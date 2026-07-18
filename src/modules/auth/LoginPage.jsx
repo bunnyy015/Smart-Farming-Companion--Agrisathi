@@ -1,10 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { ref, get } from "firebase/database";
+import { auth, database } from "../../firebase";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+
+  const selectedRole = localStorage.getItem("role");
+
+  const roleTitle = {
+    farmer: "Farmer Login",
+    admin: "Admin Login",
+    kvk: "KVK Officer Login",
+    dealer: "Dealer Login",
+  };
+
+  const rolePath = {
+    farmer: "/dashboard",
+    admin: "/admin",
+    kvk: "/kvk",
+    dealer: "/dealer",
+  };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +32,11 @@ export default function LoginPage() {
     event.preventDefault();
 
     setErrorMessage("");
+
+    if (!selectedRole) {
+      setErrorMessage("Please select a role before login.");
+      return;
+    }
 
     if (!email.trim()) {
       setErrorMessage("Please enter your email.");
@@ -28,9 +50,60 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/language");
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const uid = userCredential.user.uid;
+
+      const userSnapshot = await get(ref(database, `users/${uid}`));
+
+      if (!userSnapshot.exists()) {
+        const dealerSnapshot = await get(
+          ref(database, `dealerRequests/${uid}`)
+        );
+
+        if (dealerSnapshot.exists()) {
+          await signOut(auth);
+          setErrorMessage(
+            "Your dealer account is awaiting admin approval."
+          );
+          return;
+        }
+
+        const kvkSnapshot = await get(
+          ref(database, `kvkRequests/${uid}`)
+        );
+
+        if (kvkSnapshot.exists()) {
+          await signOut(auth);
+          setErrorMessage(
+            "Your KVK account is awaiting admin approval."
+          );
+          return;
+        }
+
+        await signOut(auth);
+        setErrorMessage("User account not found.");
+        return;
+      }
+
+      const userData = userSnapshot.val();
+
+      if (userData.role !== selectedRole) {
+        await signOut(auth);
+        setErrorMessage(
+          `This account is registered as ${userData.role}. Please login from ${userData.role} login.`
+        );
+        return;
+      }
+
+      navigate(rolePath[userData.role]);
     } catch (error) {
+      console.error(error);
       setErrorMessage("You entered wrong email or password.");
     } finally {
       setLoading(false);
@@ -44,11 +117,11 @@ export default function LoginPage() {
           <div className="text-5xl mb-3">🌾</div>
 
           <h1 className="text-3xl font-bold text-green-700">
-            AgriSathi
+            {roleTitle[selectedRole] || "AgriSaathi"}
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Sign in to continue
+            Login to your account
           </p>
         </div>
 
@@ -114,22 +187,58 @@ export default function LoginPage() {
         </div>
 
         <button
-          onClick={() => navigate("/language")}
+          onClick={() => navigate("/role-selection")}
           className="w-full border border-gray-300 py-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
         >
-          Continue as Demo Farmer
+          Change Role
         </button>
 
-        <p className="text-center text-sm text-gray-600 mt-6">
-          New farmer?{" "}
-          <button
-            type="button"
-            onClick={() => navigate("/register")}
-            className="text-green-700 font-semibold"
-          >
-            Create account
-          </button>
-        </p>
+        <div className="text-center text-sm text-gray-600 mt-6">
+          {selectedRole === "farmer" && (
+            <>
+              New farmer?{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/register")}
+                className="text-green-700 font-semibold"
+              >
+                Create account
+              </button>
+            </>
+          )}
+
+          {selectedRole === "kvk" && (
+            <>
+              <p>Don't have a KVK account?</p>
+
+              <button
+                type="button"
+                onClick={() => navigate("/kvk/register")}
+                className="text-green-700 font-semibold w-full mt-2"
+              >
+                Request Admin Approval
+              </button>
+            </>
+          )}
+
+          {selectedRole === "dealer" && (
+            <>
+              <p>Don't have a Dealer account?</p>
+
+              <button
+                type="button"
+                onClick={() => navigate("/dealer/register")}
+                className="text-green-700 font-semibold w-full mt-2"
+              >
+                Request Admin Approval
+              </button>
+            </>
+          )}
+
+          {selectedRole === "admin" && (
+            <span>Admin accounts are managed centrally.</span>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -107,16 +107,17 @@ export default function RegisterPage() {
 
       const userId = userCredential.user.uid;
 
-      await set(ref(database, "farmers/" + userId), {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        village: form.village,
-        district: form.district,
-        state: form.state,
-        mainCrop: form.mainCrop,
-        createdAt: new Date().toISOString(),
-      });
+    await set(ref(database, "users/" + userId), {
+  name: form.name,
+  email: form.email,
+  phone: form.phone,
+  village: form.village,
+  district: form.district,
+  state: form.state,
+  mainCrop: form.mainCrop,
+  role: "farmer",
+  createdAt: new Date().toISOString(),
+});
 
       navigate("/language");
     } catch (error) {
