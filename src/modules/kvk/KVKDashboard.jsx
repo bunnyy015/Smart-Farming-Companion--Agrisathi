@@ -10,7 +10,6 @@ export default function KVKDashboard() {
   const [officer, setOfficer] = useState(null);
   const [stats, setStats] = useState({
     activeSOS: 0,
-    communityPosts: 0,
     farmers: 0,
     diseaseReports: 0,
   });
@@ -50,12 +49,12 @@ export default function KVKDashboard() {
 
       const sosSnapshot = await get(ref(database, "sosRequests"));
       const usersSnapshot = await get(ref(database, "users"));
-      const communitySnapshot = await get(ref(database, "communityPosts"));
+      const diseaseSnapshot = await get(ref(database, "diseaseReports"));
 
       const sosData = sosSnapshot.exists() ? sosSnapshot.val() : {};
       const usersData = usersSnapshot.exists() ? usersSnapshot.val() : {};
-      const communityData = communitySnapshot.exists()
-        ? communitySnapshot.val()
+      const diseaseData = diseaseSnapshot.exists()
+        ? diseaseSnapshot.val()
         : {};
 
       const activeSOS = Object.values(sosData).filter(
@@ -66,23 +65,10 @@ export default function KVKDashboard() {
         (item) => item.role === "farmer"
       ).length;
 
-      const communityPosts = Object.keys(communityData).length;
-
-      const diseaseReports = Object.values(communityData).filter((post) => {
-        const text = `${post.title || ""} ${post.description || ""}`.toLowerCase();
-
-        return (
-          text.includes("disease") ||
-          text.includes("leaf") ||
-          text.includes("spots") ||
-          text.includes("crop") ||
-          text.includes("pest")
-        );
-      }).length;
+      const diseaseReports = Object.keys(diseaseData).length;
 
       setStats({
         activeSOS,
-        communityPosts,
         farmers,
         diseaseReports,
       });
@@ -143,7 +129,7 @@ export default function KVKDashboard() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-5 mb-6">
+        <div className="grid md:grid-cols-3 gap-5 mb-6">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="text-4xl mb-3">🚨</div>
             <h3 className="text-gray-500 text-sm">Active SOS</h3>
@@ -168,13 +154,6 @@ export default function KVKDashboard() {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="text-4xl mb-3">👥</div>
-            <h3 className="text-gray-500 text-sm">Community Posts</h3>
-            <p className="text-3xl font-bold text-blue-600 mt-2">
-              {stats.communityPosts}
-            </p>
-          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -236,19 +215,6 @@ export default function KVKDashboard() {
 
             <p className="text-gray-600 mt-2">
               View emergency farmer requests and mark them as resolved.
-            </p>
-          </button>
-
-          <button
-            onClick={() => navigate("/kvk/community")}
-            className="bg-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl transition"
-          >
-            <h2 className="text-2xl font-bold text-green-700">
-              👥 Community Expert Replies
-            </h2>
-
-            <p className="text-gray-600 mt-2">
-              Reply to farmer questions as a verified KVK expert.
             </p>
           </button>
 

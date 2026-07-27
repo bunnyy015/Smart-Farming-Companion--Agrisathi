@@ -1,436 +1,636 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ref, get, push, set, update } from "firebase/database";
+import {
+  get,
+  onValue,
+  push,
+  ref,
+  remove,
+  set,
+  update,
+} from "firebase/database";
 import { auth, database } from "../../firebase";
+import StatusMessage from "../../components/StatusMessage";
+
+const emptyForm = {
+  title: "",
+  content: "",
+  category: "Question",
+  crop: "",
+};
 
 export default function CommunityPage() {
   const navigate = useNavigate();
 
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [posts, setPosts] = useState([]);
-  const [userData, setUserData] = useState(null);
-  const [commentText, setCommentText] = useState({});
+  const [form, setForm] = useState(emptyForm);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchText, setSearchText] = useState("");
+  const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  const [form, setForm] = useState({
-    crop: "",
-    title: "",
-    description: "",
-    district: "",
-  });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    loadUserAndPosts();
-  }, []);
+    let unsubscribe = () => {};
 
-  function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
+    async function initializeCommunity() {
+      try {
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const profileSnapshot = await get(
+          ref(database, `users/${currentUser.uid}`)
+        );
+
+        if (!profileSnapshot.exists()) {
+          showMessage("error", "User profile was not found.");
+          return;
+        }
+
+        const profile = {
+          uid: currentUser.uid,
+          ...profileSnapshot.val(),
+        };
+
+        setCurrentProfile(profile);
+
+        unsubscribe = onValue(
+          ref(database, "communityPosts"),
+          (snapshot) => {
+            if (!snapshot.exists()) {
+              setPosts([]);
+              setLoading(false);
+              return;
+            }
+
+            const postList = Object.entries(snapshot.val())
+              .map(([id, value]) => ({
+                id,
+                ...value,
+              }))
+              .sort(
+                (first, second) =>
+                  new Date(second.createdAt || 0) -
+                  new Date(first.createdAt || 0)
+              );
+
+            setPosts(postList);
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Community loading error:", error);
+            showMessage(
+              "error",
+              "Community posts could not be loaded."
+            );
+            setLoading(false);
+          }
+        );
+      } catch (error) {
+        console.error("Community initialization error:", error);
+        showMessage("error", "Community could not be opened.");
+        setLoading(false);
+      }
+    }
+
+    initializeCommunity();
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const filteredPosts = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    return posts.filter((post) => {
+      const categoryMatches =
+        selectedCategory === "All" ||
+        post.category === selectedCategory;
+
+      if (!categoryMatches) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const searchableText = [
+        post.title,
+        post.content,
+        post.crop,
+        post.authorName,
+        post.district,
+        post.category,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(query);
     });
+  }, [posts, searchText, selectedCategory]);
+
+  function showMessage(type, text) {
+    setMessage({ type, text });
+
+    window.setTimeout(() => {
+      setMessage(null);
+    }, 5000);
   }
 
-  async function loadUserAndPosts() {
-    try {
-      const currentUser = auth.currentUser;
+  function handleFormChange(event) {
+    const { name, value } = event.target;
 
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-
-      const userSnapshot = await get(ref(database, `users/${currentUser.uid}`));
-
-      if (userSnapshot.exists()) {
-        setUserData({
-          uid: currentUser.uid,
-          ...userSnapshot.val(),
-        });
-      }
-
-      const postsSnapshot = await get(ref(database, "communityPosts"));
-
-      if (!postsSnapshot.exists()) {
-        setPosts([]);
-        return;
-      }
-
-      const data = postsSnapshot.val();
-
-      const list = Object.entries(data).map(([id, value]) => ({
-        id,
-        ...value,
-      }));
-
-      setPosts(list.reverse());
-    } catch (error) {
-      console.error(error);
-      alert("Failed to load community posts.");
-    } finally {
-      setLoading(false);
-    }
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   }
 
   async function createPost(event) {
     event.preventDefault();
 
-    if (!form.title.trim()) {
-      alert("Please enter post title.");
+    if (!currentProfile) {
       return;
     }
 
-    if (!form.description.trim()) {
-      alert("Please enter description.");
+    const title = form.title.trim();
+    const content = form.content.trim();
+
+    if (!title) {
+      showMessage("warning", "Enter a short post title.");
       return;
     }
 
-    try {
-      const currentUser = auth.currentUser;
-
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-
-      const postRef = push(ref(database, "communityPosts"));
-
-      await set(postRef, {
-        farmerUid: currentUser.uid,
-        farmerName:
-          userData?.fullName ||
-          userData?.name ||
-          userData?.farmerName ||
-          userData?.dealerName ||
-          userData?.officerName ||
-          "AgriSaathi User",
-        role: userData?.role || "farmer",
-        crop: form.crop,
-        title: form.title,
-        description: form.description,
-        district: form.district || userData?.district || "",
-        likes: 0,
-        likedBy: {},
-        comments: {},
-        createdAt: new Date().toISOString(),
-      });
-
-      setForm({
-        crop: "",
-        title: "",
-        description: "",
-        district: "",
-      });
-
-      alert("Post shared successfully.");
-      loadUserAndPosts();
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create post.");
-    }
-  }
-
-  async function likePost(post) {
-    try {
-      const currentUser = auth.currentUser;
-
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-
-      const likedBy = post.likedBy || {};
-
-      if (likedBy[currentUser.uid]) {
-        alert("You already liked this post.");
-        return;
-      }
-
-      await update(ref(database, `communityPosts/${post.id}`), {
-        likes: Number(post.likes || 0) + 1,
-        [`likedBy/${currentUser.uid}`]: true,
-      });
-
-      loadUserAndPosts();
-    } catch (error) {
-      console.error(error);
-      alert("Failed to like post.");
-    }
-  }
-
-  async function addComment(postId) {
-    const text = commentText[postId];
-
-    if (!text || !text.trim()) {
-      alert("Please write a comment.");
+    if (!content) {
+      showMessage("warning", "Enter your question or message.");
       return;
     }
 
     try {
-      const currentUser = auth.currentUser;
+      setCreating(true);
 
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-
-      const commentRef = push(
-        ref(database, `communityPosts/${postId}/comments`)
+      const postReference = push(
+        ref(database, "communityPosts")
       );
 
-      await set(commentRef, {
-        userUid: currentUser.uid,
-        userName:
-          userData?.fullName ||
-          userData?.name ||
-          userData?.farmerName ||
-          userData?.dealerName ||
-          userData?.officerName ||
+      const now = new Date().toISOString();
+
+      await set(postReference, {
+        authorUid: currentProfile.uid,
+
+        authorName:
+          currentProfile.fullName ||
+          currentProfile.farmerName ||
+          currentProfile.dealerName ||
+          currentProfile.name ||
           "AgriSaathi User",
-        role: userData?.role || "farmer",
-        text,
-        createdAt: new Date().toISOString(),
+
+        authorRole: currentProfile.role || "farmer",
+
+        district: currentProfile.district || "",
+        state: currentProfile.state || "",
+
+        title,
+        content,
+        category: form.category,
+        crop: form.crop.trim(),
+
+        likes: {},
+        likeCount: 0,
+
+        createdAt: now,
+        updatedAt: now,
       });
 
-      setCommentText({
-        ...commentText,
-        [postId]: "",
-      });
+      setForm(emptyForm);
 
-      loadUserAndPosts();
+      showMessage(
+        "success",
+        "Your post was shared with the community."
+      );
     } catch (error) {
-      console.error(error);
-      alert("Failed to add comment.");
+      console.error("Create post error:", error);
+
+      showMessage(
+        "error",
+        "Your post could not be shared."
+      );
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function toggleLike(post) {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    try {
+      const alreadyLiked = Boolean(
+        post.likes?.[currentUser.uid]
+      );
+
+      const updates = {};
+
+      updates[
+        `communityPosts/${post.id}/likes/${currentUser.uid}`
+      ] = alreadyLiked ? null : true;
+
+      updates[
+        `communityPosts/${post.id}/likeCount`
+      ] = Math.max(
+        0,
+        Number(post.likeCount || 0) +
+          (alreadyLiked ? -1 : 1)
+      );
+
+      await update(ref(database), updates);
+    } catch (error) {
+      console.error("Like post error:", error);
+      showMessage("error", "Like could not be updated.");
+    }
+  }
+
+  async function deletePost() {
+    if (!deleteTarget || !currentProfile) {
+      return;
+    }
+
+    try {
+      const canDelete =
+        deleteTarget.authorUid === currentProfile.uid ||
+        currentProfile.role === "admin";
+
+      if (!canDelete) {
+        showMessage(
+          "error",
+          "You cannot delete this post."
+        );
+        setDeleteTarget(null);
+        return;
+      }
+
+      await remove(
+        ref(
+          database,
+          `communityPosts/${deleteTarget.id}`
+        )
+      );
+
+      setDeleteTarget(null);
+      showMessage("success", "Post deleted.");
+    } catch (error) {
+      console.error("Delete post error:", error);
+      showMessage("error", "Post could not be deleted.");
     }
   }
 
   function getRoleBadge(role) {
-    if (role === "kvk") {
-      return "bg-blue-100 text-blue-700";
-    }
+    const badges = {
+      farmer: {
+        label: "Farmer",
+        className: "bg-green-100 text-green-700",
+      },
+      dealer: {
+        label: "Dealer",
+        className: "bg-blue-100 text-blue-700",
+      },
+      kvk: {
+        label: "KVK Officer",
+        className: "bg-purple-100 text-purple-700",
+      },
+      admin: {
+        label: "Admin",
+        className: "bg-red-100 text-red-700",
+      },
+    };
 
-    if (role === "dealer") {
-      return "bg-purple-100 text-purple-700";
-    }
-
-    if (role === "admin") {
-      return "bg-red-100 text-red-700";
-    }
-
-    return "bg-green-100 text-green-700";
+    return (
+      badges[role] || {
+        label: "Member",
+        className: "bg-gray-100 text-gray-700",
+      }
+    );
   }
+
+  function getCategoryIcon(category) {
+    const icons = {
+      Question: "❓",
+      Advice: "💡",
+      Experience: "🌱",
+      Alert: "⚠️",
+      Announcement: "📢",
+    };
+
+    return icons[category] || "💬";
+  }
+
+  function getBackPath() {
+    const role = currentProfile?.role;
+
+    if (role === "dealer") return "/dealer";
+    if (role === "kvk") return "/kvk";
+    if (role === "admin") return "/admin";
+
+    return "/dashboard";
+  }
+
+  const categories = [
+    "All",
+    "Question",
+    "Advice",
+    "Experience",
+    "Alert",
+    "Announcement",
+  ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
-        <h1 className="text-2xl font-bold text-green-700">
-          Loading Farmer Community...
-        </h1>
+      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
+          <div className="text-5xl">👥</div>
+
+          <h1 className="text-xl font-bold text-green-900 mt-4">
+            Loading community
+          </h1>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-green-700 text-white rounded-2xl shadow-lg p-6 mb-6">
+    <div className="min-h-screen bg-green-50 p-4 md:p-6">
+      <div className="max-w-6xl mx-auto">
+        <StatusMessage
+          message={message}
+          onClose={() => setMessage(null)}
+        />
+
+        {deleteTarget && (
+          <section className="bg-white border border-red-200 rounded-2xl shadow-lg p-5 mb-5">
+            <h2 className="text-lg font-bold text-red-700">
+              Delete this post?
+            </h2>
+
+            <p className="text-sm text-gray-600 mt-1">
+              This action cannot be undone.
+            </p>
+
+            <div className="bg-gray-50 rounded-xl p-3 mt-3">
+              <p className="font-semibold">
+                {deleteTarget.title}
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={deletePost}
+                className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold"
+              >
+                Delete Post
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="border border-gray-300 px-4 py-2.5 rounded-xl font-semibold"
+              >
+                Go Back
+              </button>
+            </div>
+          </section>
+        )}
+
+        <header className="bg-gradient-to-r from-green-800 to-green-600 text-white rounded-2xl shadow p-5">
           <button
-            onClick={() => navigate("/dashboard")}
-            className="text-sm mb-3"
+            type="button"
+            onClick={() => navigate(getBackPath())}
+            className="text-green-100 font-semibold"
           >
-            ← Back
+            ← Dashboard
           </button>
 
-          <h1 className="text-4xl font-bold">
-            👥 Farmer Community
+          <h1 className="text-3xl font-bold mt-3">
+            👥 Farming Community
           </h1>
 
-          <p className="text-green-100 mt-2">
-            Ask questions, share farming problems, and get help from farmers,
-            KVK officers, and dealers.
+          <p className="text-green-100 mt-1">
+            Ask questions and share farming knowledge.
           </p>
-        </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-green-700 mb-4">
-            Create Community Post
+          <div className="bg-white/15 rounded-xl p-3 mt-4 text-sm">
+            📍 Community posts from farmers, dealers and
+            agriculture officers.
+          </div>
+        </header>
+
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
+          <h2 className="text-xl font-bold text-green-900">
+            ✍️ Share with Community
           </h2>
 
-          <form onSubmit={createPost} className="space-y-4">
-            <input
-              name="crop"
-              placeholder="Crop name example: Rice, Tomato, Cotton"
-              value={form.crop}
-              onChange={handleChange}
-              className="w-full border border-gray-300 p-3 rounded-lg"
-            />
-
+          <form onSubmit={createPost} className="mt-4 space-y-3">
             <input
               name="title"
-              placeholder="Post title"
               value={form.title}
-              onChange={handleChange}
-              className="w-full border border-gray-300 p-3 rounded-lg"
+              onChange={handleFormChange}
+              placeholder="Short title"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3"
             />
 
             <textarea
-              name="description"
-              placeholder="Describe your crop problem or farming question"
-              value={form.description}
-              onChange={handleChange}
-              rows={4}
-              className="w-full border border-gray-300 p-3 rounded-lg"
+              name="content"
+              value={form.content}
+              onChange={handleFormChange}
+              placeholder="Ask a question or share advice..."
+              rows="4"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3"
             />
 
-            <input
-              name="district"
-              placeholder="District"
-              value={form.district}
-              onChange={handleChange}
-              className="w-full border border-gray-300 p-3 rounded-lg"
-            />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <select
+                name="category"
+                value={form.category}
+                onChange={handleFormChange}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3"
+              >
+                <option value="Question">Question</option>
+                <option value="Advice">Advice</option>
+                <option value="Experience">Experience</option>
+                <option value="Alert">Alert</option>
+                <option value="Announcement">
+                  Announcement
+                </option>
+              </select>
+
+              <input
+                name="crop"
+                value={form.crop}
+                onChange={handleFormChange}
+                placeholder="Crop name (optional)"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3"
+              />
+            </div>
 
             <button
               type="submit"
-              className="w-full bg-green-700 text-white py-3 rounded-lg font-semibold"
+              disabled={creating}
+              className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold disabled:bg-gray-400"
             >
-              Share Post
+              {creating ? "Sharing..." : "Share Post"}
             </button>
           </form>
-        </div>
+        </section>
 
-        <div className="space-y-5">
-          {posts.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-              <h2 className="text-2xl font-bold text-green-700">
-                No community posts yet
-              </h2>
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
+          <label className="font-semibold text-gray-800">
+            🔍 Search community
+          </label>
 
-              <p className="text-gray-600 mt-2">
-                Be the first farmer to ask a question.
-              </p>
-            </div>
-          ) : (
-            posts.map((post) => {
-              const comments = post.comments
-                ? Object.entries(post.comments).map(([id, value]) => ({
-                    id,
-                    ...value,
-                  }))
-                : [];
+          <input
+            type="search"
+            value={searchText}
+            onChange={(event) =>
+              setSearchText(event.target.value)
+            }
+            placeholder="Crop, question or district"
+            className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2"
+          />
+        </section>
+
+        <section className="flex gap-2 overflow-x-auto py-5">
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category}
+              onClick={() =>
+                setSelectedCategory(category)
+              }
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
+                selectedCategory === category
+                  ? "bg-green-700 text-white"
+                  : "bg-white border border-green-200 text-green-800"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </section>
+
+        {filteredPosts.length === 0 ? (
+          <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div className="text-5xl">🌱</div>
+
+            <h2 className="text-xl font-bold text-green-900 mt-4">
+              No community posts
+            </h2>
+
+            <p className="text-gray-600 mt-2">
+              Be the first person to share a farming question.
+            </p>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            {filteredPosts.map((post) => {
+              const badge = getRoleBadge(post.authorRole);
+
+              const currentUserLiked = Boolean(
+                post.likes?.[auth.currentUser?.uid]
+              );
+
+              const canDelete =
+                post.authorUid === currentProfile?.uid ||
+                currentProfile?.role === "admin";
 
               return (
-                <div
+                <article
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-lg p-6"
+                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
                 >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-2xl font-bold text-green-700">
-                        {post.title}
-                      </h2>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-bold text-gray-900">
+                          {post.authorName || "Community Member"}
+                        </p>
 
-                      <p className="text-sm text-gray-500 mt-1">
-                        By {post.farmerName} • {post.district || "District not added"}
+                        <span
+                          className={`${badge.className} px-2.5 py-1 rounded-full text-xs font-semibold`}
+                        >
+                          {badge.label}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        📍 {post.district || post.state || "Location not added"}
                       </p>
-
-                      <span
-                        className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadge(
-                          post.role
-                        )}`}
-                      >
-                        {post.role || "farmer"}
-                      </span>
                     </div>
 
-                    <div className="text-sm text-gray-500">
-                      {post.createdAt
-                        ? new Date(post.createdAt).toLocaleString()
-                        : ""}
-                    </div>
+                    <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                      {getCategoryIcon(post.category)}{" "}
+                      {post.category}
+                    </span>
                   </div>
 
-                  {post.crop && (
-                    <p className="text-sm text-gray-600 mt-4">
-                      <b>Crop:</b> {post.crop}
-                    </p>
-                  )}
+                  <h2 className="text-xl font-bold text-green-900 mt-4">
+                    {post.title}
+                  </h2>
 
-                  <p className="text-gray-700 mt-3">
-                    {post.description}
+                  <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                    {post.content}
                   </p>
 
-                  <div className="flex gap-3 mt-5">
+                  {post.crop && (
+                    <span className="inline-block bg-yellow-50 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold mt-3">
+                      🌾 {post.crop}
+                    </span>
+                  )}
+
+                  <p className="text-xs text-gray-500 mt-4">
+                    {post.createdAt
+                      ? new Date(post.createdAt).toLocaleString("en-IN")
+                      : ""}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 mt-4 pt-4">
                     <button
-                      onClick={() => likePost(post)}
-                      className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold"
+                      type="button"
+                      onClick={() => toggleLike(post)}
+                      className={`px-4 py-2 rounded-xl font-semibold ${
+                        currentUserLiked
+                          ? "bg-green-700 text-white"
+                          : "bg-green-50 text-green-700"
+                      }`}
                     >
-                      👍 Like ({post.likes || 0})
+                      👍 {Number(post.likeCount || 0)}
                     </button>
-                  </div>
 
-                  <div className="mt-6">
-                    <h3 className="font-bold text-green-700 mb-3">
-                      Comments
-                    </h3>
-
-                    {comments.length === 0 ? (
-                      <p className="text-sm text-gray-500">
-                        No comments yet.
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {comments.map((comment) => (
-                          <div
-                            key={comment.id}
-                            className="bg-green-50 border border-green-100 rounded-xl p-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-green-700">
-                                {comment.userName}
-                              </p>
-
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-semibold ${getRoleBadge(
-                                  comment.role
-                                )}`}
-                              >
-                                {comment.role}
-                              </span>
-                            </div>
-
-                            <p className="text-gray-700 mt-1">
-                              {comment.text}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col md:flex-row gap-3 mt-4">
-                      <input
-                        value={commentText[post.id] || ""}
-                        onChange={(event) =>
-                          setCommentText({
-                            ...commentText,
-                            [post.id]: event.target.value,
-                          })
-                        }
-                        placeholder="Write a helpful comment..."
-                        className="flex-1 border border-gray-300 p-3 rounded-lg"
-                      />
-
+                    {canDelete && (
                       <button
-                        onClick={() => addComment(post.id)}
-                        className="bg-green-700 text-white px-5 py-3 rounded-lg font-semibold"
+                        type="button"
+                        onClick={() => setDeleteTarget(post)}
+                        className="border border-red-200 text-red-700 px-4 py-2 rounded-xl font-semibold"
                       >
-                        Comment
+                        Delete
                       </button>
-                    </div>
+                    )}
                   </div>
-                </div>
+                </article>
               );
-            })
-          )}
-        </div>
+            })}
+          </section>
+        )}
       </div>
     </div>
   );

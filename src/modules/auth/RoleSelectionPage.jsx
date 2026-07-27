@@ -28,7 +28,7 @@ export default function RoleSelectionPage() {
           <div className="text-5xl mb-3">👨‍🌾</div>
           <h2 className="text-xl font-bold">Farmer</h2>
           <p className="text-gray-600 mt-2">
-            Crop care, weather, market prices and irrigation.
+            Crop disease detection, weather, market prices and animal care.
           </p>
         </div>
 
