@@ -16,10 +16,8 @@ import VoiceAssistantPage from "./utils/VoiceAssistantPage";
 import DashboardPage from "./modules/dashboard/DashboardPage";
 import WeatherPage from "./modules/weather/WeatherPage";
 import MarketPricesPage from "./modules/market/MarketPricesPage";
-import AnimalCarePage from "./modules/animalCare/AnimalCarePage";
 import CropDiseasePage from "./modules/cropDisease/CropDiseasePage";
 import FarmerProfilePage from "./modules/profile/FarmerProfilePage";
-import SOSPage from "./modules/sos/SOSPage";
 import GovtSchemesPage from "./modules/schemes/GovtSchemesPage";
 
 import FarmerDealerProductsPage from "./modules/farmer/FarmerDealerProductsPage";
@@ -31,12 +29,10 @@ import CommunityPage from "./modules/community/CommunityPage";
 
 import AdminDashboard from "./modules/admin/AdminDashboard";
 import FarmersListPage from "./modules/admin/FarmersListPage";
-import SOSRequestsPage from "./modules/admin/SOSRequestsPage";
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import KVKRequestsPage from "./modules/admin/KVKRequestsPage";
 
 import KVKDashboard from "./modules/kvk/KVKDashboard";
-import KVKSOSRequestsPage from "./modules/kvk/KVKSOSRequestsPage";
 
 import DealerDashboard from "./modules/dealer/DealerDashboard";
 import DealerRegistrationPage from "./modules/dealer/DealerRegistrationPage";
@@ -51,83 +47,162 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<SplashPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/language" element={<LanguageSelection />} />
-        <Route path="/role-selection" element={<RoleSelectionPage />} />
 
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/farmer/voice" element={<VoiceAssistantPage />} />
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route
+          path="/register"
+          element={<RegisterPage />}
+        />
+
+        <Route
+          path="/language"
+          element={<LanguageSelection />}
+        />
+
+        <Route
+          path="/role-selection"
+          element={<RoleSelectionPage />}
+        />
+
+        {/* Farmer routes */}
+
+        <Route
+          path="/dashboard"
+          element={<DashboardPage />}
+        />
+
+        <Route
+          path="/farmer/voice"
+          element={<VoiceAssistantPage />}
+        />
+
         <Route
           path="/farmer/dealer-products"
           element={<FarmerDealerProductsPage />}
         />
+
         <Route
           path="/farmer/product/:dealerUid/:productId"
           element={<FarmerProductDetailsPage />}
         />
+
         <Route
           path="/farmer/orders"
           element={<FarmerOrdersPage />}
         />
+
         <Route
           path="/farmer/notifications"
           element={<FarmerNotificationsPage />}
         />
 
-        <Route path="/community" element={<CommunityPage />} />
+        <Route
+          path="/weather"
+          element={<WeatherPage />}
+        />
 
-        <Route path="/weather" element={<WeatherPage />} />
-        <Route path="/market-prices" element={<MarketPricesPage />} />
-        <Route path="/animal-care" element={<AnimalCarePage />} />
-        <Route path="/crop-disease" element={<CropDiseasePage />} />
-        <Route path="/profile" element={<FarmerProfilePage />} />
-        <Route path="/sos" element={<SOSPage />} />
-        <Route path="/govt-schemes" element={<GovtSchemesPage />} />
+        <Route
+          path="/market-prices"
+          element={<MarketPricesPage />}
+        />
 
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/farmers" element={<FarmersListPage />} />
-        <Route path="/admin/sos" element={<SOSRequestsPage />} />
+        <Route
+          path="/crop-disease"
+          element={<CropDiseasePage />}
+        />
+
+        <Route
+          path="/profile"
+          element={<FarmerProfilePage />}
+        />
+
+        <Route
+          path="/govt-schemes"
+          element={<GovtSchemesPage />}
+        />
+
+        <Route
+          path="/community"
+          element={<CommunityPage />}
+        />
+
+        {/* Admin routes */}
+
+        <Route
+          path="/admin"
+          element={<AdminDashboard />}
+        />
+
+        <Route
+          path="/admin/farmers"
+          element={<FarmersListPage />}
+        />
+
         <Route
           path="/admin/dealer-requests"
           element={<DealerRequestsPage />}
         />
+
         <Route
           path="/admin/kvk-requests"
           element={<KVKRequestsPage />}
         />
 
+        {/* KVK routes */}
+
         <Route
           path="/kvk/register"
           element={<KVKRegistrationPage />}
         />
-        <Route path="/kvk" element={<KVKDashboard />} />
-        <Route path="/kvk/sos" element={<KVKSOSRequestsPage />} />
+
+        <Route
+          path="/kvk"
+          element={<KVKDashboard />}
+        />
+
+        {/* Dealer routes */}
 
         <Route
           path="/dealer/register"
           element={<DealerRegistrationPage />}
         />
-        <Route path="/dealer" element={<DealerDashboard />} />
+
+        <Route
+          path="/dealer"
+          element={<DealerDashboard />}
+        />
+
         <Route
           path="/dealer/products"
           element={<DealerProductsPage />}
         />
+
         <Route
           path="/dealer/stock"
           element={<DealerStockPage />}
         />
+
         <Route
           path="/dealer/orders"
           element={<DealerOrdersPage />}
         />
+
         <Route
           path="/dealer/sales"
           element={<DealerSalesPage />}
         />
+
         <Route
           path="/dealer/notifications"
           element={<DealerNotificationsPage />}
+        />
+
+        {/* Invalid route */}
+
+        <Route
+          path="*"
+          element={<SplashPage />}
         />
       </Routes>
     </BrowserRouter>

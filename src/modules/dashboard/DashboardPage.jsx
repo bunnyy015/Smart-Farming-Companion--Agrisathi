@@ -12,7 +12,9 @@ import { auth, database } from "../../firebase";
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  const [notificationIds, setNotificationIds] = useState([]);
+  const [notificationIds, setNotificationIds] =
+    useState([]);
+
   const [loadingNotifications, setLoadingNotifications] =
     useState(true);
 
@@ -32,7 +34,9 @@ export default function DashboardPage() {
         `farmerNotificationReads_${currentUser.uid}`
       );
 
-      const readIds = saved ? JSON.parse(saved) : [];
+      const readIds = saved
+        ? JSON.parse(saved)
+        : [];
 
       return notificationIds.filter(
         (id) => !readIds.includes(id)
@@ -49,6 +53,10 @@ export default function DashboardPage() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
+        navigate("/login", {
+          replace: true,
+        });
+
         return;
       }
 
@@ -75,9 +83,13 @@ export default function DashboardPage() {
         "cancelled",
       ];
 
-      const ids = Object.entries(snapshot.val())
+      const ids = Object.entries(
+        snapshot.val()
+      )
         .filter(([, order]) =>
-          supportedStatuses.includes(order.status)
+          supportedStatuses.includes(
+            order.status
+          )
         )
         .map(
           ([id, order]) =>
@@ -104,21 +116,24 @@ export default function DashboardPage() {
       icon: "🌿",
       path: "/crop-disease",
     },
+
     {
       title: "Weather",
-      subtitle: "Today’s forecast",
+      subtitle: "Farm forecast",
       icon: "🌦️",
       path: "/weather",
     },
+
     {
       title: "Local Dealers",
       subtitle: "Seeds and fertilizers",
       icon: "🏪",
       path: "/farmer/dealer-products",
     },
+
     {
       title: "My Orders",
-      subtitle: "Track requests",
+      subtitle: "Track purchases",
       icon: "🛒",
       path: "/farmer/orders",
     },
@@ -126,34 +141,31 @@ export default function DashboardPage() {
 
   const services = [
     {
-      title: "Community",
-      icon: "👥",
-      path: "/community",
-    },
-    {
-      title: "Animal Care",
-      icon: "🐄",
-      path: "/animal-care",
-    },
-    {
       title: "Market Prices",
+      subtitle: "Local mandi prices",
       icon: "📈",
       path: "/market-prices",
     },
+
     {
-      title: "Govt Schemes",
+      title: "Government Schemes",
+      subtitle: "Farmer benefits",
       icon: "🏛️",
       path: "/govt-schemes",
     },
+
+    {
+      title: "Community",
+      subtitle: "Ask and share",
+      icon: "👥",
+      path: "/community",
+    },
+
     {
       title: "My Profile",
+      subtitle: "Farm details",
       icon: "👤",
       path: "/profile",
-    },
-    {
-      title: "SOS Help",
-      icon: "🚨",
-      path: "/sos",
     },
   ];
 
@@ -168,14 +180,16 @@ export default function DashboardPage() {
               </h1>
 
               <p className="text-green-100 mt-1">
-                Your farming companion
+                Your crop farming companion
               </p>
             </div>
 
             <button
               type="button"
               onClick={() =>
-                navigate("/farmer/notifications")
+                navigate(
+                  "/farmer/notifications"
+                )
               }
               className="relative bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold"
             >
@@ -198,7 +212,8 @@ export default function DashboardPage() {
             </p>
 
             <p className="text-sm text-green-100 mt-1">
-              Weather, crop help, dealers and services.
+              Get crop guidance, weather,
+              market prices and local products.
             </p>
           </div>
         </header>
@@ -209,13 +224,16 @@ export default function DashboardPage() {
           </h2>
 
           <p className="text-gray-600 text-sm mt-1">
-            Tap and speak naturally.
+            Tap and speak in your language.
           </p>
 
           <button
             type="button"
-            onClick={() => navigate("/farmer/voice")}
+            onClick={() =>
+              navigate("/farmer/voice")
+            }
             className="w-20 h-20 rounded-full bg-green-700 text-white text-3xl mt-4 shadow hover:bg-green-800"
+            aria-label="Open voice assistant"
           >
             🎤
           </button>
@@ -226,7 +244,9 @@ export default function DashboardPage() {
             <button
               type="button"
               key={feature.path}
-              onClick={() => navigate(feature.path)}
+              onClick={() =>
+                navigate(feature.path)
+              }
               className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-lg transition"
             >
               <div className="text-3xl">
@@ -249,12 +269,14 @@ export default function DashboardPage() {
             Farming Services
           </h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {services.map((service) => (
               <button
                 type="button"
                 key={service.path}
-                onClick={() => navigate(service.path)}
+                onClick={() =>
+                  navigate(service.path)
+                }
                 className="bg-white rounded-2xl shadow p-4 text-left hover:shadow-lg transition"
               >
                 <span className="text-2xl">
@@ -264,9 +286,25 @@ export default function DashboardPage() {
                 <p className="font-semibold text-gray-800 mt-2">
                   {service.title}
                 </p>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  {service.subtitle}
+                </p>
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-6">
+          <h2 className="text-lg font-bold text-green-800">
+            🩺 Need veterinary help?
+          </h2>
+
+          <p className="text-sm text-gray-600 mt-2">
+            A simple nearby veterinary
+            hospitals and doctor contact page
+            will be added separately.
+          </p>
         </section>
       </div>
     </div>
