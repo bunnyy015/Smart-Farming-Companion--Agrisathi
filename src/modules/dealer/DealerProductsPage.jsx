@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   get,
   push,
@@ -8,6 +9,7 @@ import {
   set,
   update,
 } from "firebase/database";
+
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 
@@ -22,19 +24,48 @@ const emptyForm = {
   description: "",
 };
 
+const allowedImageTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
 export default function DealerProductsPage() {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(emptyForm);
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [existingImageUrl, setExistingImageUrl] =
+    useState("");
+  const [existingPublicId, setExistingPublicId] =
+    useState("");
+
+  const [deleteTarget, setDeleteTarget] =
+    useState(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (
+        imagePreview &&
+        imagePreview.startsWith("blob:")
+      ) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   function showMessage(type, text) {
     setMessage({ type, text });
@@ -53,9 +84,60 @@ export default function DealerProductsPage() {
     }));
   }
 
+  function handleImageChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!allowedImageTypes.includes(file.type)) {
+      showMessage(
+        "warning",
+        "Select a JPG, PNG or WEBP image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage(
+        "warning",
+        "Product image must be smaller than 5 MB."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (
+      imagePreview &&
+      imagePreview.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setMessage(null);
+  }
+
   function resetForm() {
+    if (
+      imagePreview &&
+      imagePreview.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
     setEditingId("");
     setForm(emptyForm);
+
+    setImageFile(null);
+    setImagePreview("");
+    setExistingImageUrl("");
+    setExistingPublicId("");
   }
 
   async function loadProducts() {
@@ -65,12 +147,18 @@ export default function DealerProductsPage() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        navigate("/login", { replace: true });
+        navigate("/login", {
+          replace: true,
+        });
+
         return;
       }
 
       const snapshot = await get(
-        ref(database, `dealerProducts/${currentUser.uid}`)
+        ref(
+          database,
+          `dealerProducts/${currentUser.uid}`
+        )
       );
 
       if (!snapshot.exists()) {
@@ -91,35 +179,116 @@ export default function DealerProductsPage() {
 
       setProducts(list);
     } catch (error) {
-      console.error("Dealer products error:", error);
-      showMessage("error", "Products could not be loaded.");
+      console.error(
+        "Dealer products error:",
+        error
+      );
+
+      showMessage(
+        "error",
+        "Products could not be loaded."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  async function uploadImageToCloudinary(file) {
+    if (!file) {
+      return {
+        imageUrl: existingImageUrl,
+        imagePublicId: existingPublicId,
+      };
+    }
+
+    const cloudName =
+      import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+
+    const uploadPreset =
+      import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      throw new Error(
+        "Cloudinary configuration is missing."
+      );
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message ||
+          "Image upload failed."
+      );
+    }
+
+    return {
+      imageUrl: data.secure_url || "",
+      imagePublicId: data.public_id || "",
+    };
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const productName = form.productName.trim();
-    const category = form.category.trim();
-    const unit = form.unit.trim();
-    const price = Number(form.price);
-    const quantity = Number(form.quantity);
-    const lowStockLevel = Number(form.lowStockLevel);
+    const productName =
+      form.productName.trim();
+
+    const category =
+      form.category.trim();
+
+    const unit =
+      form.unit.trim();
+
+    const price =
+      Number(form.price);
+
+    const quantity =
+      Number(form.quantity);
+
+    const lowStockLevel =
+      Number(form.lowStockLevel);
 
     if (!productName) {
-      showMessage("warning", "Enter the product name.");
+      showMessage(
+        "warning",
+        "Enter the product name."
+      );
+
       return;
     }
 
     if (!category) {
-      showMessage("warning", "Select a category.");
+      showMessage(
+        "warning",
+        "Select a category."
+      );
+
       return;
     }
 
-    if (!Number.isFinite(price) || price < 0) {
-      showMessage("warning", "Enter a valid price.");
+    if (
+      !Number.isFinite(price) ||
+      price < 0
+    ) {
+      showMessage(
+        "warning",
+        "Enter a valid price."
+      );
+
       return;
     }
 
@@ -131,11 +300,16 @@ export default function DealerProductsPage() {
         "warning",
         "Quantity must be a whole number."
       );
+
       return;
     }
 
     if (!unit) {
-      showMessage("warning", "Enter the product unit.");
+      showMessage(
+        "warning",
+        "Enter the product unit."
+      );
+
       return;
     }
 
@@ -147,6 +321,7 @@ export default function DealerProductsPage() {
         "warning",
         "Enter a valid low-stock level."
       );
+
       return;
     }
 
@@ -156,16 +331,27 @@ export default function DealerProductsPage() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        navigate("/login", { replace: true });
+        navigate("/login", {
+          replace: true,
+        });
+
         return;
       }
 
-      const now = new Date().toISOString();
+      const now =
+        new Date().toISOString();
 
       if (editingId) {
-        const existingProduct = products.find(
-          (product) => product.id === editingId
-        );
+        const existingProduct =
+          products.find(
+            (product) =>
+              product.id === editingId
+          );
+
+        const uploadedImage =
+          await uploadImageToCloudinary(
+            imageFile
+          );
 
         await update(
           ref(
@@ -180,26 +366,43 @@ export default function DealerProductsPage() {
             quantity,
             unit,
             lowStockLevel,
-            description: form.description.trim(),
+            description:
+              form.description.trim(),
 
-            dealerUid: currentUser.uid,
+            imageUrl:
+              uploadedImage.imageUrl || "",
 
-            reservedQuantity: Number(
-              existingProduct?.reservedQuantity || 0
-            ),
+            imagePublicId:
+              uploadedImage.imagePublicId || "",
 
-            soldQuantity: Number(
-              existingProduct?.soldQuantity || 0
-            ),
+            dealerUid:
+              currentUser.uid,
+
+            reservedQuantity:
+              Number(
+                existingProduct
+                  ?.reservedQuantity || 0
+              ),
+
+            soldQuantity:
+              Number(
+                existingProduct
+                  ?.soldQuantity || 0
+              ),
 
             status:
-              quantity > 0 ? "available" : "out_of_stock",
+              quantity > 0
+                ? "available"
+                : "out_of_stock",
 
             updatedAt: now,
           }
         );
 
-        showMessage("success", "Product updated.");
+        showMessage(
+          "success",
+          "Product updated."
+        );
       } else {
         const productReference = push(
           ref(
@@ -207,6 +410,11 @@ export default function DealerProductsPage() {
             `dealerProducts/${currentUser.uid}`
           )
         );
+
+        const uploadedImage =
+          await uploadImageToCloudinary(
+            imageFile
+          );
 
         await set(productReference, {
           productName,
@@ -216,36 +424,81 @@ export default function DealerProductsPage() {
           quantity,
           unit,
           lowStockLevel,
-          description: form.description.trim(),
+          description:
+            form.description.trim(),
 
-          dealerUid: currentUser.uid,
+          imageUrl:
+            uploadedImage.imageUrl || "",
+
+          imagePublicId:
+            uploadedImage.imagePublicId || "",
+
+          dealerUid:
+            currentUser.uid,
 
           reservedQuantity: 0,
           soldQuantity: 0,
 
           status:
-            quantity > 0 ? "available" : "out_of_stock",
+            quantity > 0
+              ? "available"
+              : "out_of_stock",
 
           createdAt: now,
           updatedAt: now,
         });
 
-        showMessage("success", "Product added.");
+        showMessage(
+          "success",
+          "Product added."
+        );
       }
 
       resetForm();
       await loadProducts();
     } catch (error) {
-      console.error("Save product error:", error);
+      console.error(
+        "Save product error:",
+        error
+      );
 
-      showMessage(
-        "error",
-        String(error?.message || "")
+      const messageText =
+        String(error?.message || "");
+
+      if (
+        messageText
+          .toLowerCase()
+          .includes("cloudinary")
+      ) {
+        showMessage(
+          "error",
+          "Cloudinary setup is missing."
+        );
+      } else if (
+        messageText
+          .toLowerCase()
+          .includes("upload preset")
+      ) {
+        showMessage(
+          "error",
+          "Cloudinary upload preset is incorrect."
+        );
+      } else if (
+        messageText
           .toLowerCase()
           .includes("permission denied")
-          ? "Product permission denied. Check Firebase rules."
-          : "Product could not be saved."
-      );
+      ) {
+        showMessage(
+          "error",
+          "Firebase permission denied."
+        );
+      } else {
+        showMessage(
+          "error",
+          messageText ||
+            "Product could not be saved."
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -255,17 +508,53 @@ export default function DealerProductsPage() {
     setEditingId(product.id);
 
     setForm({
-      productName: product.productName || "",
-      category: product.category || "",
-      brand: product.brand || "",
-      price: String(product.price ?? ""),
-      quantity: String(product.quantity ?? ""),
-      unit: product.unit || "",
-      lowStockLevel: String(
-        product.lowStockLevel ?? 5
-      ),
-      description: product.description || "",
+      productName:
+        product.productName || "",
+
+      category:
+        product.category || "",
+
+      brand:
+        product.brand || "",
+
+      price:
+        String(product.price ?? ""),
+
+      quantity:
+        String(product.quantity ?? ""),
+
+      unit:
+        product.unit || "",
+
+      lowStockLevel:
+        String(
+          product.lowStockLevel ?? 5
+        ),
+
+      description:
+        product.description || "",
     });
+
+    if (
+      imagePreview &&
+      imagePreview.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(null);
+
+    setImagePreview(
+      product.imageUrl || ""
+    );
+
+    setExistingImageUrl(
+      product.imageUrl || ""
+    );
+
+    setExistingPublicId(
+      product.imagePublicId || ""
+    );
 
     window.scrollTo({
       top: 0,
@@ -273,43 +562,74 @@ export default function DealerProductsPage() {
     });
   }
 
-  async function deleteProduct(product) {
-    if (Number(product.reservedQuantity || 0) > 0) {
+  function requestDelete(product) {
+    if (
+      Number(
+        product.reservedQuantity || 0
+      ) > 0
+    ) {
       showMessage(
         "warning",
         "This product has accepted orders and cannot be deleted."
       );
+
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete ${product.productName}?`
-    );
+    setDeleteTarget(product);
+  }
 
-    if (!confirmed) {
+  async function confirmDelete() {
+    if (!deleteTarget) {
       return;
     }
 
     try {
+      setDeleting(true);
+
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        navigate("/login", { replace: true });
+        navigate("/login", {
+          replace: true,
+        });
+
         return;
       }
 
       await remove(
         ref(
           database,
-          `dealerProducts/${currentUser.uid}/${product.id}`
+          `dealerProducts/${currentUser.uid}/${deleteTarget.id}`
         )
       );
 
-      showMessage("success", "Product deleted.");
+      if (
+        editingId === deleteTarget.id
+      ) {
+        resetForm();
+      }
+
+      setDeleteTarget(null);
+
+      showMessage(
+        "success",
+        "Product deleted."
+      );
+
       await loadProducts();
     } catch (error) {
-      console.error("Delete product error:", error);
-      showMessage("error", "Product could not be deleted.");
+      console.error(
+        "Delete product error:",
+        error
+      );
+
+      showMessage(
+        "error",
+        "Product could not be deleted."
+      );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -328,13 +648,59 @@ export default function DealerProductsPage() {
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}
-          onClose={() => setMessage(null)}
+          onClose={() =>
+            setMessage(null)
+          }
         />
+
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5">
+              <h2 className="text-xl font-bold text-gray-900">
+                Delete product?
+              </h2>
+
+              <p className="text-gray-600 mt-2">
+                Delete{" "}
+                <strong>
+                  {deleteTarget.productName}
+                </strong>
+                ?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 mt-5">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() =>
+                    setDeleteTarget(null)
+                  }
+                  className="border border-gray-300 rounded-xl py-3 font-semibold"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={confirmDelete}
+                  className="bg-red-600 text-white rounded-xl py-3 font-semibold disabled:bg-gray-400"
+                >
+                  {deleting
+                    ? "Deleting..."
+                    : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <header className="bg-white rounded-2xl shadow p-5 mb-5">
           <button
             type="button"
-            onClick={() => navigate("/dealer")}
+            onClick={() =>
+              navigate("/dealer")
+            }
             className="text-green-700 font-semibold"
           >
             ← Dealer Dashboard
@@ -345,14 +711,16 @@ export default function DealerProductsPage() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Add products and keep stock information updated.
+            Add product images and update stock.
           </p>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-5">
           <section className="bg-white rounded-2xl shadow p-5">
             <h2 className="text-xl font-bold text-green-800">
-              {editingId ? "Update Product" : "Add Product"}
+              {editingId
+                ? "Update Product"
+                : "Add Product"}
             </h2>
 
             <form
@@ -373,17 +741,24 @@ export default function DealerProductsPage() {
                 onChange={handleChange}
                 className="w-full border rounded-xl px-4 py-3"
               >
-                <option value="">Select category</option>
-                <option value="Seeds">Seeds</option>
+                <option value="">
+                  Select category
+                </option>
+
+                <option value="Seeds">
+                  Seeds
+                </option>
+
                 <option value="Fertilizer">
                   Fertilizer
                 </option>
+
                 <option value="Pesticide">
                   Pesticide
                 </option>
-                <option value="Tools">Tools</option>
-                <option value="Animal Feed">
-                  Animal Feed
+
+                <option value="Tools">
+                  Tools
                 </option>
               </select>
 
@@ -394,6 +769,31 @@ export default function DealerProductsPage() {
                 placeholder="Brand"
                 className="w-full border rounded-xl px-4 py-3"
               />
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Product image
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                  className="w-full border border-dashed border-green-400 bg-green-50 rounded-xl p-3"
+                />
+
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG or WEBP. Maximum 5 MB.
+                </p>
+              </div>
+
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-full h-48 object-contain bg-gray-50 border rounded-xl"
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -474,7 +874,10 @@ export default function DealerProductsPage() {
           <section className="lg:col-span-2 space-y-4">
             {products.length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center">
-                <div className="text-4xl">📦</div>
+                <div className="text-4xl">
+                  📦
+                </div>
+
                 <p className="text-gray-600 mt-3">
                   No products added yet.
                 </p>
@@ -493,9 +896,10 @@ export default function DealerProductsPage() {
                   product.soldQuantity || 0
                 );
 
-                const lowStockLevel = Number(
-                  product.lowStockLevel || 0
-                );
+                const lowStockLevel =
+                  Number(
+                    product.lowStockLevel || 0
+                  );
 
                 const lowStock =
                   available <= lowStockLevel;
@@ -505,80 +909,121 @@ export default function DealerProductsPage() {
                     key={product.id}
                     className="bg-white rounded-2xl shadow p-5"
                   >
-                    <div className="flex flex-col md:flex-row md:justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-xl font-bold text-green-800">
-                            {product.productName}
-                          </h2>
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full md:w-36">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={
+                              product.productName
+                            }
+                            className="w-full h-36 object-contain bg-gray-50 border rounded-xl"
+                          />
+                        ) : (
+                          <div className="w-full h-36 bg-green-50 rounded-xl flex items-center justify-center text-4xl">
+                            📦
+                          </div>
+                        )}
+                      </div>
 
-                          {lowStock && (
-                            <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">
-                              Low stock
-                            </span>
-                          )}
+                      <div className="flex-1">
+                        <div className="flex flex-col md:flex-row md:justify-between gap-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h2 className="text-xl font-bold text-green-800">
+                                {
+                                  product.productName
+                                }
+                              </h2>
+
+                              {lowStock && (
+                                <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">
+                                  Low stock
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-sm text-gray-500 mt-1">
+                              {product.category}
+
+                              {product.brand
+                                ? ` • ${product.brand}`
+                                : ""}
+                            </p>
+
+                            <p className="font-semibold mt-2">
+                              ₹
+                              {Number(
+                                product.price || 0
+                              ).toFixed(2)}{" "}
+                              / {product.unit}
+                            </p>
+
+                            {product.description && (
+                              <p className="text-sm text-gray-600 mt-2">
+                                {
+                                  product.description
+                                }
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 self-start">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                editProduct(product)
+                              }
+                              className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                requestDelete(
+                                  product
+                                )
+                              }
+                              className="border border-red-600 text-red-700 px-4 py-2 rounded-xl"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
 
-                        <p className="text-sm text-gray-500 mt-1">
-                          {product.category}
-                          {product.brand
-                            ? ` • ${product.brand}`
-                            : ""}
-                        </p>
+                        <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+                          <div className="bg-green-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-500">
+                              Available
+                            </p>
 
-                        <p className="font-semibold mt-2">
-                          ₹{Number(product.price || 0).toFixed(2)} /{" "}
-                          {product.unit}
-                        </p>
-                      </div>
+                            <p className="font-bold text-green-700">
+                              {available}
+                            </p>
+                          </div>
 
-                      <div className="flex gap-2 self-start">
-                        <button
-                          type="button"
-                          onClick={() => editProduct(product)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-                        >
-                          Edit
-                        </button>
+                          <div className="bg-blue-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-500">
+                              Reserved
+                            </p>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            deleteProduct(product)
-                          }
-                          className="border border-red-600 text-red-700 px-4 py-2 rounded-xl"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+                            <p className="font-bold text-blue-700">
+                              {reserved}
+                            </p>
+                          </div>
 
-                    <div className="grid grid-cols-3 gap-3 mt-4 text-center">
-                      <div className="bg-green-50 rounded-xl p-3">
-                        <p className="text-xs text-gray-500">
-                          Available
-                        </p>
-                        <p className="font-bold text-green-700">
-                          {available}
-                        </p>
-                      </div>
+                          <div className="bg-orange-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-500">
+                              Sold
+                            </p>
 
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <p className="text-xs text-gray-500">
-                          Reserved
-                        </p>
-                        <p className="font-bold text-blue-700">
-                          {reserved}
-                        </p>
-                      </div>
-
-                      <div className="bg-orange-50 rounded-xl p-3">
-                        <p className="text-xs text-gray-500">
-                          Sold
-                        </p>
-                        <p className="font-bold text-orange-700">
-                          {sold}
-                        </p>
+                            <p className="font-bold text-orange-700">
+                              {sold}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </article>

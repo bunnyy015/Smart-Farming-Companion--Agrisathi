@@ -9,10 +9,35 @@ import { onAuthStateChanged } from "firebase/auth";
 import { get, ref } from "firebase/database";
 
 import { auth, database } from "../firebase";
+
 import {
   getLanguage,
   setLanguage,
 } from "./language";
+
+import {
+  getPreferredLanguage,
+  setPreferredLanguage,
+} from "./languageProfile";
+
+import {
+  createVoiceLanguagePrompt,
+} from "./voiceLanguageContext";
+
+import {
+  addFarmerMessage,
+  addAssistantMessage,
+  getVoiceMemoryForPrompt,
+  clearVoiceMemory,
+} from "./voiceMemory";
+
+import {
+  detectLocalVoiceCommand,
+} from "./voiceLocalCommands";
+
+import {
+  createWeatherPromptContext,
+} from "./weatherContext";
 
 const MODELS = [
   "gemini-2.5-flash",
@@ -61,18 +86,29 @@ const greetings = {
 };
 
 const retryMessages = {
-  en: "I could not hear that clearly. Please say it again.",
-  te: "స్పష్టంగా వినిపించలేదు. దయచేసి మళ్లీ చెప్పండి.",
-  hi: "मैं ठीक से सुन नहीं पाया। कृपया फिर से कहें।",
-  ta: "எனக்குத் தெளிவாகக் கேட்கவில்லை. மீண்டும் சொல்லுங்கள்.",
-  kn: "ನನಗೆ ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ಮತ್ತೆ ಹೇಳಿ.",
-  ml: "എനിക്ക് വ്യക്തമായി കേൾക്കാനായില്ല. വീണ്ടും പറയൂ.",
-  mr: "मला स्पष्ट ऐकू आले नाही. पुन्हा सांगा.",
-  bn: "আমি স্পষ্ট শুনতে পাইনি। আবার বলুন।",
-  gu: "મને સ્પષ્ટ સંભળાયું નથી. ફરી કહો.",
-  pa: "ਮੈਨੂੰ ਸਾਫ਼ ਸੁਣਾਈ ਨਹੀਂ ਦਿੱਤਾ। ਦੁਬਾਰਾ ਕਹੋ।",
-  ur: "مجھے واضح سنائی نہیں دیا۔ دوبارہ کہیں۔",
-  or: "ମୁଁ ସ୍ପଷ୍ଟ ଭାବେ ଶୁଣିପାରିଲି ନାହିଁ। ପୁଣି କୁହନ୍ତୁ।",
+  en: "I could not understand that clearly. Please say it again.",
+
+  te: "స్పష్టంగా అర్థం కాలేదు. దయచేసి మళ్లీ చెప్పండి.",
+
+  hi: "मैं ठीक से समझ नहीं पाया। कृपया फिर से कहें।",
+
+  ta: "எனக்குத் தெளிவாகப் புரியவில்லை. மீண்டும் சொல்லுங்கள்.",
+
+  kn: "ನನಗೆ ಸ್ಪಷ್ಟವಾಗಿ ಅರ್ಥವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಹೇಳಿ.",
+
+  ml: "എനിക്ക് വ്യക്തമായി മനസ്സിലായില്ല. വീണ്ടും പറയൂ.",
+
+  mr: "मला स्पष्ट समजले नाही. पुन्हा सांगा.",
+
+  bn: "আমি স্পষ্টভাবে বুঝতে পারিনি। আবার বলুন।",
+
+  gu: "મને સ્પષ્ટ રીતે સમજાયું નથી. ફરી કહો.",
+
+  pa: "ਮੈਨੂੰ ਸਾਫ਼ ਸਮਝ ਨਹੀਂ ਆਇਆ। ਦੁਬਾਰਾ ਕਹੋ।",
+
+  ur: "مجھے واضح طور پر سمجھ نہیں آیا۔ دوبارہ کہیں۔",
+
+  or: "ମୁଁ ସ୍ପଷ୍ଟ ଭାବେ ବୁଝିପାରିଲି ନାହିଁ। ପୁଣି କୁହନ୍ତୁ।",
 };
 
 const interfaceText = {
@@ -87,27 +123,28 @@ const interfaceText = {
       "Voice recognition is not supported on this browser. Please use Chrome.",
     stop: "Stop",
     back: "Back",
+    privacy:
+      "Your speech is processed only to provide farming guidance.",
   },
 
   te: {
     title: "అగ్రిసాథి వాయిస్ సహాయకుడు",
-    ready:
-      "ప్రారంభించడానికి మైక్రోఫోన్ నొక్కండి",
+    ready: "ప్రారంభించడానికి మైక్రోఫోన్ నొక్కండి",
     listening: "వింటున్నాను…",
     thinking: "ఆలోచిస్తున్నాను…",
     speaking: "మాట్లాడుతున్నాను…",
-    stopped:
-      "సంభాషణ నిలిపివేయబడింది",
+    stopped: "సంభాషణ నిలిపివేయబడింది",
     unsupported:
       "ఈ బ్రౌజర్‌లో వాయిస్ గుర్తింపు లేదు. Chrome ఉపయోగించండి.",
     stop: "ఆపండి",
     back: "వెనుకకు",
+    privacy:
+      "వ్యవసాయ సహాయం అందించడానికి మాత్రమే మీ మాటలను ప్రాసెస్ చేస్తాము.",
   },
 
   hi: {
     title: "एग्रीसाथी आवाज़ सहायक",
-    ready:
-      "शुरू करने के लिए माइक्रोफ़ोन दबाएँ",
+    ready: "शुरू करने के लिए माइक्रोफ़ोन दबाएँ",
     listening: "सुन रहा हूँ…",
     thinking: "सोच रहा हूँ…",
     speaking: "बोल रहा हूँ…",
@@ -116,6 +153,8 @@ const interfaceText = {
       "इस ब्राउज़र में आवाज़ पहचान उपलब्ध नहीं है। Chrome इस्तेमाल करें।",
     stop: "रोकें",
     back: "वापस",
+    privacy:
+      "आपकी आवाज़ का उपयोग केवल खेती से जुड़ी सहायता देने के लिए किया जाता है।",
   },
 };
 
@@ -124,40 +163,259 @@ const actionRoutes = {
   crop_disease: "/crop-disease",
   market_prices: "/market-prices",
   government_schemes: "/govt-schemes",
-  dealer_products:
-    "/farmer/dealer-products",
+  dealer_products: "/farmer/dealer-products",
   farmer_orders: "/farmer/orders",
   community: "/community",
   profile: "/profile",
   dashboard: "/dashboard",
 };
 
+const allowedActions = new Set([
+  "none",
+  ...Object.keys(actionRoutes),
+]);
+
+const emptyFarmerProfile = {
+  name: "",
+  village: "",
+  district: "",
+  state: "",
+  mainCrop: "",
+  phone: "",
+};
+
 function getUi(language) {
-  return (
-    interfaceText[language] ||
-    interfaceText.en
+  return interfaceText[language] || interfaceText.en;
+}
+
+function getValidLanguage(language) {
+  return speechLocales[language]
+    ? language
+    : "en";
+}
+
+function getInitialLanguage() {
+  const preferredLanguage =
+    getPreferredLanguage();
+
+  if (speechLocales[preferredLanguage]) {
+    return preferredLanguage;
+  }
+
+  return getValidLanguage(getLanguage());
+}
+
+function cleanProfileValue(value) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "";
+  }
+
+  return String(value).trim();
+}
+
+function normalizeFarmerProfile(profile) {
+  if (
+    !profile ||
+    typeof profile !== "object"
+  ) {
+    return emptyFarmerProfile;
+  }
+
+  return {
+    name: cleanProfileValue(
+      profile.name ||
+        profile.fullName
+    ),
+
+    village: cleanProfileValue(
+      profile.village
+    ),
+
+    district: cleanProfileValue(
+      profile.district
+    ),
+
+    state: cleanProfileValue(
+      profile.state
+    ),
+
+    mainCrop: cleanProfileValue(
+      profile.mainCrop ||
+        profile.primaryCrop ||
+        profile.crop
+    ),
+
+    phone: cleanProfileValue(
+      profile.phone
+    ),
+  };
+}
+
+function createFarmerProfilePrompt(
+  profile,
+  preferredLanguage
+) {
+  const safeProfile =
+    normalizeFarmerProfile(profile);
+
+  const availableDetails = [];
+
+  if (safeProfile.name) {
+    availableDetails.push(
+      `Farmer name: ${safeProfile.name}`
+    );
+  }
+
+  if (safeProfile.village) {
+    availableDetails.push(
+      `Village: ${safeProfile.village}`
+    );
+  }
+
+  if (safeProfile.district) {
+    availableDetails.push(
+      `District: ${safeProfile.district}`
+    );
+  }
+
+  if (safeProfile.state) {
+    availableDetails.push(
+      `State: ${safeProfile.state}`
+    );
+  }
+
+  if (safeProfile.mainCrop) {
+    availableDetails.push(
+      `Main crop: ${safeProfile.mainCrop}`
+    );
+  }
+
+  availableDetails.push(
+    `Preferred language code: ${getValidLanguage(
+      preferredLanguage
+    )}`
   );
+
+  if (availableDetails.length === 1) {
+    return "No detailed farmer profile is available.";
+  }
+
+  return availableDetails.join("\n");
+}
+
+function extractJson(responseText) {
+  if (
+    typeof responseText !== "string" ||
+    !responseText.trim()
+  ) {
+    throw new Error(
+      "The assistant returned an empty response."
+    );
+  }
+
+  const cleanedText = responseText
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  const firstBrace =
+    cleanedText.indexOf("{");
+
+  const lastBrace =
+    cleanedText.lastIndexOf("}");
+
+  if (
+    firstBrace === -1 ||
+    lastBrace === -1 ||
+    lastBrace <= firstBrace
+  ) {
+    throw new Error(
+      "The assistant response was not valid JSON."
+    );
+  }
+
+  const jsonText = cleanedText.slice(
+    firstBrace,
+    lastBrace + 1
+  );
+
+  return JSON.parse(jsonText);
+}
+
+function validateGeminiResult(result) {
+  if (
+    !result ||
+    typeof result !== "object"
+  ) {
+    throw new Error(
+      "The assistant returned an invalid result."
+    );
+  }
+
+  const reply =
+    typeof result.reply === "string"
+      ? result.reply.trim()
+      : "";
+
+  if (!reply) {
+    throw new Error(
+      "The assistant did not provide a reply."
+    );
+  }
+
+  const languageCode =
+    getValidLanguage(
+      result.languageCode
+    );
+
+  const action =
+    allowedActions.has(result.action)
+      ? result.action
+      : "none";
+
+  return {
+    reply,
+    languageCode,
+    action,
+  };
 }
 
 export default function VoiceAssistantPage() {
   const navigate = useNavigate();
 
-  const [languageCode, setLanguageCode] =
-    useState(getLanguage());
+  const initialLanguageRef =
+    useRef(getInitialLanguage());
+
+  const [
+    languageCode,
+    setLanguageCode,
+  ] = useState(
+    initialLanguageRef.current
+  );
 
   const [status, setStatus] =
     useState("ready");
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
+
   const [authorized, setAuthorized] =
     useState(false);
 
-  const recognitionRef = useRef(null);
-  const activeRef = useRef(false);
-  const historyRef = useRef([]);
-  const languageRef = useRef(
-    getLanguage()
-  );
+  const recognitionRef =
+    useRef(null);
+
+  const activeRef =
+    useRef(false);
+
+  const languageRef =
+    useRef(initialLanguageRef.current);
+
+  const farmerProfileRef =
+    useRef(emptyFarmerProfile);
 
   const ui = getUi(languageCode);
 
@@ -174,25 +432,71 @@ export default function VoiceAssistantPage() {
             return;
           }
 
-          const snapshot = await get(
-            ref(
-              database,
-              `users/${user.uid}`
-            )
-          );
+          try {
+            const userSnapshot =
+              await get(
+                ref(
+                  database,
+                  `users/${user.uid}`
+                )
+              );
 
-          if (
-            !snapshot.exists() ||
-            snapshot.val().role !== "farmer"
-          ) {
-            navigate("/role-selection", {
+            if (
+              !userSnapshot.exists() ||
+              userSnapshot.val()?.role !==
+                "farmer"
+            ) {
+              navigate(
+                "/role-selection",
+                {
+                  replace: true,
+                }
+              );
+
+              return;
+            }
+
+            try {
+              const farmerSnapshot =
+                await get(
+                  ref(
+                    database,
+                    `farmers/${user.uid}`
+                  )
+                );
+
+              if (
+                farmerSnapshot.exists()
+              ) {
+                farmerProfileRef.current =
+                  normalizeFarmerProfile(
+                    farmerSnapshot.val()
+                  );
+              } else {
+                farmerProfileRef.current =
+                  emptyFarmerProfile;
+              }
+            } catch (profileError) {
+              console.error(
+                "Farmer profile loading error:",
+                profileError
+              );
+
+              farmerProfileRef.current =
+                emptyFarmerProfile;
+            }
+
+            setAuthorized(true);
+          } catch (authorizationError) {
+            console.error(
+              "Voice assistant authorization error:",
+              authorizationError
+            );
+
+            navigate("/login", {
               replace: true,
             });
-
-            return;
           }
-
-          setAuthorized(true);
         }
       );
 
@@ -203,28 +507,36 @@ export default function VoiceAssistantPage() {
 
       window.speechSynthesis?.cancel();
 
+      clearVoiceMemory();
+
       unsubscribe();
     };
   }, [navigate]);
 
   function updateLanguage(code) {
-    if (!speechLocales[code]) {
-      return;
-    }
+    const validCode =
+      getValidLanguage(code);
 
-    languageRef.current = code;
-    setLanguageCode(code);
-    setLanguage(code);
+    languageRef.current =
+      validCode;
+
+    setLanguageCode(validCode);
+
+    setLanguage(validCode);
+
+    setPreferredLanguage(validCode);
   }
 
   function chooseVoice(code) {
+    const validCode =
+      getValidLanguage(code);
+
     const locale =
-      speechLocales[code] ||
-      speechLocales.en;
+      speechLocales[validCode];
 
     const voices =
-      window.speechSynthesis?.getVoices?.() ||
-      [];
+      window.speechSynthesis
+        ?.getVoices?.() || [];
 
     return (
       voices.find(
@@ -236,7 +548,7 @@ export default function VoiceAssistantPage() {
         voice.lang
           .toLowerCase()
           .startsWith(
-            code.toLowerCase()
+            validCode.toLowerCase()
           )
       ) ||
       null
@@ -255,22 +567,27 @@ export default function VoiceAssistantPage() {
       return;
     }
 
+    const validCode =
+      getValidLanguage(code);
+
     window.speechSynthesis.cancel();
 
     setStatus("speaking");
 
     const utterance =
-      new SpeechSynthesisUtterance(text);
+      new SpeechSynthesisUtterance(
+        text
+      );
 
     utterance.lang =
-      speechLocales[code] ||
-      speechLocales.en;
+      speechLocales[validCode];
 
     utterance.rate = 0.94;
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    const voice = chooseVoice(code);
+    const voice =
+      chooseVoice(validCode);
 
     if (voice) {
       utterance.voice = voice;
@@ -282,7 +599,14 @@ export default function VoiceAssistantPage() {
       }
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (
+      speechError
+    ) => {
+      console.error(
+        "Speech synthesis error:",
+        speechError
+      );
+
       if (activeRef.current) {
         onFinished?.();
       }
@@ -339,7 +663,8 @@ export default function VoiceAssistantPage() {
       event
     ) => {
       const transcript =
-        event.results?.[0]?.[0]?.transcript?.trim();
+        event.results?.[0]?.[0]
+          ?.transcript?.trim();
 
       if (transcript) {
         respondToFarmer(transcript);
@@ -347,11 +672,12 @@ export default function VoiceAssistantPage() {
     };
 
     recognition.onerror = (
-      event
+      recognitionError
     ) => {
       if (
         !activeRef.current ||
-        event.error === "aborted"
+        recognitionError.error ===
+          "aborted"
       ) {
         return;
       }
@@ -371,27 +697,59 @@ export default function VoiceAssistantPage() {
     };
 
     recognition.onend = () => {
-      recognitionRef.current = null;
+      if (
+        recognitionRef.current ===
+        recognition
+      ) {
+        recognitionRef.current =
+          null;
+      }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (recognitionStartError) {
+      console.error(
+        "Speech recognition start error:",
+        recognitionStartError
+      );
+
+      setStatus("ready");
+      activeRef.current = false;
+
+      setError(
+        getUi(
+          languageRef.current
+        ).unsupported
+      );
+    }
   }
 
-  async function askGemini(
-    transcript
-  ) {
+  async function askGemini(transcript) {
     const apiKey =
       import.meta.env
         .VITE_GEMINI_API_KEY;
 
     if (!apiKey) {
       throw new Error(
-        "Voice assistant service is not configured."
+        "VITE_GEMINI_API_KEY is missing."
       );
     }
 
-    const recentHistory =
-      historyRef.current.slice(-8);
+    const languageContext =
+      createVoiceLanguagePrompt();
+
+    const conversationHistory =
+      getVoiceMemoryForPrompt();
+
+    const farmerProfileContext =
+      createFarmerProfilePrompt(
+        farmerProfileRef.current,
+        languageRef.current
+      );
+
+    const weatherContext =
+      createWeatherPromptContext();
 
     const prompt = `
 You are AgriSaathi, a patient crop-farming assistant for Indian farmers.
@@ -400,13 +758,30 @@ Rules:
 - Detect the language of the current farmer message.
 - Reply completely in the same language.
 - Keep the reply short, clear and easy to understand.
+- The farmer may use local village slang or mix Indian languages with English.
+- Use the farmer profile only when it is relevant to the question.
+- Use village, district and state details for location-aware farming guidance.
+- Use the main crop detail when giving crop-related guidance.
+- Use the saved weather context only when the farmer asks a weather-related or weather-dependent farming question.
+- For spraying, irrigation, sowing, harvesting or field-work questions, consider the available temperature, humidity, rain probability and wind data.
+- If live weather is unavailable or expired, do not guess current weather.
+- Clearly say that the farmer should open the Weather page and refresh location when current weather is required.
+- Treat weather forecasts as guidance, not certainty.
+- Do not repeatedly mention the farmer's personal details.
+- Never reveal the farmer's phone number.
+- Do not claim that profile information is complete or verified.
+- Use the saved language context only to improve understanding.
+- Do not mention language detection, dialect detection, saved vocabulary, farmer profile context or conversation memory.
 - Focus on crop farming, weather, mandi prices, crop disease, seeds, fertilizers, government schemes, farmer orders and community.
-- The application does not contain SOS or full animal-care services.
-- For animal health questions, advise the farmer to contact a nearby government veterinary hospital or qualified veterinarian. Do not provide medicine dosage.
+- The application does not contain SOS or complete animal-care services.
+- For animal health questions, advise the farmer to contact a nearby government veterinary hospital or qualified veterinarian.
+- Do not provide animal medicine dosages.
 - For crop disease diagnosis, ask the farmer to use the crop photo scanner.
-- Never give pesticide dosage. Ask the farmer to follow the product label and agriculture-officer guidance.
-- Do not claim that a purchase, call, location share or profile update was completed.
-- Use an action only when the farmer clearly asks to open a page.
+- Never provide pesticide dosage.
+- Ask the farmer to follow the product label and agriculture-officer guidance.
+- Do not claim that a purchase, call, location share, order or profile update was completed.
+- Select an action only when the farmer clearly asks to open a page.
+- When no page should be opened, use the action "none".
 
 Allowed actions:
 none
@@ -420,103 +795,186 @@ community
 profile
 dashboard
 
-Return only valid JSON:
+Return only valid JSON in this exact structure:
 {
   "reply": "spoken response",
   "languageCode": "en|te|hi|ta|kn|ml|mr|bn|gu|pa|ur|or",
   "action": "none"
 }
 
-Conversation history:
-${JSON.stringify(recentHistory)}
+Farmer profile:
+${farmerProfileContext}
+
+Saved weather context:
+${weatherContext}
+
+Saved farmer language context:
+${languageContext}
+
+Current session conversation:
+${conversationHistory}
 
 Current farmer message:
 ${JSON.stringify(transcript)}
-`;
+`.trim();
+
+    let lastError = null;
 
     for (const model of MODELS) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+
+                  parts: [
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+
+              generationConfig: {
+                temperature: 0.3,
+                responseMimeType:
+                  "application/json",
               },
-            ],
-          }),
-        }
-      );
-
-      const data =
-        await response.json();
-
-      const responseText =
-        data?.candidates?.[0]?.content
-          ?.parts?.[0]?.text;
-
-      if (responseText) {
-        return JSON.parse(
-          responseText
-            .replace(
-              /```json|```/g,
-              ""
-            )
-            .trim()
+            }),
+          }
         );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          lastError = new Error(
+            data?.error?.message ||
+              `Gemini request failed with status ${response.status}.`
+          );
+
+          continue;
+        }
+
+        const responseText =
+          data?.candidates?.[0]
+            ?.content?.parts?.[0]
+            ?.text;
+
+        const parsedResult =
+          extractJson(responseText);
+
+        return validateGeminiResult(
+          parsedResult
+        );
+      } catch (modelError) {
+        console.error(
+          `Gemini model ${model} failed:`,
+          modelError
+        );
+
+        lastError = modelError;
       }
     }
 
-    throw new Error(
-      "Voice assistant is temporarily unavailable."
+    throw (
+      lastError ||
+      new Error(
+        "Voice assistant is temporarily unavailable."
+      )
+    );
+  }
+
+  function handleLocalCommand(
+    localCommand,
+    transcript
+  ) {
+    const commandLanguage =
+      getValidLanguage(
+        localCommand.languageCode
+      );
+
+    updateLanguage(commandLanguage);
+
+    addFarmerMessage(transcript);
+
+    addAssistantMessage(
+      localCommand.reply
+    );
+
+    speak(
+      localCommand.reply,
+      commandLanguage,
+      () => {
+        activeRef.current = false;
+
+        clearVoiceMemory();
+
+        navigate(localCommand.route);
+      }
     );
   }
 
   async function respondToFarmer(
     transcript
   ) {
+    if (!transcript) {
+      return;
+    }
+
+    recognitionRef.current?.abort();
+
+    setError("");
+
+    const localCommand =
+      detectLocalVoiceCommand(
+        transcript,
+        languageRef.current
+      );
+
+    if (localCommand) {
+      handleLocalCommand(
+        localCommand,
+        transcript
+      );
+
+      return;
+    }
+
     try {
       setStatus("thinking");
-      setError("");
 
       const result =
         await askGemini(transcript);
 
+      if (!activeRef.current) {
+        return;
+      }
+
       const detectedLanguage =
-        speechLocales[
+        getValidLanguage(
           result.languageCode
-        ]
-          ? result.languageCode
-          : languageRef.current;
+        );
 
       updateLanguage(
         detectedLanguage
       );
 
-      historyRef.current = [
-        ...historyRef.current,
+      addFarmerMessage(transcript);
 
-        {
-          role: "farmer",
-          message: transcript,
-        },
-
-        {
-          role: "assistant",
-          message: result.reply,
-        },
-      ].slice(-10);
+      addAssistantMessage(
+        result.reply
+      );
 
       const route =
         actionRoutes[result.action];
@@ -527,10 +985,15 @@ ${JSON.stringify(transcript)}
         () => {
           if (route) {
             activeRef.current = false;
+
+            clearVoiceMemory();
+
             navigate(route);
-          } else {
-            startListening();
+
+            return;
           }
+
+          startListening();
         }
       );
     } catch (requestError) {
@@ -538,6 +1001,10 @@ ${JSON.stringify(transcript)}
         "Voice assistant error:",
         requestError
       );
+
+      if (!activeRef.current) {
+        return;
+      }
 
       const retryMessage =
         retryMessages[
@@ -562,8 +1029,9 @@ ${JSON.stringify(transcript)}
       return;
     }
 
+    clearVoiceMemory();
+
     activeRef.current = true;
-    historyRef.current = [];
 
     setError("");
 
@@ -583,7 +1051,11 @@ ${JSON.stringify(transcript)}
 
     recognitionRef.current?.abort();
 
+    recognitionRef.current = null;
+
     window.speechSynthesis?.cancel();
+
+    clearVoiceMemory();
 
     setStatus("stopped");
   }
@@ -606,9 +1078,10 @@ ${JSON.stringify(transcript)}
       <main className="w-full max-w-xl text-center text-white">
         <button
           type="button"
-          onClick={() =>
-            navigate("/dashboard")
-          }
+          onClick={() => {
+            stopConversation();
+            navigate("/dashboard");
+          }}
           className="absolute top-5 left-5 bg-white/15 px-4 py-2 rounded-full hover:bg-white/25"
         >
           ← {ui.back}
@@ -676,7 +1149,10 @@ ${JSON.stringify(transcript)}
         </p>
 
         {error && (
-          <p className="mt-5 bg-red-900/40 border border-red-200/40 rounded-xl p-4">
+          <p
+            className="mt-5 bg-red-900/40 border border-red-200/40 rounded-xl p-4"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -692,8 +1168,7 @@ ${JSON.stringify(transcript)}
         )}
 
         <p className="mt-10 text-green-100 text-sm">
-          Your speech is processed only
-          to provide farming guidance.
+          {ui.privacy}
         </p>
       </main>
     </div>

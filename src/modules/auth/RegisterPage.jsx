@@ -1,233 +1,768 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  deleteUser,
+  sendEmailVerification,
+} from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
+import StatusMessage from "../../components/StatusMessage";
+
+const INITIAL_FORM = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  phone: "",
+  village: "",
+  mandal: "",
+  district: "",
+  state: "",
+  mainCrop: "",
+  otherCrops: "",
+  landSize: "",
+  landUnit: "acres",
+  irrigationType: "",
+  soilType: "",
+  preferredLanguage: "English",
+};
+
+const CROPS = [
+  "Paddy",
+  "Cotton",
+  "Maize",
+  "Chilli",
+  "Turmeric",
+  "Groundnut",
+  "Soybean",
+  "Red Gram",
+  "Green Gram",
+  "Black Gram",
+  "Wheat",
+  "Sugarcane",
+  "Vegetables",
+  "Fruits",
+  "Other",
+];
+
+const STATES = [
+  "Telangana",
+  "Andhra Pradesh",
+  "Karnataka",
+  "Maharashtra",
+  "Tamil Nadu",
+  "Kerala",
+  "Odisha",
+  "Chhattisgarh",
+  "Madhya Pradesh",
+  "Uttar Pradesh",
+  "Rajasthan",
+  "Gujarat",
+  "Punjab",
+  "Haryana",
+  "Bihar",
+  "West Bengal",
+  "Assam",
+  "Jharkhand",
+  "Other",
+];
+
+function getFriendlyError(error) {
+  const code = error?.code || "";
+
+  if (code === "auth/email-already-in-use") {
+    return "This email is already registered. Please log in instead.";
+  }
+
+  if (code === "auth/invalid-email") {
+    return "Enter a valid email address.";
+  }
+
+  if (code === "auth/weak-password") {
+    return "Use a stronger password with at least 6 characters.";
+  }
+
+  if (code === "auth/network-request-failed") {
+    return "Check your internet connection and try again.";
+  }
+
+  if (code === "auth/operation-not-allowed") {
+    return "Email registration is not enabled in Firebase Authentication.";
+  }
+
+  return "Farmer account could not be created. Please try again.";
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    phone: "",
-    village: "",
-    district: "",
-    state: "",
-    mainCrop: "",
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [message, setMessage] = useState(null);
 
-  function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
+  const normalizedEmail = useMemo(
+    () => form.email.trim().toLowerCase(),
+    [form.email]
+  );
 
-    setErrorMessage("");
+  function showMessage(type, text) {
+    setMessage({ type, text });
   }
 
-  function getFriendlyError(error) {
-    if (error.code === "auth/email-already-in-use") {
-      return "This email is already registered. Please login instead.";
+  function clearMessage() {
+    setMessage(null);
+  }
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+
+    clearMessage();
+  }
+
+  function validateForm() {
+    const name = form.name.trim();
+    const phone = form.phone.replace(/\D/g, "");
+    const landSize = Number(form.landSize || 0);
+
+    if (!name) {
+      return "Enter the farmer's name.";
     }
 
-    if (error.code === "auth/invalid-email") {
-      return "Please enter a valid email address.";
+    if (!normalizedEmail) {
+      return "Enter an email address.";
     }
 
-    if (error.code === "auth/weak-password") {
-      return "Password should be at least 6 characters.";
+    if (!form.password) {
+      return "Enter a password.";
     }
 
-    return "Account creation failed. Please try again.";
+    if (form.password.length < 6) {
+      return "Password must contain at least 6 characters.";
+    }
+
+    if (form.password !== form.confirmPassword) {
+      return "Password and confirm password do not match.";
+    }
+
+    if (!phone) {
+      return "Enter a mobile number.";
+    }
+
+    if (phone.length !== 10) {
+      return "Enter a valid 10-digit mobile number.";
+    }
+
+    if (!form.village.trim()) {
+      return "Enter the village or town.";
+    }
+
+    if (!form.district.trim()) {
+      return "Enter the district.";
+    }
+
+    if (!form.state.trim()) {
+      return "Select the state.";
+    }
+
+    if (!form.mainCrop.trim()) {
+      return "Select the main crop.";
+    }
+
+    if (
+      form.landSize &&
+      (!Number.isFinite(landSize) || landSize <= 0)
+    ) {
+      return "Enter a valid land size.";
+    }
+
+    return "";
   }
 
   async function handleRegister(event) {
     event.preventDefault();
+    clearMessage();
 
-    setErrorMessage("");
+    const validationError = validateForm();
 
-    if (!form.name.trim()) {
-      setErrorMessage("Please enter farmer name.");
+    if (validationError) {
+      showMessage("warning", validationError);
       return;
     }
 
-    if (!form.email.trim()) {
-      setErrorMessage("Please enter email.");
-      return;
-    }
-
-    if (!form.password.trim()) {
-      setErrorMessage("Please enter password.");
-      return;
-    }
-
-    if (form.password.length < 6) {
-      setErrorMessage("Password should be at least 6 characters.");
-      return;
-    }
-
-    if (!form.phone.trim()) {
-      setErrorMessage("Please enter mobile number.");
-      return;
-    }
-
-    if (!form.village.trim()) {
-      setErrorMessage("Please enter village.");
-      return;
-    }
-
-    if (!form.district.trim()) {
-      setErrorMessage("Please enter district.");
-      return;
-    }
-
-    if (!form.state.trim()) {
-      setErrorMessage("Please enter state.");
-      return;
-    }
-
-    if (!form.mainCrop.trim()) {
-      setErrorMessage("Please enter main crop.");
-      return;
-    }
+    let createdUser = null;
 
     try {
       setLoading(true);
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
+      const credential =
+        await createUserWithEmailAndPassword(
+          auth,
+          normalizedEmail,
+          form.password
+        );
+
+      createdUser = credential.user;
+
+      const now = new Date().toISOString();
+      const phone = form.phone.replace(/\D/g, "");
+
+      const farmerData = {
+        uid: createdUser.uid,
+
+        name: form.name.trim(),
+        fullName: form.name.trim(),
+        farmerName: form.name.trim(),
+
+        email: normalizedEmail,
+
+        phone,
+        mobile: phone,
+        phoneNumber: phone,
+
+        village: form.village.trim(),
+        mandal: form.mandal.trim(),
+        district: form.district.trim(),
+        state: form.state.trim(),
+
+        mainCrop: form.mainCrop.trim(),
+        otherCrops: form.otherCrops.trim(),
+
+        landSize: form.landSize
+          ? Number(form.landSize)
+          : 0,
+
+        landUnit: form.landUnit,
+        irrigationType: form.irrigationType,
+        soilType: form.soilType,
+        preferredLanguage: form.preferredLanguage,
+
+        role: "farmer",
+        status: "active",
+
+        emailVerified: false,
+        profileCompleted: false,
+
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await set(
+        ref(database, `users/${createdUser.uid}`),
+        farmerData
       );
 
-      const userId = userCredential.user.uid;
+      try {
+        await sendEmailVerification(createdUser);
+      } catch (verificationError) {
+        console.error(
+          "Email verification error:",
+          verificationError
+        );
+      }
 
-    await set(ref(database, "users/" + userId), {
-  name: form.name,
-  email: form.email,
-  phone: form.phone,
-  village: form.village,
-  district: form.district,
-  state: form.state,
-  mainCrop: form.mainCrop,
-  role: "farmer",
-  createdAt: new Date().toISOString(),
-});
+      localStorage.setItem("role", "farmer");
 
-      navigate("/language");
+      navigate("/language", {
+        replace: true,
+      });
     } catch (error) {
-      setErrorMessage(getFriendlyError(error));
+      console.error("Farmer registration error:", error);
+
+      if (
+        createdUser &&
+        error?.code !== "auth/email-already-in-use"
+      ) {
+        try {
+          await deleteUser(createdUser);
+        } catch (cleanupError) {
+          console.error(
+            "Registration cleanup error:",
+            cleanupError
+          );
+        }
+      }
+
+      showMessage("error", getFriendlyError(error));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-6">
-        <h1 className="text-3xl font-bold text-green-700 text-center">
-          Create Farmer Account
-        </h1>
+    <div className="min-h-screen bg-gradient-to-b from-green-100 to-green-50 p-4 md:p-6">
+      <main className="max-w-3xl mx-auto">
+        <StatusMessage
+          message={message}
+          onClose={clearMessage}
+        />
 
-        <p className="text-gray-600 text-center mt-2 mb-6">
-          Enter farmer details
-        </p>
-
-        <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            name="name"
-            placeholder="Farmer name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="phone"
-            placeholder="Mobile number"
-            value={form.phone}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="village"
-            placeholder="Village"
-            value={form.village}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="district"
-            placeholder="District"
-            value={form.district}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="state"
-            placeholder="State"
-            value={form.state}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          <input
-            name="mainCrop"
-            placeholder="Main crop, example: Rice"
-            value={form.mainCrop}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {errorMessage}
+        <section className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          <header className="bg-gradient-to-r from-green-800 to-green-600 text-white p-6 text-center">
+            <div className="w-20 h-20 mx-auto rounded-full bg-white/20 flex items-center justify-center text-5xl">
+              👨‍🌾
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-700 text-white py-3 rounded-lg font-semibold disabled:bg-gray-400"
+            <h1 className="text-3xl font-bold mt-4">
+              Create Farmer Account
+            </h1>
+
+            <p className="text-green-100 mt-2">
+              Add personal and farm details for better services.
+            </p>
+          </header>
+
+          <form
+            onSubmit={handleRegister}
+            className="p-5 md:p-7 space-y-6"
           >
-            {loading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
+            <section>
+              <h2 className="text-lg font-bold text-green-900">
+                👤 Personal Details
+              </h2>
 
-        <button
-          type="button"
-          onClick={() => navigate("/login")}
-          className="w-full mt-4 text-green-700 font-semibold"
-        >
-          Already have account? Login
-        </button>
-      </div>
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label
+                    htmlFor="farmer-name"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Farmer Name
+                  </label>
+
+                  <input
+                    id="farmer-name"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Enter farmer name"
+                    autoComplete="name"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="farmer-phone"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Mobile Number
+                  </label>
+
+                  <input
+                    id="farmer-phone"
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength="10"
+                    value={form.phone}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="10-digit mobile number"
+                    autoComplete="tel"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="farmer-email"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Email Address
+                  </label>
+
+                  <input
+                    id="farmer-email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Enter email address"
+                    autoComplete="email"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="farmer-password"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Password
+                  </label>
+
+                  <div className="relative mt-1">
+                    <input
+                      id="farmer-password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange}
+                      disabled={loading}
+                      placeholder="Minimum 6 characters"
+                      autoComplete="new-password"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-20 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        setShowPassword((current) => !current)
+                      }
+                      className="absolute inset-y-0 right-3 text-sm font-semibold text-green-700 disabled:text-gray-400"
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="confirm-password"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Confirm Password
+                  </label>
+
+                  <div className="relative mt-1">
+                    <input
+                      id="confirm-password"
+                      name="confirmPassword"
+                      type={
+                        showConfirmPassword ? "text" : "password"
+                      }
+                      value={form.confirmPassword}
+                      onChange={handleChange}
+                      disabled={loading}
+                      placeholder="Re-enter password"
+                      autoComplete="new-password"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-20 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        setShowConfirmPassword(
+                          (current) => !current
+                        )
+                      }
+                      className="absolute inset-y-0 right-3 text-sm font-semibold text-green-700 disabled:text-gray-400"
+                    >
+                      {showConfirmPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t border-gray-100 pt-6">
+              <h2 className="text-lg font-bold text-green-900">
+                📍 Location Details
+              </h2>
+
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label
+                    htmlFor="farmer-village"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Village or Town
+                  </label>
+
+                  <input
+                    id="farmer-village"
+                    name="village"
+                    value={form.village}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Village or town"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="farmer-mandal"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Mandal or Taluk
+                  </label>
+
+                  <input
+                    id="farmer-mandal"
+                    name="mandal"
+                    value={form.mandal}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Mandal or taluk"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="farmer-district"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    District
+                  </label>
+
+                  <input
+                    id="farmer-district"
+                    name="district"
+                    value={form.district}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="District"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="farmer-state"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    State
+                  </label>
+
+                  <select
+                    id="farmer-state"
+                    name="state"
+                    value={form.state}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  >
+                    <option value="">Select state</option>
+
+                    {STATES.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t border-gray-100 pt-6">
+              <h2 className="text-lg font-bold text-green-900">
+                🌾 Farm Details
+              </h2>
+
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label
+                    htmlFor="main-crop"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Main Crop
+                  </label>
+
+                  <select
+                    id="main-crop"
+                    name="mainCrop"
+                    value={form.mainCrop}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  >
+                    <option value="">Select main crop</option>
+
+                    {CROPS.map((crop) => (
+                      <option key={crop} value={crop}>
+                        {crop}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="other-crops"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Other Crops
+                  </label>
+
+                  <input
+                    id="other-crops"
+                    name="otherCrops"
+                    value={form.otherCrops}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="Example: Maize, chilli"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="land-size"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Land Size
+                  </label>
+
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      id="land-size"
+                      name="landSize"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.landSize}
+                      onChange={handleChange}
+                      disabled={loading}
+                      placeholder="Land size"
+                      className="min-w-0 flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                    />
+
+                    <select
+                      name="landUnit"
+                      value={form.landUnit}
+                      onChange={handleChange}
+                      disabled={loading}
+                      className="border border-gray-300 rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                    >
+                      <option value="acres">Acres</option>
+                      <option value="hectares">Hectares</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="irrigation-type"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Irrigation Type
+                  </label>
+
+                  <select
+                    id="irrigation-type"
+                    name="irrigationType"
+                    value={form.irrigationType}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  >
+                    <option value="">Select irrigation</option>
+                    <option value="Rainfed">Rainfed</option>
+                    <option value="Borewell">Borewell</option>
+                    <option value="Canal">Canal</option>
+                    <option value="Drip">Drip</option>
+                    <option value="Sprinkler">Sprinkler</option>
+                    <option value="Tank">Tank</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="soil-type"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Soil Type
+                  </label>
+
+                  <select
+                    id="soil-type"
+                    name="soilType"
+                    value={form.soilType}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  >
+                    <option value="">Select soil type</option>
+                    <option value="Black Soil">Black Soil</option>
+                    <option value="Red Soil">Red Soil</option>
+                    <option value="Sandy Soil">Sandy Soil</option>
+                    <option value="Loamy Soil">Loamy Soil</option>
+                    <option value="Clay Soil">Clay Soil</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="preferred-language"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Preferred Language
+                  </label>
+
+                  <select
+                    id="preferred-language"
+                    name="preferredLanguage"
+                    value={form.preferredLanguage}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  >
+                    <option value="English">English</option>
+                    <option value="Telugu">Telugu</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Kannada">Kannada</option>
+                    <option value="Malayalam">Malayalam</option>
+                    <option value="Marathi">Marathi</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="Gujarati">Gujarati</option>
+                    <option value="Punjabi">Punjabi</option>
+                    <option value="Urdu">Urdu</option>
+                    <option value="Odia">Odia</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-4 text-sm">
+              A verification link will be sent to the registered
+              email address.
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  Creating Account...
+                </span>
+              ) : (
+                "Create Farmer Account"
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => navigate("/login")}
+              className="w-full border border-green-200 bg-green-50 text-green-800 py-3 rounded-xl font-semibold disabled:opacity-50"
+            >
+              Already Have an Account? Login
+            </button>
+          </form>
+        </section>
+      </main>
     </div>
   );
 }

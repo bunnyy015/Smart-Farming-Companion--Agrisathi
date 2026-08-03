@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
   get,
@@ -8,6 +9,7 @@ import {
   ref,
   update,
 } from "firebase/database";
+
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 
@@ -18,19 +20,145 @@ const FILTERS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const ACTIVE_STATUSES = [
+  "pending",
+  "accepted",
+  "delivered_by_dealer",
+  "received_by_farmer",
+  "payment_received",
+];
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Date unavailable";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return date.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function getStatusDetails(status) {
+  const statuses = {
+    pending: {
+      icon: "⏳",
+      label: "Waiting for Dealer",
+      className: "bg-yellow-100 text-yellow-800",
+      progress: 15,
+      message: "The dealer has not responded yet.",
+    },
+
+    accepted: {
+      icon: "✅",
+      label: "Dealer Accepted",
+      className: "bg-blue-100 text-blue-800",
+      progress: 40,
+      message: "The dealer is preparing your order.",
+    },
+
+    delivered_by_dealer: {
+      icon: "🚚",
+      label: "Marked Delivered",
+      className: "bg-purple-100 text-purple-800",
+      progress: 70,
+      message: "Confirm only after receiving the product.",
+    },
+
+    received_by_farmer: {
+      icon: "📦",
+      label: "Product Received",
+      className: "bg-indigo-100 text-indigo-800",
+      progress: 85,
+      message: "Waiting for the dealer to confirm payment.",
+    },
+
+    payment_received: {
+      icon: "💵",
+      label: "Payment Confirmed",
+      className: "bg-orange-100 text-orange-800",
+      progress: 95,
+      message: "The order is almost complete.",
+    },
+
+    completed: {
+      icon: "🎉",
+      label: "Completed",
+      className: "bg-green-100 text-green-800",
+      progress: 100,
+      message: "The order was completed successfully.",
+    },
+
+    rejected: {
+      icon: "❌",
+      label: "Rejected",
+      className: "bg-red-100 text-red-800",
+      progress: 0,
+      message: "The dealer could not accept this request.",
+    },
+
+    cancelled: {
+      icon: "🚫",
+      label: "Cancelled",
+      className: "bg-gray-100 text-gray-700",
+      progress: 0,
+      message: "This order request was cancelled.",
+    },
+  };
+
+  return (
+    statuses[status] || {
+      icon: "ℹ️",
+      label: "Order Update",
+      className: "bg-gray-100 text-gray-700",
+      progress: 0,
+      message: "Check the latest order information.",
+    }
+  );
+}
+
 export default function FarmerOrdersPage() {
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+
   const [confirmation, setConfirmation] = useState(null);
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        navigate("/login", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      await loadOrders(user.uid);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const filteredOrders = useMemo(() => {
     if (selectedFilter === "all") {
@@ -39,13 +167,7 @@ export default function FarmerOrdersPage() {
 
     if (selectedFilter === "active") {
       return orders.filter((order) =>
-        [
-          "pending",
-          "accepted",
-          "delivered_by_dealer",
-          "received_by_farmer",
-          "payment_received",
-        ].includes(order.status)
+        ACTIVE_STATUSES.includes(order.status)
       );
     }
 
@@ -60,6 +182,25 @@ export default function FarmerOrdersPage() {
     );
   }, [orders, selectedFilter]);
 
+  const counts = useMemo(
+    () => ({
+      all: orders.length,
+
+      active: orders.filter((order) =>
+        ACTIVE_STATUSES.includes(order.status)
+      ).length,
+
+      completed: orders.filter(
+        (order) => order.status === "completed"
+      ).length,
+
+      cancelled: orders.filter((order) =>
+        ["cancelled", "rejected"].includes(order.status)
+      ).length,
+    }),
+    [orders]
+  );
+
   function showMessage(type, text) {
     setMessage({ type, text });
 
@@ -68,21 +209,33 @@ export default function FarmerOrdersPage() {
     }, 5000);
   }
 
-  async function loadOrders() {
-    setLoading(true);
+  async function loadOrders(uid, isRefresh = false) {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
     try {
-      const currentUser = auth.currentUser;
+      const profileSnapshot = await get(
+        ref(database, `users/${uid}`)
+      );
 
-      if (!currentUser) {
-        navigate("/login", { replace: true });
+      if (
+        !profileSnapshot.exists() ||
+        profileSnapshot.val().role !== "farmer"
+      ) {
+        navigate("/role-selection", {
+          replace: true,
+        });
+
         return;
       }
 
       const ordersQuery = query(
         ref(database, "dealerOrders"),
         orderByChild("farmerUid"),
-        equalTo(currentUser.uid)
+        equalTo(uid)
       );
 
       const snapshot = await get(ordersQuery);
@@ -99,8 +252,16 @@ export default function FarmerOrdersPage() {
         }))
         .sort(
           (first, second) =>
-            new Date(second.createdAt || 0) -
-            new Date(first.createdAt || 0)
+            new Date(
+              second.updatedAt ||
+                second.createdAt ||
+                0
+            ) -
+            new Date(
+              first.updatedAt ||
+                first.createdAt ||
+                0
+            )
         );
 
       setOrders(orderList);
@@ -117,7 +278,22 @@ export default function FarmerOrdersPage() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }
+
+  async function refreshOrders() {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      navigate("/login", {
+        replace: true,
+      });
+
+      return;
+    }
+
+    await loadOrders(currentUser.uid, true);
   }
 
   function openConfirmation(type, order) {
@@ -137,8 +313,10 @@ export default function FarmerOrdersPage() {
     if (order.status !== "pending") {
       showMessage(
         "warning",
-        "Only pending orders can be cancelled."
+        "Only waiting orders can be cancelled."
       );
+
+      setConfirmation(null);
       return;
     }
 
@@ -158,15 +336,19 @@ export default function FarmerOrdersPage() {
       );
 
       setConfirmation(null);
-      showMessage("success", "Order request cancelled.");
 
-      await loadOrders();
+      showMessage(
+        "success",
+        "The order request was cancelled."
+      );
+
+      await refreshOrders();
     } catch (error) {
       console.error("Cancel order error:", error);
 
       showMessage(
         "error",
-        "Order could not be cancelled."
+        "The order could not be cancelled."
       );
     } finally {
       setUpdatingId("");
@@ -174,16 +356,13 @@ export default function FarmerOrdersPage() {
   }
 
   async function confirmProductReceived(order) {
-    if (
-      ![
-        "delivered_by_dealer",
-        "payment_received",
-      ].includes(order.status)
-    ) {
+    if (order.status !== "delivered_by_dealer") {
       showMessage(
         "warning",
         "The dealer must mark the order as delivered first."
       );
+
+      setConfirmation(null);
       return;
     }
 
@@ -197,11 +376,9 @@ export default function FarmerOrdersPage() {
         {
           farmerReceived: true,
           farmerReceivedAt: now,
-
           status: order.dealerPaymentReceived
             ? "payment_received"
             : "received_by_farmer",
-
           updatedAt: now,
         }
       );
@@ -210,13 +387,13 @@ export default function FarmerOrdersPage() {
 
       showMessage(
         "success",
-        "Product received confirmation sent to the dealer."
+        "Product receipt was confirmed."
       );
 
-      await loadOrders();
+      await refreshOrders();
     } catch (error) {
       console.error(
-        "Farmer delivery confirmation error:",
+        "Product receipt confirmation error:",
         error
       );
 
@@ -239,81 +416,10 @@ export default function FarmerOrdersPage() {
       return;
     }
 
-    if (confirmation.type === "received") {
-      confirmProductReceived(confirmation.order);
-    }
+    confirmProductReceived(confirmation.order);
   }
 
-  function getStatusDetails(status) {
-    const statuses = {
-      pending: {
-        icon: "⏳",
-        label: "Waiting for Dealer",
-        className: "bg-yellow-100 text-yellow-800",
-        progress: 20,
-      },
-
-      accepted: {
-        icon: "✅",
-        label: "Accepted by Dealer",
-        className: "bg-blue-100 text-blue-800",
-        progress: 45,
-      },
-
-      delivered_by_dealer: {
-        icon: "🚚",
-        label: "Delivered by Dealer",
-        className: "bg-purple-100 text-purple-800",
-        progress: 70,
-      },
-
-      received_by_farmer: {
-        icon: "📦",
-        label: "Product Received",
-        className: "bg-indigo-100 text-indigo-800",
-        progress: 85,
-      },
-
-      payment_received: {
-        icon: "💵",
-        label: "Payment Confirmed",
-        className: "bg-orange-100 text-orange-800",
-        progress: 90,
-      },
-
-      completed: {
-        icon: "🎉",
-        label: "Completed",
-        className: "bg-green-100 text-green-800",
-        progress: 100,
-      },
-
-      rejected: {
-        icon: "❌",
-        label: "Rejected by Dealer",
-        className: "bg-red-100 text-red-800",
-        progress: 0,
-      },
-
-      cancelled: {
-        icon: "🚫",
-        label: "Cancelled",
-        className: "bg-gray-100 text-gray-700",
-        progress: 0,
-      },
-    };
-
-    return (
-      statuses[status] || {
-        icon: "ℹ️",
-        label: status || "Pending",
-        className: "bg-gray-100 text-gray-700",
-        progress: 0,
-      }
-    );
-  }
-
-  function confirmationDetails() {
+  function getConfirmationDetails() {
     if (!confirmation) {
       return null;
     }
@@ -322,356 +428,439 @@ export default function FarmerOrdersPage() {
       return {
         icon: "🚫",
         title: "Cancel this order?",
-        text: "The dealer will no longer process this request.",
-        buttonText: "Cancel Order",
-        buttonClass: "bg-red-600 text-white",
+        text: "The dealer will stop processing this request.",
+        actionText: "Cancel Order",
+        actionClass: "bg-red-600 text-white",
       };
     }
 
     return {
       icon: "📦",
       title: "Did you receive the product?",
-      text: "Confirm only after the product has been delivered to you.",
-      buttonText: "Yes, I Received It",
-      buttonClass: "bg-green-700 text-white",
+      text: "Confirm only after checking the delivered product.",
+      actionText: "Yes, Product Received",
+      actionClass: "bg-green-700 text-white",
     };
   }
 
-  const confirmationInfo = confirmationDetails();
+  const confirmationDetails = getConfirmationDetails();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
-          <div className="text-5xl">🛒</div>
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto rounded-full border-4 border-green-200 border-t-green-700 animate-spin" />
 
-          <h1 className="text-xl font-bold text-green-900 mt-4">
-            Loading your orders
-          </h1>
+          <p className="font-semibold text-green-800 mt-4">
+            Loading your orders...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-green-50 pb-24">
+      <main className="w-full max-w-md mx-auto">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
-        {confirmation && confirmationInfo && (
-          <section className="bg-white border border-gray-200 rounded-2xl shadow-lg p-5 mb-5">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">
-                {confirmationInfo.icon}
-              </span>
-
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-gray-900">
-                  {confirmationInfo.title}
-                </h2>
-
-                <p className="text-sm text-gray-600 mt-1">
-                  {confirmationInfo.text}
-                </p>
-
-                <div className="bg-gray-50 rounded-xl p-3 mt-3">
-                  <p className="font-semibold text-green-900">
-                    {confirmation.order.productName}
-                  </p>
-
-                  <p className="text-sm text-gray-600 mt-1">
-                    {confirmation.order.quantity}{" "}
-                    {confirmation.order.unit || "units"} • ₹
-                    {Number(
-                      confirmation.order.totalAmount || 0
-                    ).toFixed(2)}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-3 mt-4">
-                  <button
-                    type="button"
-                    disabled={
-                      updatingId === confirmation.order.id
-                    }
-                    onClick={executeConfirmation}
-                    className={`${confirmationInfo.buttonClass} px-4 py-2.5 rounded-xl font-semibold disabled:bg-gray-400`}
-                  >
-                    {updatingId === confirmation.order.id
-                      ? "Please wait..."
-                      : confirmationInfo.buttonText}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={Boolean(updatingId)}
-                    onClick={closeConfirmation}
-                    className="border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50"
-                  >
-                    Go Back
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <header className="bg-gradient-to-r from-green-800 to-green-600 text-white rounded-2xl shadow p-5">
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard")}
-            className="text-green-100 font-semibold"
-          >
-            ← Dashboard
-          </button>
-
-          <div className="flex flex-wrap items-start justify-between gap-4 mt-3">
-            <div>
-              <h1 className="text-3xl font-bold">
-                🛒 My Orders
-              </h1>
-
-              <p className="text-green-100 mt-1">
-                Track requests, delivery and payment.
-              </p>
-            </div>
+        <header className="bg-gradient-to-br from-green-800 to-green-600 text-white rounded-b-3xl px-4 pt-5 pb-6 shadow-lg">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center"
+              aria-label="Back to dashboard"
+            >
+              ←
+            </button>
 
             <button
               type="button"
-              onClick={() =>
-                navigate("/farmer/dealer-products")
-              }
-              className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold"
+              disabled={refreshing}
+              onClick={refreshOrders}
+              className="bg-white/15 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
             >
-              Buy Products
+              {refreshing ? "Refreshing..." : "Refresh"}
             </button>
+          </div>
+
+          <div className="mt-5">
+            <p className="text-green-100 text-sm">
+              Farmer purchases
+            </p>
+
+            <h1 className="text-3xl font-bold mt-1">
+              🛒 My Orders
+            </h1>
+
+            <p className="text-green-100 text-sm mt-2">
+              Track dealer response, delivery and payment.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-5">
+            <div className="bg-white/15 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold">{counts.all}</p>
+              <p className="text-xs text-green-100 mt-1">
+                Total
+              </p>
+            </div>
+
+            <div className="bg-white/15 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold">
+                {counts.active}
+              </p>
+              <p className="text-xs text-green-100 mt-1">
+                Active
+              </p>
+            </div>
+
+            <div className="bg-white/15 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold">
+                {counts.completed}
+              </p>
+              <p className="text-xs text-green-100 mt-1">
+                Completed
+              </p>
+            </div>
           </div>
         </header>
 
-        <section className="flex gap-2 overflow-x-auto py-5">
-          {FILTERS.map((filter) => {
-            const active =
-              selectedFilter === filter.value;
+        <div className="px-4">
+          {confirmation && confirmationDetails && (
+            <section className="bg-white border-2 border-green-200 rounded-2xl shadow-lg p-4 mt-5">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">
+                  {confirmationDetails.icon}
+                </div>
 
-            return (
+                <div className="flex-1">
+                  <h2 className="font-bold text-lg text-gray-900">
+                    {confirmationDetails.title}
+                  </h2>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    {confirmationDetails.text}
+                  </p>
+
+                  <div className="bg-gray-50 rounded-xl p-3 mt-3">
+                    <p className="font-bold text-green-900">
+                      {confirmation.order.productName ||
+                        "Farm Product"}
+                    </p>
+
+                    <p className="text-sm text-gray-600 mt-1">
+                      {confirmation.order.quantity || 0}{" "}
+                      {confirmation.order.unit || "units"}
+                    </p>
+
+                    <p className="font-semibold mt-1">
+                      {formatMoney(
+                        confirmation.order.totalAmount
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <button
+                      type="button"
+                      disabled={
+                        updatingId === confirmation.order.id
+                      }
+                      onClick={executeConfirmation}
+                      className={`${confirmationDetails.actionClass} min-h-12 rounded-xl font-semibold disabled:bg-gray-400`}
+                    >
+                      {updatingId === confirmation.order.id
+                        ? "Please wait..."
+                        : confirmationDetails.actionText}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={Boolean(updatingId)}
+                      onClick={closeConfirmation}
+                      className="border border-gray-300 min-h-12 rounded-xl font-semibold disabled:opacity-50"
+                    >
+                      Go Back
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="flex gap-2 overflow-x-auto py-5">
+            {FILTERS.map((filter) => (
               <button
                 type="button"
                 key={filter.value}
                 onClick={() =>
                   setSelectedFilter(filter.value)
                 }
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
-                  active
+                className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
+                  selectedFilter === filter.value
                     ? "bg-green-700 text-white"
                     : "bg-white border border-green-200 text-green-800"
                 }`}
               >
-                {filter.label}
+                {filter.label} ({counts[filter.value]})
               </button>
-            );
-          })}
-        </section>
-
-        {filteredOrders.length === 0 ? (
-          <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="text-5xl">📦</div>
-
-            <h2 className="text-xl font-bold text-green-900 mt-4">
-              No orders found
-            </h2>
-
-            <p className="text-gray-600 mt-2">
-              Your product requests will appear here.
-            </p>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/farmer/dealer-products")
-              }
-              className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold mt-5"
-            >
-              View Products
-            </button>
+            ))}
           </section>
-        ) : (
-          <section className="space-y-4">
-            {filteredOrders.map((order) => {
-              const status = getStatusDetails(
-                order.status
-              );
 
-              const updating =
-                updatingId === order.id;
+          {filteredOrders.length === 0 ? (
+            <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
+              <div className="text-6xl">📦</div>
 
-              return (
-                <article
-                  key={order.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-green-900">
-                        {order.productName ||
-                          "Farm Product"}
-                      </h2>
+              <h2 className="text-xl font-bold text-green-900 mt-4">
+                No orders found
+              </h2>
 
-                      <p className="text-sm text-gray-500 mt-1">
-                        🏪 {order.dealerName || "Dealer"}
-                      </p>
+              <p className="text-gray-600 text-sm mt-2">
+                Product requests will appear here.
+              </p>
 
-                      <p className="text-sm text-gray-600 mt-2">
-                        📦 {order.quantity || 0}{" "}
-                        {order.unit || "units"}
-                      </p>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/farmer/dealer-products")
+                }
+                className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold mt-5"
+              >
+                View Dealer Products
+              </button>
+            </section>
+          ) : (
+            <section className="space-y-4">
+              {filteredOrders.map((order) => {
+                const status = getStatusDetails(order.status);
+                const updating = updatingId === order.id;
 
-                      <p className="font-bold text-gray-900 mt-1">
-                        ₹
-                        {Number(
-                          order.totalAmount || 0
-                        ).toFixed(2)}
-                      </p>
+                return (
+                  <article
+                    key={order.id}
+                    className="bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden"
+                  >
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="text-lg font-bold text-green-900 truncate">
+                            {order.productName || "Farm Product"}
+                          </h2>
 
-                      <p className="text-xs text-gray-500 mt-2">
-                        {order.createdAt
-                          ? new Date(
-                              order.createdAt
-                            ).toLocaleString()
-                          : ""}
-                      </p>
-                    </div>
+                          <p className="text-sm text-gray-500 mt-1 truncate">
+                            🏪 {order.dealerName || "Dealer"}
+                          </p>
+                        </div>
 
-                    <span
-                      className={`${status.className} px-3 py-1.5 rounded-full text-sm font-semibold self-start`}
-                    >
-                      {status.icon} {status.label}
-                    </span>
-                  </div>
-
-                  {![
-                    "rejected",
-                    "cancelled",
-                  ].includes(order.status) && (
-                    <div className="mt-5">
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-600 rounded-full transition-all"
-                          style={{
-                            width: `${status.progress}%`,
-                          }}
-                        />
+                        <span
+                          className={`${status.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold`}
+                        >
+                          {status.icon} {status.label}
+                        </span>
                       </div>
 
-                      <div className="grid grid-cols-4 text-center text-xs text-gray-500 mt-2">
-                        <span>Requested</span>
-                        <span>Accepted</span>
-                        <span>Delivered</span>
-                        <span>Completed</span>
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-green-50 rounded-xl p-3">
+                          <p className="text-xs text-gray-500">
+                            Quantity
+                          </p>
+
+                          <p className="font-bold text-green-900 mt-1">
+                            {order.quantity || 0}{" "}
+                            {order.unit || "units"}
+                          </p>
+                        </div>
+
+                        <div className="bg-blue-50 rounded-xl p-3">
+                          <p className="text-xs text-gray-500">
+                            Total Amount
+                          </p>
+
+                          <p className="font-bold text-blue-900 mt-1">
+                            {formatMoney(order.totalAmount)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <div className="flex justify-between text-xs text-gray-500 mb-2">
+                          <span>Order progress</span>
+                          <span>{status.progress}%</span>
+                        </div>
+
+                        <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-600 rounded-full"
+                            style={{
+                              width: `${status.progress}%`,
+                            }}
+                          />
+                        </div>
+
+                        <p className="text-sm text-gray-600 mt-2">
+                          {status.message}
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-3 mt-4">
+                        <p className="text-xs text-gray-500">
+                          Ordered on
+                        </p>
+
+                        <p className="text-sm font-semibold mt-1">
+                          {formatDate(order.createdAt)}
+                        </p>
+                      </div>
+
+                      {order.deliveryAddress && (
+                        <div className="bg-gray-50 rounded-xl p-3 mt-3">
+                          <p className="text-xs text-gray-500">
+                            Delivery address
+                          </p>
+
+                          <p className="text-sm font-semibold mt-1">
+                            {order.deliveryAddress}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="space-y-3 mt-4">
+                        {order.dealerPhone &&
+                          ![
+                            "cancelled",
+                            "rejected",
+                            "completed",
+                          ].includes(order.status) && (
+                            <a
+                              href={`tel:${order.dealerPhone}`}
+                              className="w-full border border-blue-200 bg-blue-50 text-blue-700 min-h-12 rounded-xl font-semibold flex items-center justify-center"
+                            >
+                              📞 Call Dealer
+                            </a>
+                          )}
+
+                        {order.status === "pending" && (
+                          <button
+                            type="button"
+                            disabled={updating}
+                            onClick={() =>
+                              openConfirmation("cancel", order)
+                            }
+                            className="w-full border border-red-500 text-red-700 min-h-12 rounded-xl font-semibold disabled:opacity-50"
+                          >
+                            Cancel Order
+                          </button>
+                        )}
+
+                        {order.status ===
+                          "delivered_by_dealer" &&
+                          !order.farmerReceived && (
+                            <button
+                              type="button"
+                              disabled={updating}
+                              onClick={() =>
+                                openConfirmation("received", order)
+                              }
+                              className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold disabled:bg-gray-400"
+                            >
+                              📦 I Received the Product
+                            </button>
+                          )}
+
+                        {order.status === "completed" && (
+                          <div className="bg-green-50 text-green-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                            ✅ Order Completed
+                          </div>
+                        )}
+
+                        {order.status === "rejected" && (
+                          <div className="bg-red-50 text-red-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                            ❌ Rejected by Dealer
+                          </div>
+                        )}
+
+                        {order.status === "cancelled" && (
+                          <div className="bg-gray-100 text-gray-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                            🚫 Order Cancelled
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </article>
+                );
+              })}
+            </section>
+          )}
+        </div>
 
-                  <div className="grid sm:grid-cols-2 gap-3 mt-5 text-sm">
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-gray-500">
-                        Payment
-                      </p>
+        <nav className="fixed bottom-0 left-0 right-0 z-40">
+          <div className="max-w-md mx-auto bg-white border-t border-gray-200 shadow-2xl px-2 py-2">
+            <div className="grid grid-cols-5">
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard")}
+                className="flex flex-col items-center py-2 text-gray-600"
+              >
+                <span className="text-xl">🏠</span>
+                <span className="text-[11px] font-semibold mt-1">
+                  Home
+                </span>
+              </button>
 
-                      <p className="font-semibold mt-1">
-                        {order.paymentMode ||
-                          "Cash on Delivery"}
-                      </p>
-                    </div>
+              <button
+                type="button"
+                className="flex flex-col items-center py-2 text-green-700"
+              >
+                <span className="text-xl">🛒</span>
+                <span className="text-[11px] font-semibold mt-1">
+                  Orders
+                </span>
+              </button>
 
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-gray-500">
-                        Delivery Address
-                      </p>
+              <button
+                type="button"
+                onClick={() => navigate("/farmer/voice")}
+                className="flex flex-col items-center"
+              >
+                <span className="w-14 h-14 -mt-8 rounded-full bg-green-700 text-white flex items-center justify-center text-2xl shadow-lg border-4 border-green-50">
+                  🎤
+                </span>
 
-                      <p className="font-semibold mt-1">
-                        {order.deliveryAddress ||
-                          "Address not added"}
-                      </p>
-                    </div>
-                  </div>
+                <span className="text-[11px] font-semibold text-green-700 mt-1">
+                  Voice
+                </span>
+              </button>
 
-                  <div className="flex flex-wrap gap-3 mt-5">
-                    {order.dealerPhone &&
-                      ![
-                        "rejected",
-                        "cancelled",
-                      ].includes(order.status) && (
-                        <a
-                          href={`tel:${order.dealerPhone}`}
-                          className="border border-blue-200 bg-blue-50 text-blue-700 px-4 py-2.5 rounded-xl font-semibold"
-                        >
-                          📞 Call Dealer
-                        </a>
-                      )}
+              <button
+                type="button"
+                onClick={() => navigate("/community")}
+                className="flex flex-col items-center py-2 text-gray-600"
+              >
+                <span className="text-xl">👥</span>
+                <span className="text-[11px] font-semibold mt-1">
+                  Community
+                </span>
+              </button>
 
-                    {order.status === "pending" && (
-                      <button
-                        type="button"
-                        disabled={updating}
-                        onClick={() =>
-                          openConfirmation(
-                            "cancel",
-                            order
-                          )
-                        }
-                        className="border border-red-600 text-red-700 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50"
-                      >
-                        Cancel Order
-                      </button>
-                    )}
-
-                    {[
-                      "delivered_by_dealer",
-                      "payment_received",
-                    ].includes(order.status) &&
-                      !order.farmerReceived && (
-                        <button
-                          type="button"
-                          disabled={updating}
-                          onClick={() =>
-                            openConfirmation(
-                              "received",
-                              order
-                            )
-                          }
-                          className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold disabled:bg-gray-400"
-                        >
-                          I Received Product
-                        </button>
-                      )}
-
-                    {order.status === "completed" && (
-                      <span className="bg-green-50 text-green-700 px-4 py-2.5 rounded-xl font-bold">
-                        ✅ Order Completed
-                      </span>
-                    )}
-
-                    {order.status === "rejected" && (
-                      <span className="bg-red-50 text-red-700 px-4 py-2.5 rounded-xl font-bold">
-                        Rejected by Dealer
-                      </span>
-                    )}
-
-                    {order.status === "cancelled" && (
-                      <span className="bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl font-bold">
-                        Order Cancelled
-                      </span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={() => navigate("/profile")}
+                className="flex flex-col items-center py-2 text-gray-600"
+              >
+                <span className="text-xl">👤</span>
+                <span className="text-[11px] font-semibold mt-1">
+                  Profile
+                </span>
+              </button>
+            </div>
+          </div>
+        </nav>
+      </main>
     </div>
   );
 }
