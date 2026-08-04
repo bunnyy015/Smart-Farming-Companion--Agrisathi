@@ -54,7 +54,6 @@ function normalizeText(value) {
 
 function normalizeStateName(value) {
   const normalized = normalizeText(value);
-
   return STATE_NAMES[normalized] || String(value || "").trim();
 }
 
@@ -90,6 +89,7 @@ function getCropCategory(commodity) {
     "rice",
     "wheat",
     "maize",
+    "corn",
     "jowar",
     "bajra",
     "ragi",
@@ -122,6 +122,7 @@ function getCropCategory(commodity) {
     "carrot",
     "beans",
     "chilli",
+    "chili",
     "cucumber",
     "okra",
     "ladies finger",
@@ -197,17 +198,12 @@ function getCropCategory(commodity) {
   return "other";
 }
 
-function getCommodityIcon(commodity) {
-  return CATEGORY_ICONS[getCropCategory(commodity)] || "🌱";
-}
-
 function parseArrivalDate(value) {
   if (!value) {
     return 0;
   }
 
   const text = String(value).trim();
-
   const parts = text.split(/[/-]/);
 
   if (parts.length === 3) {
@@ -232,7 +228,6 @@ function parseArrivalDate(value) {
   }
 
   const timestamp = new Date(text).getTime();
-
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
@@ -245,12 +240,10 @@ function calculateDistance(
   const earthRadius = 6371;
 
   const latitudeDifference =
-    ((secondLatitude - firstLatitude) * Math.PI) /
-    180;
+    ((secondLatitude - firstLatitude) * Math.PI) / 180;
 
   const longitudeDifference =
-    ((secondLongitude - firstLongitude) * Math.PI) /
-    180;
+    ((secondLongitude - firstLongitude) * Math.PI) / 180;
 
   const firstLatitudeRadians =
     (firstLatitude * Math.PI) / 180;
@@ -303,10 +296,7 @@ function buildGovernmentMandiUrl({
     );
   }
 
-  return (
-    `https://api.data.gov.in/resource/` +
-    `${MANDI_RESOURCE_ID}?${parameters.toString()}`
-  );
+  return `https://api.data.gov.in/resource/${MANDI_RESOURCE_ID}?${parameters.toString()}`;
 }
 
 async function fetchGovernmentRecords({
@@ -333,11 +323,228 @@ async function fetchGovernmentRecords({
     : [];
 }
 
+function svgToDataUri(svg) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function buildCircleImage(background, inner) {
+  return svgToDataUri(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="24" fill="${background}" />
+      ${inner}
+    </svg>
+  `);
+}
+
+const CROP_IMAGES = {
+  paddy: buildCircleImage(
+    "#fef3c7",
+    `
+      <rect x="0" y="80" width="120" height="40" fill="#86efac"/>
+      <path d="M58 18 L58 88" stroke="#65a30d" stroke-width="4" stroke-linecap="round"/>
+      <path d="M58 32 C44 22, 36 20, 28 28" stroke="#84cc16" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M58 44 C72 34, 82 30, 92 38" stroke="#84cc16" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M58 54 C42 48, 34 48, 24 58" stroke="#84cc16" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M58 62 C72 56, 84 58, 94 66" stroke="#84cc16" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="73" cy="27" r="3" fill="#facc15"/>
+      <circle cx="77" cy="31" r="3" fill="#facc15"/>
+      <circle cx="80" cy="35" r="3" fill="#facc15"/>
+      <circle cx="84" cy="39" r="3" fill="#facc15"/>
+      <circle cx="87" cy="43" r="3" fill="#facc15"/>
+      <circle cx="70" cy="34" r="3" fill="#facc15"/>
+      <circle cx="74" cy="38" r="3" fill="#facc15"/>
+      <circle cx="78" cy="42" r="3" fill="#facc15"/>
+    `
+  ),
+
+  tomato: buildCircleImage(
+    "#fee2e2",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <circle cx="60" cy="58" r="24" fill="#ef4444"/>
+      <path d="M60 34 L66 42 L76 40 L72 50 L80 58 L68 58 L60 68 L52 58 L40 58 L48 50 L44 40 L54 42 Z" fill="#16a34a"/>
+      <rect x="58" y="22" width="4" height="14" rx="2" fill="#15803d"/>
+    `
+  ),
+
+  onion: buildCircleImage(
+    "#ede9fe",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <path d="M60 28 C78 44 82 54 82 68 C82 81 72 92 60 92 C48 92 38 81 38 68 C38 54 42 44 60 28 Z" fill="#a78bfa"/>
+      <path d="M60 28 C54 20 52 14 54 8" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M52 44 C58 54 58 74 52 86" stroke="#c4b5fd" stroke-width="3" fill="none"/>
+      <path d="M68 44 C62 54 62 74 68 86" stroke="#c4b5fd" stroke-width="3" fill="none"/>
+    `
+  ),
+
+  potato: buildCircleImage(
+    "#ffedd5",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <ellipse cx="60" cy="62" rx="28" ry="22" fill="#c2410c"/>
+      <circle cx="48" cy="58" r="2.5" fill="#7c2d12"/>
+      <circle cx="64" cy="50" r="2.5" fill="#7c2d12"/>
+      <circle cx="72" cy="66" r="2.5" fill="#7c2d12"/>
+      <circle cx="54" cy="72" r="2.5" fill="#7c2d12"/>
+    `
+  ),
+
+  chilli: buildCircleImage(
+    "#dcfce7",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <path d="M38 58 C46 38, 78 32, 84 56 C88 68, 80 82, 60 84 C42 86, 30 74, 38 58 Z" fill="#ef4444"/>
+      <path d="M34 54 C38 48, 46 46, 52 48" stroke="#16a34a" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle cx="78" cy="56" r="4" fill="#fca5a5"/>
+    `
+  ),
+
+  maize: buildCircleImage(
+    "#fef9c3",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <ellipse cx="60" cy="56" rx="18" ry="28" fill="#facc15"/>
+      <path d="M44 54 C36 40, 34 34, 38 24 C48 32, 54 40, 56 52" fill="#16a34a"/>
+      <path d="M76 54 C84 40, 86 34, 82 24 C72 32, 66 40, 64 52" fill="#16a34a"/>
+      <g fill="#fde047">
+        <circle cx="54" cy="42" r="3"/>
+        <circle cx="60" cy="42" r="3"/>
+        <circle cx="66" cy="42" r="3"/>
+        <circle cx="54" cy="50" r="3"/>
+        <circle cx="60" cy="50" r="3"/>
+        <circle cx="66" cy="50" r="3"/>
+        <circle cx="54" cy="58" r="3"/>
+        <circle cx="60" cy="58" r="3"/>
+        <circle cx="66" cy="58" r="3"/>
+        <circle cx="54" cy="66" r="3"/>
+        <circle cx="60" cy="66" r="3"/>
+        <circle cx="66" cy="66" r="3"/>
+      </g>
+    `
+  ),
+
+  cotton: buildCircleImage(
+    "#eff6ff",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <path d="M60 28 L60 88" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+      <path d="M60 44 C48 36, 44 34, 38 38" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M60 54 C72 46, 78 44, 84 48" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="44" cy="38" r="11" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+      <circle cx="76" cy="48" r="11" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+      <circle cx="60" cy="62" r="13" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+    `
+  ),
+
+  banana: buildCircleImage(
+    "#fef3c7",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <path d="M38 66 C44 38, 70 26, 88 28 C84 58, 62 78, 44 78 C40 78, 38 74, 38 66 Z" fill="#facc15"/>
+      <path d="M42 66 C50 46, 68 36, 82 36" stroke="#fde68a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <rect x="84" y="27" width="6" height="8" rx="3" fill="#16a34a"/>
+    `
+  ),
+
+  turmeric: buildCircleImage(
+    "#fef3c7",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <ellipse cx="48" cy="62" rx="12" ry="18" fill="#f59e0b"/>
+      <ellipse cx="62" cy="56" rx="11" ry="16" fill="#f59e0b"/>
+      <ellipse cx="74" cy="64" rx="10" ry="14" fill="#f59e0b"/>
+      <path d="M60 24 L60 50" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+      <path d="M60 26 C48 18, 42 16, 36 20" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M60 30 C72 20, 80 18, 88 22" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round"/>
+    `
+  ),
+
+  generic: buildCircleImage(
+    "#dcfce7",
+    `
+      <rect x="0" y="84" width="120" height="36" fill="#86efac"/>
+      <path d="M60 26 C74 38, 80 52, 76 66 C72 80, 52 84, 44 70 C38 60, 44 40, 60 26 Z" fill="#22c55e"/>
+      <path d="M60 32 C56 46, 54 60, 54 74" stroke="#15803d" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M58 48 C68 44, 74 40, 78 34" stroke="#15803d" stroke-width="3" fill="none" stroke-linecap="round"/>
+    `
+  ),
+};
+
+function getCropImage(commodity) {
+  const value = normalizeText(commodity);
+
+  if (value.includes("paddy") || value.includes("rice")) {
+    return CROP_IMAGES.paddy;
+  }
+
+  if (value.includes("tomato")) {
+    return CROP_IMAGES.tomato;
+  }
+
+  if (value.includes("onion")) {
+    return CROP_IMAGES.onion;
+  }
+
+  if (value.includes("potato")) {
+    return CROP_IMAGES.potato;
+  }
+
+  if (
+    value.includes("chilli") ||
+    value.includes("chili")
+  ) {
+    return CROP_IMAGES.chilli;
+  }
+
+  if (
+    value.includes("maize") ||
+    value.includes("corn")
+  ) {
+    return CROP_IMAGES.maize;
+  }
+
+  if (value.includes("cotton")) {
+    return CROP_IMAGES.cotton;
+  }
+
+  if (value.includes("banana")) {
+    return CROP_IMAGES.banana;
+  }
+
+  if (value.includes("turmeric")) {
+    return CROP_IMAGES.turmeric;
+  }
+
+  const category = getCropCategory(commodity);
+
+  if (category === "cereals") {
+    return CROP_IMAGES.paddy;
+  }
+
+  if (category === "vegetables") {
+    return CROP_IMAGES.tomato;
+  }
+
+  if (category === "fruits") {
+    return CROP_IMAGES.banana;
+  }
+
+  if (category === "spices") {
+    return CROP_IMAGES.turmeric;
+  }
+
+  if (category === "fibre") {
+    return CROP_IMAGES.cotton;
+  }
+
+  return CROP_IMAGES.generic;
+}
+
 export default function MarketPricesPage() {
   const navigate = useNavigate();
 
   const [farmer, setFarmer] = useState(null);
-
   const [location, setLocation] = useState(null);
   const [detectedPlace, setDetectedPlace] =
     useState(null);
@@ -349,13 +556,10 @@ export default function MarketPricesPage() {
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState("all");
-
   const [selectedDistrict, setSelectedDistrict] =
     useState("");
-
   const [selectedMarket, setSelectedMarket] =
     useState("");
-
   const [sortMode, setSortMode] =
     useState("latest");
 
@@ -450,9 +654,7 @@ export default function MarketPricesPage() {
 
     return [...results].sort((first, second) => {
       if (sortMode === "highest") {
-        return (
-          second.modalPrice - first.modalPrice
-        );
+        return second.modalPrice - first.modalPrice;
       }
 
       if (sortMode === "lowest") {
@@ -488,7 +690,6 @@ export default function MarketPricesPage() {
       if (!cropMap.has(key)) {
         cropMap.set(key, {
           commodity: item.commodity,
-          icon: item.icon,
           category: item.category,
           records: [],
         });
@@ -519,13 +720,15 @@ export default function MarketPricesPage() {
 
         const average =
           records.reduce(
-            (sum, item) =>
-              sum + item.modalPrice,
+            (sum, item) => sum + item.modalPrice,
             0
           ) / records.length;
 
         return {
           ...group,
+          image: getCropImage(group.commodity),
+          icon:
+            CATEGORY_ICONS[group.category] || "🌱",
           highest,
           lowest,
           average,
@@ -535,9 +738,7 @@ export default function MarketPricesPage() {
         };
       })
       .sort((first, second) =>
-        first.commodity.localeCompare(
-          second.commodity
-        )
+        first.commodity.localeCompare(second.commodity)
       );
   }, [filteredPrices]);
 
@@ -558,17 +759,6 @@ export default function MarketPricesPage() {
       )
     ).size;
 
-    const highestRecord =
-      filteredPrices.length > 0
-        ? filteredPrices.reduce(
-            (best, item) =>
-              item.modalPrice > best.modalPrice
-                ? item
-                : best,
-            filteredPrices[0]
-          )
-        : null;
-
     const averagePrice =
       allModalPrices.length > 0
         ? allModalPrices.reduce(
@@ -580,7 +770,6 @@ export default function MarketPricesPage() {
     return {
       crops: uniqueCrops,
       markets: uniqueMarkets,
-      highestRecord,
       averagePrice,
     };
   }, [filteredPrices]);
@@ -604,13 +793,15 @@ export default function MarketPricesPage() {
         return;
       }
 
-      const profileSnapshot = await get(
-        ref(database, `users/${currentUser.uid}`)
-      );
+      const [userSnapshot, farmerSnapshot] =
+        await Promise.all([
+          get(ref(database, `users/${currentUser.uid}`)),
+          get(ref(database, `farmers/${currentUser.uid}`)),
+        ]);
 
       if (
-        !profileSnapshot.exists() ||
-        profileSnapshot.val().role !== "farmer"
+        !userSnapshot.exists() ||
+        userSnapshot.val().role !== "farmer"
       ) {
         navigate("/role-selection", {
           replace: true,
@@ -620,7 +811,11 @@ export default function MarketPricesPage() {
 
       const farmerProfile = {
         uid: currentUser.uid,
-        ...profileSnapshot.val(),
+        ...userSnapshot.val(),
+        ...(farmerSnapshot.exists()
+          ? farmerSnapshot.val()
+          : {}),
+        role: userSnapshot.val().role,
       };
 
       setFarmer(farmerProfile);
@@ -649,7 +844,6 @@ export default function MarketPricesPage() {
     if (!navigator.geolocation) {
       const profileState =
         farmerProfile?.state || "";
-
       const profileDistrict =
         farmerProfile?.district || "";
 
@@ -703,7 +897,6 @@ export default function MarketPricesPage() {
               state,
               district,
             }),
-
             loadNearbySellingPoints(
               currentLocation
             ),
@@ -736,11 +929,9 @@ export default function MarketPricesPage() {
           setLoading(false);
         }
       },
-
       async () => {
         const profileState =
           farmerProfile?.state || "";
-
         const profileDistrict =
           farmerProfile?.district || "";
 
@@ -759,7 +950,6 @@ export default function MarketPricesPage() {
         setDetectingLocation(false);
         setLoading(false);
       },
-
       {
         enableHighAccuracy: true,
         timeout: 15000,
@@ -827,21 +1017,19 @@ export default function MarketPricesPage() {
         farmer?.mandal ||
         "",
 
-      district:
-        normalizeDistrictName(
-          findAdministrative(["district"]) ||
-            result.city ||
-            farmer?.district ||
-            ""
-        ),
+      district: normalizeDistrictName(
+        findAdministrative(["district"]) ||
+          result.city ||
+          farmer?.district ||
+          ""
+      ),
 
-      state:
-        normalizeStateName(
-          result.principalSubdivision ||
-            findAdministrative(["state"]) ||
-            farmer?.state ||
-            ""
-        ),
+      state: normalizeStateName(
+        result.principalSubdivision ||
+          findAdministrative(["state"]) ||
+          farmer?.state ||
+          ""
+      ),
 
       postcode: result.postcode || "",
       country: result.countryName || "",
@@ -971,7 +1159,11 @@ export default function MarketPricesPage() {
             category:
               getCropCategory(commodity),
 
-            icon: getCommodityIcon(commodity),
+            image: getCropImage(commodity),
+            icon:
+              CATEGORY_ICONS[
+                getCropCategory(commodity)
+              ] || "🌱",
           };
         })
         .filter(
@@ -991,7 +1183,6 @@ export default function MarketPricesPage() {
               normalizeText(record.variety),
               record.arrivalDate,
             ].join("|"),
-
             record,
           ])
         ).values()
@@ -1043,7 +1234,6 @@ export default function MarketPricesPage() {
         "warning",
         "Location is required to search nearby selling points."
       );
-
       return;
     }
 
@@ -1095,9 +1285,7 @@ out center tags;
 
       const result = await response.json();
 
-      const prepared = (
-        result?.elements || []
-      )
+      const prepared = (result?.elements || [])
         .map((element) => {
           const pointLatitude =
             element.lat ||
@@ -1107,27 +1295,22 @@ out center tags;
             element.lon ||
             element.center?.lon;
 
-          if (
-            !pointLatitude ||
-            !pointLongitude
-          ) {
+          if (!pointLatitude || !pointLongitude) {
             return null;
           }
 
           const tags = element.tags || {};
-
           const name =
             tags.name ||
             tags["name:en"] ||
             "Nearby Selling Point";
 
-          const distance =
-            calculateDistance(
-              latitude,
-              longitude,
-              pointLatitude,
-              pointLongitude
-            );
+          const distance = calculateDistance(
+            latitude,
+            longitude,
+            pointLatitude,
+            pointLongitude
+          );
 
           let type = "Market";
 
@@ -1228,7 +1411,6 @@ out center tags;
   function openGeneralMapSearch() {
     const crop =
       farmer?.mainCrop || "crop";
-
     const area =
       detectedPlace?.district ||
       farmer?.district ||
@@ -1334,9 +1516,7 @@ out center tags;
     return (
       <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
-          <div className="text-5xl">
-            📈
-          </div>
+          <div className="text-5xl">📈</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
             {detectingLocation
@@ -1349,7 +1529,7 @@ out center tags;
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="min-h-screen bg-green-50 p-4">
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}
@@ -1367,15 +1547,14 @@ out center tags;
             ← Dashboard
           </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-3">
+          <div className="flex flex-col gap-4 mt-3">
             <div>
               <h1 className="text-3xl font-bold">
                 📈 Local Crop Prices
               </h1>
 
               <p className="text-green-100 mt-1">
-                Government mandi prices for all
-                available crops.
+                Government mandi prices with crop images for easy farmer understanding.
               </p>
             </div>
 
@@ -1387,7 +1566,7 @@ out center tags;
                   farmer
                 )
               }
-              className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60"
+              className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60 self-start"
             >
               {detectingLocation
                 ? "Detecting..."
@@ -1417,7 +1596,7 @@ out center tags;
           </div>
         </header>
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+        <section className="grid grid-cols-2 gap-4 mt-5">
           <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
             <p className="text-sm text-gray-500">
               Crops
@@ -1453,7 +1632,7 @@ out center tags;
               Average Price
             </p>
 
-            <p className="text-xl font-bold text-orange-800 mt-2">
+            <p className="text-lg font-bold text-orange-800 mt-2">
               {formatCurrency(
                 overallStatistics.averagePrice
               )}
@@ -1467,28 +1646,34 @@ out center tags;
 
         {farmer?.mainCrop && (
           <section className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mt-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
+            <div className="flex items-center gap-3">
+              <img
+                src={getCropImage(farmer.mainCrop)}
+                alt={farmer.mainCrop}
+                className="w-14 h-14 rounded-xl object-cover bg-white border border-yellow-200"
+              />
+
+              <div className="flex-1">
                 <p className="text-sm text-yellow-800">
                   Your main crop
                 </p>
 
                 <h2 className="text-xl font-bold text-yellow-900 mt-1">
-                  🌾 {farmer.mainCrop}
+                  {farmer.mainCrop}
                 </h2>
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchText(farmer.mainCrop);
-                  setSelectedCategory("all");
-                }}
-                className="bg-yellow-700 text-white px-4 py-2.5 rounded-xl font-semibold self-start"
-              >
-                Show Prices
-              </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchText(farmer.mainCrop);
+                setSelectedCategory("all");
+              }}
+              className="bg-yellow-700 text-white px-4 py-2.5 rounded-xl font-semibold mt-4 w-full"
+            >
+              Show Prices
+            </button>
           </section>
         )}
 
@@ -1511,21 +1696,37 @@ out center tags;
             className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2 outline-none focus:ring-2 focus:ring-green-600"
           />
 
-          <div className="grid sm:grid-cols-3 gap-3 mt-4">
+          <div className="flex gap-2 overflow-x-auto mt-4 pb-1">
+            {categories.map((category) => (
+              <button
+                type="button"
+                key={category.value}
+                onClick={() =>
+                  setSelectedCategory(category.value)
+                }
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
+                  selectedCategory === category.value
+                    ? "bg-green-700 text-white"
+                    : "bg-green-50 text-green-800 border border-green-200"
+                }`}
+              >
+                {category.icon} {category.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3 mt-4">
             <select
               value={selectedDistrict}
               onChange={(event) => {
                 setSelectedDistrict(
                   event.target.value
                 );
-
                 setSelectedMarket("");
               }}
               className="border border-gray-300 rounded-xl px-4 py-3"
             >
-              <option value="">
-                All Districts
-              </option>
+              <option value="">All Districts</option>
 
               {districts.map((district) => (
                 <option
@@ -1546,9 +1747,7 @@ out center tags;
               }
               className="border border-gray-300 rounded-xl px-4 py-3"
             >
-              <option value="">
-                All Markets
-              </option>
+              <option value="">All Markets</option>
 
               {markets.map((market) => (
                 <option
@@ -1570,15 +1769,12 @@ out center tags;
               <option value="latest">
                 Latest Records
               </option>
-
               <option value="highest">
                 Highest Price
               </option>
-
               <option value="lowest">
                 Lowest Price
               </option>
-
               <option value="crop">
                 Crop Name
               </option>
@@ -1586,395 +1782,321 @@ out center tags;
           </div>
         </section>
 
-        <section className="flex gap-2 overflow-x-auto py-5">
-          {categories.map((category) => (
-            <button
-              type="button"
-              key={category.value}
-              onClick={() =>
-                setSelectedCategory(
-                  category.value
-                )
-              }
-              className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
-                selectedCategory ===
-                category.value
-                  ? "bg-green-700 text-white"
-                  : "bg-white border border-green-200 text-green-800"
-              }`}
-            >
-              {category.icon}{" "}
-              {category.label}
-            </button>
-          ))}
-        </section>
-
-        {loadingPrices ? (
-          <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="text-5xl">
-              📊
-            </div>
-
-            <h2 className="text-xl font-bold text-green-900 mt-4">
-              Loading government prices
-            </h2>
-          </section>
-        ) : groupedCropSummary.length === 0 ? (
-          <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="text-5xl">
-              🌾
-            </div>
-
-            <h2 className="text-xl font-bold text-green-900 mt-4">
-              No crop prices found
+        <section className="mt-5">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-xl font-bold text-green-900">
+              Crop Price Summary
             </h2>
 
-            <p className="text-gray-600 mt-2">
-              Change the crop, market or
-              district filter.
-            </p>
-          </section>
-        ) : (
-          <>
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-green-900">
-                  🌾 Crop Price Summary
-                </h2>
+            {loadingPrices && (
+              <p className="text-sm text-gray-500">
+                Loading prices...
+              </p>
+            )}
+          </div>
 
-                <span className="text-sm text-gray-500">
-                  {groupedCropSummary.length} crops
-                </span>
-              </div>
+          {groupedCropSummary.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+              <p className="text-gray-600">
+                No crop prices found for the selected filters.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {groupedCropSummary.map((summary) => {
+                const advice =
+                  getSellingAdvice(summary);
 
-              <div className="grid md:grid-cols-2 gap-4">
-                {groupedCropSummary.map(
-                  (summary) => {
-                    const advice =
-                      getSellingAdvice(
-                        summary
-                      );
+                return (
+                  <article
+                    key={summary.commodity}
+                    className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={summary.image}
+                        alt={summary.commodity}
+                        className="w-16 h-16 rounded-xl object-cover border border-green-100 bg-green-50"
+                      />
 
-                    return (
-                      <article
-                        key={summary.commodity}
-                        className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h2 className="text-xl font-bold text-green-900">
-                              {summary.icon}{" "}
-                              {summary.commodity}
-                            </h2>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-green-900">
+                            {summary.commodity}
+                          </h3>
 
-                            <p className="text-sm text-gray-500 mt-1">
-                              {
-                                summary.marketsCount
-                              }{" "}
-                              markets available
-                            </p>
-                          </div>
+                          <span className="text-sm">
+                            {summary.icon}
+                          </span>
 
                           <span
-                            className={`${advice.className} px-3 py-1 rounded-full text-xs font-semibold`}
+                            className={`${advice.className} px-2.5 py-1 rounded-full text-xs font-semibold`}
                           >
                             {advice.label}
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 mt-4 text-center">
-                          <div className="bg-red-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-500">
-                              Lowest
-                            </p>
-
-                            <p className="font-bold text-red-800 mt-1">
-                              {formatCurrency(
-                                summary.lowest
-                                  .modalPrice
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="bg-yellow-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-500">
-                              Average
-                            </p>
-
-                            <p className="font-bold text-yellow-800 mt-1">
-                              {formatCurrency(
-                                summary.average
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="bg-green-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-500">
-                              Highest
-                            </p>
-
-                            <p className="font-bold text-green-800 mt-1">
-                              {formatCurrency(
-                                summary.highest
-                                  .modalPrice
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="bg-green-50 rounded-xl p-3 mt-4">
-                          <p className="text-xs text-gray-500">
-                            Best listed market
-                          </p>
-
-                          <p className="font-bold text-green-900 mt-1">
-                            🏪{" "}
-                            {
-                              summary.highest
-                                .market
-                            }
-                          </p>
-
-                          <p className="text-sm text-gray-600 mt-1">
-                            📍{" "}
-                            {
-                              summary.highest
-                                .district
-                            }
-                          </p>
-
-                          <p className="text-sm font-semibold text-green-800 mt-1">
-                            {formatCurrency(
-                              summary.highest
-                                .modalPrice
-                            )}{" "}
-                            per quintal
-                          </p>
-                        </div>
-                      </article>
-                    );
-                  }
-                )}
-              </div>
-            </section>
-
-            <section className="mt-7">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-green-900">
-                  📋 All Market Records
-                </h2>
-
-                <span className="text-sm text-gray-500">
-                  {filteredPrices.length} records
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                {filteredPrices.map((item) => (
-                  <article
-                    key={item.id}
-                    className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div>
-                        <h2 className="text-xl font-bold text-green-900">
-                          {item.icon}{" "}
-                          {item.commodity}
-                        </h2>
-
                         <p className="text-sm text-gray-500 mt-1">
-                          Variety:{" "}
-                          {item.variety ||
-                            "Common"}
-                        </p>
-
-                        <p className="text-sm text-gray-600 mt-2">
-                          🏪 {item.market}
-                        </p>
-
-                        <p className="text-sm text-gray-600">
-                          📍 {item.district},{" "}
-                          {item.state}
-                        </p>
-
-                        <p className="text-xs text-gray-500 mt-2">
-                          Date:{" "}
-                          {item.arrivalDate ||
-                            "Not available"}
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 rounded-xl p-4 md:min-w-44">
-                        <p className="text-sm text-gray-500">
-                          Modal Price
-                        </p>
-
-                        <p className="text-2xl font-bold text-green-800 mt-1">
-                          {formatCurrency(
-                            item.modalPrice
-                          )}
-                        </p>
-
-                        <p className="text-xs text-gray-500">
-                          per quintal
+                          {summary.records.length} records •{" "}
+                          {summary.marketsCount} markets
                         </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500">
+                          Highest
+                        </p>
+                        <p className="font-bold text-green-800 mt-1">
+                          {formatCurrency(
+                            summary.highest.modalPrice
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {summary.highest.market}
+                        </p>
+                      </div>
+
                       <div className="bg-red-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Minimum
+                          Lowest
                         </p>
-
-                        <p className="font-bold text-red-800 mt-1">
+                        <p className="font-bold text-red-700 mt-1">
                           {formatCurrency(
-                            item.minimumPrice
+                            summary.lowest.modalPrice
                           )}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {summary.lowest.market}
                         </p>
                       </div>
 
                       <div className="bg-blue-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Maximum
+                          Average
                         </p>
-
-                        <p className="font-bold text-blue-800 mt-1">
+                        <p className="font-bold text-blue-700 mt-1">
                           {formatCurrency(
-                            item.maximumPrice
+                            summary.average
                           )}
                         </p>
                       </div>
+
+                      <div className="bg-yellow-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500">
+                          Best Place
+                        </p>
+                        <p className="font-bold text-yellow-700 mt-1 text-sm">
+                          {summary.highest.market}
+                        </p>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchText(summary.commodity);
+                        setSelectedCategory("all");
+                      }}
+                      className="w-full mt-4 bg-green-700 text-white py-2.5 rounded-xl font-semibold"
+                    >
+                      View {summary.commodity} Details
+                    </button>
                   </article>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-        <section className="mt-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-green-900">
-                📍 Where to Sell
-              </h2>
+        <section className="mt-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-xl font-bold text-green-900">
+              Mandi Price Details
+            </h2>
 
-              <p className="text-sm text-gray-600 mt-1">
-                Nearby markets and crop-processing
-                mills.
+            {loadingPrices && (
+              <p className="text-sm text-gray-500">
+                Refreshing...
+              </p>
+            )}
+          </div>
+
+          {filteredPrices.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+              <p className="text-gray-600">
+                No market records available.
               </p>
             </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPrices.slice(0, 60).map((item) => (
+                <article
+                  key={item.id}
+                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={item.image}
+                      alt={item.commodity}
+                      className="w-14 h-14 rounded-xl object-cover border border-green-100 bg-green-50"
+                    />
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={
-                  !location ||
-                  loadingSellingPoints
-                }
-                onClick={() =>
-                  loadNearbySellingPoints(
-                    location
-                  )
-                }
-                className="border border-green-700 text-green-700 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50"
-              >
-                {loadingSellingPoints
-                  ? "Searching..."
-                  : "Refresh Nearby"}
-              </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold text-green-900">
+                          {item.commodity}
+                        </h3>
 
-              <button
-                type="button"
-                onClick={openGeneralMapSearch}
-                className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold"
-              >
-                Search on Maps
-              </button>
+                        <span className="text-sm">
+                          {item.icon}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-gray-500 mt-1">
+                        {item.variety} • {item.market}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {item.district}, {item.state}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500">
+                        Min
+                      </p>
+                      <p className="font-bold text-gray-800 mt-1">
+                        {formatCurrency(
+                          item.minimumPrice
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="bg-green-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500">
+                        Modal
+                      </p>
+                      <p className="font-bold text-green-800 mt-1">
+                        {formatCurrency(
+                          item.modalPrice
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500">
+                        Max
+                      </p>
+                      <p className="font-bold text-gray-800 mt-1">
+                        {formatCurrency(
+                          item.maximumPrice
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500">
+                      Date: {item.arrivalDate || "Not available"}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            `${item.market}, ${item.district}, ${item.state}`
+                          )}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      }}
+                      className="text-sm bg-blue-600 text-white px-3 py-2 rounded-xl font-semibold"
+                    >
+                      Open Market
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
+          )}
+        </section>
+
+        <section className="mt-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-xl font-bold text-green-900">
+              Nearby Selling Places
+            </h2>
+
+            <button
+              type="button"
+              onClick={openGeneralMapSearch}
+              className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
+            >
+              Search in Maps
+            </button>
           </div>
 
           {loadingSellingPoints ? (
-            <div className="bg-white rounded-2xl shadow-sm p-7 text-center mt-4">
-              Searching nearby selling points...
+            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+              <p className="text-gray-600">
+                Searching nearby selling places...
+              </p>
             </div>
           ) : sellingPoints.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-7 text-center mt-4">
-              <div className="text-5xl">
-                🏪
-              </div>
-
-              <h3 className="text-xl font-bold text-green-900 mt-4">
-                No mapped markets found nearby
-              </h3>
-
-              <p className="text-gray-600 mt-2">
-                Use map search to find additional
-                mandis and mills.
+            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+              <p className="text-gray-600">
+                Nearby mapped selling places were not found.
               </p>
-
-              <button
-                type="button"
-                onClick={openGeneralMapSearch}
-                className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold mt-5"
-              >
-                Open Map Search
-              </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-3">
               {sellingPoints.map((point) => (
                 <article
                   key={point.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
+                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-bold text-green-900">
-                        🏪 {point.name}
+                        {point.name}
                       </h3>
 
                       <p className="text-sm text-gray-600 mt-1">
                         {point.type}
                       </p>
-                    </div>
 
-                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      {point.distance.toFixed(1)}{" "}
-                      km
-                    </span>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {point.address || "Address not available"}
+                      </p>
+
+                      <p className="text-sm text-gray-500 mt-1">
+                        Distance: {point.distance.toFixed(1)} km
+                      </p>
+                    </div>
                   </div>
 
-                  {point.address && (
-                    <p className="text-sm text-gray-600 mt-3">
-                      📍 {point.address}
-                    </p>
-                  )}
-
-                  {point.openingHours && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      🕒 {point.openingHours}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap gap-3 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     <button
                       type="button"
                       onClick={() =>
                         openDirections(point)
                       }
-                      className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold"
                     >
-                      🧭 Directions
+                      Directions
                     </button>
 
                     {point.phone && (
                       <a
                         href={`tel:${point.phone}`}
-                        className="border border-blue-300 bg-blue-50 text-blue-700 px-4 py-2.5 rounded-xl font-semibold"
+                        className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
                       >
-                        📞 Call
+                        Call
                       </a>
                     )}
                   </div>
@@ -1982,20 +2104,7 @@ out center tags;
               ))}
             </div>
           )}
-
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-4 mt-4 text-sm">
-            Confirm the buyer, price, weighing method,
-            payment terms and market charges before
-            transporting produce.
-          </div>
         </section>
-
-        <p className="text-xs text-center text-gray-500 mt-7">
-          Price source: Government of India
-          Agmarknet data. Nearby locations use
-          OpenStreetMap data and may not include every
-          rural market or mill.
-        </p>
       </div>
     </div>
   );

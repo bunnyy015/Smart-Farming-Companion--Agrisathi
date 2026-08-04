@@ -17,6 +17,7 @@ export default function DealerSalesPage() {
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   useEffect(() => {
     loadSales();
@@ -266,6 +267,99 @@ export default function DealerSalesPage() {
     }
   }
 
+  async function openSaleDetails(sale) {
+    try {
+      let fullSale = { ...sale };
+
+      if (sale.orderId) {
+        const orderSnapshot = await get(
+          ref(database, `dealerOrders/${sale.orderId}`)
+        );
+
+        if (orderSnapshot.exists()) {
+          fullSale = {
+            ...orderSnapshot.val(),
+            ...sale,
+          };
+        }
+      }
+
+      if (fullSale.farmerUid) {
+        let farmer = {};
+
+        try {
+          const farmerSnapshot = await get(
+            ref(
+              database,
+              `farmers/${fullSale.farmerUid}`
+            )
+          );
+
+          if (farmerSnapshot.exists()) {
+            farmer = farmerSnapshot.val();
+          }
+        } catch (farmerError) {
+          console.error(
+            "Farmer profile access error:",
+            farmerError
+          );
+        }
+
+        const generatedAddress = [
+          farmer.village,
+          farmer.mandal,
+          farmer.district,
+          farmer.state,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        fullSale = {
+          ...fullSale,
+
+          farmerName:
+            fullSale.farmerName ||
+            farmer.fullName ||
+            farmer.farmerName ||
+            farmer.name ||
+            "Farmer",
+
+          farmerPhone:
+            fullSale.farmerPhone ||
+            farmer.phone ||
+            farmer.mobile ||
+            farmer.phoneNumber ||
+            "",
+
+          farmerDistrict:
+            fullSale.farmerDistrict ||
+            farmer.district ||
+            "",
+
+          farmerState:
+            fullSale.farmerState ||
+            farmer.state ||
+            "",
+
+          deliveryAddress:
+            fullSale.deliveryAddress &&
+            fullSale.deliveryAddress !==
+              "Address not added"
+              ? fullSale.deliveryAddress
+              : farmer.deliveryAddress ||
+                farmer.address ||
+                generatedAddress ||
+                "",
+        };
+      }
+
+      setSelectedSale(fullSale);
+    } catch (error) {
+      console.error("Sale details error:", error);
+      setSelectedSale(sale);
+    }
+  }
+
   function formatCurrency(value) {
     return Number(value || 0).toLocaleString(
       "en-IN",
@@ -314,6 +408,150 @@ export default function DealerSalesPage() {
           message={message}
           onClose={() => setMessage(null)}
         />
+
+        {selectedSale && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+              <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Completed sale details
+                  </p>
+
+                  <h2 className="text-xl font-bold text-green-900">
+                    {selectedSale.productName || "Farm Product"}
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedSale(null)}
+                  className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 font-bold"
+                  aria-label="Close sale details"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <section className="bg-green-50 border border-green-100 rounded-xl p-4">
+                  <p className="text-sm text-gray-500">
+                    Farmer
+                  </p>
+
+                  <p className="font-bold text-green-900 mt-1">
+                    {selectedSale.farmerName || "Farmer"}
+                  </p>
+
+                  {selectedSale.farmerPhone && (
+                    <a
+                      href={`tel:${selectedSale.farmerPhone}`}
+                      className="inline-flex mt-3 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold"
+                    >
+                      📞 Call Farmer
+                    </a>
+                  )}
+                </section>
+
+                <section className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500">
+                      Quantity
+                    </p>
+
+                    <p className="font-bold mt-1">
+                      {Number(selectedSale.quantity || 0)}{" "}
+                      {selectedSale.unit || "units"}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500">
+                      Total amount
+                    </p>
+
+                    <p className="font-bold text-green-800 mt-1">
+                      {formatCurrency(selectedSale.totalAmount)}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500">
+                      Price per unit
+                    </p>
+
+                    <p className="font-bold mt-1">
+                      {formatCurrency(selectedSale.price)}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500">
+                      Payment
+                    </p>
+
+                    <p className="font-bold mt-1">
+                      {selectedSale.paymentMode || "Cash on Delivery"}
+                    </p>
+                  </div>
+                </section>
+
+                <section className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">
+                    Farmer location
+                  </p>
+
+                  <p className="font-semibold mt-1">
+                    {[
+                      selectedSale.farmerDistrict,
+                      selectedSale.farmerState,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "Not available"}
+                  </p>
+                </section>
+
+                <section className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">
+                    Delivery address
+                  </p>
+
+                  <p className="font-semibold mt-1">
+                    {selectedSale.deliveryAddress || "Not available"}
+                  </p>
+                </section>
+
+                <section className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">
+                    Order reference
+                  </p>
+
+                  <p className="font-semibold mt-1 break-all">
+                    {selectedSale.orderId || "Not available"}
+                  </p>
+                </section>
+
+                <section className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">
+                    Completed on
+                  </p>
+
+                  <p className="font-semibold mt-1">
+                    {formatDate(selectedSale.completedAt)}
+                  </p>
+                </section>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedSale(null)}
+                  className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <header className="bg-gradient-to-r from-green-800 to-green-600 text-white rounded-2xl shadow p-5">
           <button
@@ -489,7 +727,18 @@ export default function DealerSalesPage() {
               {filteredSales.map((sale) => (
                 <article
                   key={sale.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openSaleDetails(sale)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      openSaleDetails(sale);
+                    }
+                  }}
+                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-green-300 transition"
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     <div>
@@ -564,6 +813,12 @@ export default function DealerSalesPage() {
                           "Not available"}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-end mt-4">
+                    <span className="text-green-700 font-semibold text-sm">
+                      View sale details →
+                    </span>
                   </div>
 
                   {sale.legacyRecord && (

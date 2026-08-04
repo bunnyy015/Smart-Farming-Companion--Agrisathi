@@ -121,29 +121,47 @@ export default function FarmerDealerProductsPage() {
         return;
       }
 
-      const farmerSnapshot = await get(
-        ref(
-          database,
-          `users/${currentUser.uid}`
-        )
-      );
+      const [userSnapshot, farmerSnapshot] =
+        await Promise.all([
+          get(
+            ref(
+              database,
+              `users/${currentUser.uid}`
+            )
+          ),
+          get(
+            ref(
+              database,
+              `farmers/${currentUser.uid}`
+            )
+          ),
+        ]);
 
-      if (!farmerSnapshot.exists()) {
+      if (!userSnapshot.exists()) {
         showMessage(
           "error",
-          "Farmer profile was not found."
+          "Farmer account was not found."
         );
         return;
       }
 
-      const farmerData = farmerSnapshot.val();
+      const userData = userSnapshot.val();
+      const farmerDetails = farmerSnapshot.exists()
+        ? farmerSnapshot.val()
+        : {};
 
-      if (farmerData.role !== "farmer") {
+      if (userData.role !== "farmer") {
         navigate("/role-selection", {
           replace: true,
         });
         return;
       }
+
+      const farmerData = {
+        ...userData,
+        ...farmerDetails,
+        role: userData.role,
+      };
 
       const farmerProfile = {
         uid: currentUser.uid,
@@ -449,9 +467,16 @@ export default function FarmerDealerProductsPage() {
           farmer.state || "",
 
         deliveryAddress:
-          farmer.address ||
-          farmer.village ||
           farmer.deliveryAddress ||
+          farmer.address ||
+          [
+            farmer.village,
+            farmer.mandal,
+            farmer.district,
+            farmer.state,
+          ]
+            .filter(Boolean)
+            .join(", ") ||
           "Address not added",
 
         dealerUid: product.dealerUid,

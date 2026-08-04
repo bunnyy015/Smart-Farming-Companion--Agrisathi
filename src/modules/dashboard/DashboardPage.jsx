@@ -8,6 +8,11 @@ import {
   ref,
 } from "firebase/database";
 import { auth, database } from "../../firebase";
+import {
+  getLanguage,
+  subscribeLanguageChange,
+  t,
+} from "../../utils/language";
 
 import FarmerHeader from "../../components/FarmerHeader";
 import VoiceAssistantCard from "../../components/VoiceAssistantCard";
@@ -37,9 +42,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [marketLoading, setMarketLoading] = useState(true);
+  const [language, setCurrentLanguage] = useState(
+    getLanguage()
+  );
 
   useEffect(() => {
     initializeDashboard();
+
+    return subscribeLanguageChange((nextLanguage) => {
+      setCurrentLanguage(nextLanguage);
+    });
   }, []);
 
   const unreadNotifications = useMemo(() => {
@@ -73,13 +85,25 @@ export default function DashboardPage() {
         return;
       }
 
-      const profileSnapshot = await get(
-        ref(database, `users/${currentUser.uid}`)
-      );
+      const [userSnapshot, farmerSnapshot] =
+        await Promise.all([
+          get(
+            ref(
+              database,
+              `users/${currentUser.uid}`
+            )
+          ),
+          get(
+            ref(
+              database,
+              `farmers/${currentUser.uid}`
+            )
+          ),
+        ]);
 
       if (
-        !profileSnapshot.exists() ||
-        profileSnapshot.val().role !== "farmer"
+        !userSnapshot.exists() ||
+        userSnapshot.val().role !== "farmer"
       ) {
         navigate("/role-selection", {
           replace: true,
@@ -89,7 +113,11 @@ export default function DashboardPage() {
 
       const farmerProfile = {
         uid: currentUser.uid,
-        ...profileSnapshot.val(),
+        ...userSnapshot.val(),
+        ...(farmerSnapshot.exists()
+          ? farmerSnapshot.val()
+          : {}),
+        role: userSnapshot.val().role,
       };
 
       setFarmer(farmerProfile);
@@ -339,42 +367,42 @@ export default function DashboardPage() {
   function getOrderStatus(order) {
     const statuses = {
       pending: {
-        label: "Waiting for dealer",
+        label: t("waitingForDealer", {}, language),
         className: "bg-yellow-100 text-yellow-800",
       },
       accepted: {
-        label: "Dealer accepted",
+        label: t("dealerAccepted", {}, language),
         className: "bg-blue-100 text-blue-800",
       },
       rejected: {
-        label: "Order rejected",
+        label: t("orderRejected", {}, language),
         className: "bg-red-100 text-red-700",
       },
       delivered_by_dealer: {
-        label: "Marked delivered",
+        label: t("markedDelivered", {}, language),
         className: "bg-purple-100 text-purple-800",
       },
       received_by_farmer: {
-        label: "Delivery confirmed",
+        label: t("deliveryConfirmed", {}, language),
         className: "bg-indigo-100 text-indigo-800",
       },
       payment_received: {
-        label: "Payment confirmed",
+        label: t("paymentConfirmed", {}, language),
         className: "bg-orange-100 text-orange-800",
       },
       completed: {
-        label: "Completed",
+        label: t("completed", {}, language),
         className: "bg-green-100 text-green-800",
       },
       cancelled: {
-        label: "Cancelled",
+        label: t("cancelled", {}, language),
         className: "bg-gray-100 text-gray-700",
       },
     };
 
     return (
       statuses[order?.status] || {
-        label: "Order update",
+        label: t("orderUpdate", {}, language),
         className: "bg-gray-100 text-gray-700",
       }
     );
@@ -387,7 +415,7 @@ export default function DashboardPage() {
           <div className="w-12 h-12 mx-auto rounded-full border-4 border-green-200 border-t-green-700 animate-spin" />
 
           <p className="font-semibold text-green-800 mt-4">
-            Opening AgriSaathi...
+            {t("openingAgriSaathi", {}, language)}
           </p>
         </div>
       </div>
@@ -435,16 +463,16 @@ export default function DashboardPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-gray-500">
-                    LATEST ORDER
+                    {t("latestOrder", {}, language)}
                   </p>
 
                   <h2 className="font-bold text-green-900 mt-1">
                     {latestOrder.productName ||
-                      "Farm product"}
+                      t("farmProduct", {}, language)}
                   </h2>
 
                   <p className="text-sm text-gray-600 mt-1">
-                    Quantity: {latestOrder.quantity || 0}{" "}
+                    {t("quantity", {}, language)}: {latestOrder.quantity || 0}{" "}
                     {latestOrder.unit || ""}
                   </p>
                 </div>
@@ -463,17 +491,17 @@ export default function DashboardPage() {
                 }
                 className="w-full bg-blue-50 text-blue-800 py-3 rounded-xl font-semibold mt-4"
               >
-                Track Order
+                {t("trackOrder", {}, language)}
               </button>
             </section>
           )}
 
           <section className="grid grid-cols-4 gap-2 mt-5">
             {[
-              ["🌦️", "Weather", "/weather"],
-              ["🏛️", "Schemes", "/govt-schemes"],
-              ["👥", "Community", "/community"],
-              ["👤", "Profile", "/profile"],
+              ["🌦️", t("weather", {}, language), "/weather"],
+              ["🏛️", t("schemes", {}, language), "/govt-schemes"],
+              ["👥", t("community", {}, language), "/community"],
+              ["👤", t("profile", {}, language), "/profile"],
             ].map(([icon, title, path]) => (
               <button
                 type="button"
@@ -492,12 +520,15 @@ export default function DashboardPage() {
 
           <section className="bg-white border border-green-100 rounded-2xl shadow-sm p-4 mt-5">
             <h2 className="font-bold text-green-900">
-              📍 Nearby Services
+              📍 {t("nearbyServices", {}, language)}
             </h2>
 
             <p className="text-sm text-gray-600 mt-1">
-              Find veterinary hospitals, agriculture offices,
-              soil-testing labs and equipment services.
+              {t(
+                "nearbyServicesDescription",
+                {},
+                language
+              )}
             </p>
 
             <button
@@ -505,7 +536,7 @@ export default function DashboardPage() {
               onClick={() =>
                 window.open(
                   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    `agriculture services veterinary hospital soil testing lab near ${
+                    `agriculture office soil testing lab farm equipment services near ${
                       farmer?.district ||
                       farmer?.village ||
                       ""
@@ -517,7 +548,7 @@ export default function DashboardPage() {
               }
               className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold mt-4"
             >
-              Open Nearby Services
+              {t("openNearbyServices", {}, language)}
             </button>
           </section>
         </div>
@@ -532,7 +563,7 @@ export default function DashboardPage() {
               >
                 <span className="text-xl">🏠</span>
                 <span className="text-[11px] font-semibold mt-1">
-                  Home
+                  {t("home", {}, language)}
                 </span>
               </button>
 
@@ -545,7 +576,7 @@ export default function DashboardPage() {
               >
                 <span className="text-xl">🛒</span>
                 <span className="text-[11px] font-semibold mt-1">
-                  Orders
+                  {t("orders", {}, language)}
                 </span>
               </button>
 
@@ -561,7 +592,7 @@ export default function DashboardPage() {
                 </span>
 
                 <span className="text-[11px] font-semibold text-green-700 mt-1">
-                  Voice
+                  {t("voice", {}, language)}
                 </span>
               </button>
 
@@ -574,7 +605,7 @@ export default function DashboardPage() {
               >
                 <span className="text-xl">👥</span>
                 <span className="text-[11px] font-semibold mt-1">
-                  Community
+                  {t("community", {}, language)}
                 </span>
               </button>
 
@@ -585,7 +616,7 @@ export default function DashboardPage() {
               >
                 <span className="text-xl">👤</span>
                 <span className="text-[11px] font-semibold mt-1">
-                  Profile
+                  {t("profile", {}, language)}
                 </span>
               </button>
             </div>

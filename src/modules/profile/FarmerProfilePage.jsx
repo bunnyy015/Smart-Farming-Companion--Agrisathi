@@ -4,6 +4,13 @@ import { onAuthStateChanged } from "firebase/auth";
 import { get, ref, update } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import LanguageSelector from "../../components/LanguageSelector";
+import {
+  getLanguage,
+  getLanguageName,
+  subscribeLanguageChange,
+  t,
+} from "../../utils/language";
 
 const emptyForm = {
   name: "",
@@ -31,18 +38,32 @@ export default function FarmerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [language, setCurrentLanguage] = useState(
+    getLanguage()
+  );
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
+    const unsubscribeAuth = onAuthStateChanged(
+      auth,
+      async (user) => {
+        if (!user) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        await loadProfile(user.uid, user.email);
       }
+    );
 
-      await loadProfile(user.uid, user.email);
-    });
+    const unsubscribeLanguage =
+      subscribeLanguageChange((nextLanguage) => {
+        setCurrentLanguage(nextLanguage);
+      });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeLanguage();
+    };
   }, [navigate]);
 
   const profileCompletion = useMemo(() => {
@@ -112,30 +133,41 @@ export default function FarmerProfilePage() {
     setLoading(true);
 
     try {
-      const snapshot = await get(
-        ref(database, `users/${uid}`)
-      );
+      const [userSnapshot, farmerSnapshot] =
+        await Promise.all([
+          get(ref(database, `users/${uid}`)),
+          get(ref(database, `farmers/${uid}`)),
+        ]);
 
-      if (!snapshot.exists()) {
+      if (!userSnapshot.exists()) {
         setFarmer(null);
         showMessage(
           "error",
-          "Farmer profile was not found."
+          "Farmer account was not found."
         );
         return;
       }
 
-      const profile = snapshot.val();
+      const userData = userSnapshot.val();
+      const farmerData = farmerSnapshot.exists()
+        ? farmerSnapshot.val()
+        : {};
 
-      if (profile.role !== "farmer") {
+      if (userData.role !== "farmer") {
         navigate("/role-selection", { replace: true });
         return;
       }
 
       const farmerProfile = {
         uid,
-        email: profile.email || email || "",
-        ...profile,
+        ...userData,
+        ...farmerData,
+        role: userData.role,
+        email:
+          farmerData.email ||
+          userData.email ||
+          email ||
+          "",
       };
 
       setFarmer(farmerProfile);
@@ -209,6 +241,14 @@ export default function FarmerProfilePage() {
       return;
     }
 
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      showMessage(
+        "warning",
+        "Enter a valid 10-digit mobile number."
+      );
+      return;
+    }
+
     if (!district) {
       showMessage("warning", "Enter district.");
       return;
@@ -273,14 +313,31 @@ export default function FarmerProfilePage() {
         updatedAt: now,
       };
 
-      await update(
-        ref(database, `users/${currentUser.uid}`),
-        updates
-      );
+      const farmerUpdates = {
+        ...updates,
+        email:
+          farmer.email ||
+          currentUser.email ||
+          "",
+      };
+
+      await update(ref(database), {
+        [`users/${currentUser.uid}`]: {
+          ...updates,
+          role: "farmer",
+          email:
+            farmer.email ||
+            currentUser.email ||
+            "",
+        },
+
+        [`farmers/${currentUser.uid}`]:
+          farmerUpdates,
+      });
 
       const updatedProfile = {
         ...farmer,
-        ...updates,
+        ...farmerUpdates,
       };
 
       setFarmer(updatedProfile);
@@ -322,7 +379,7 @@ export default function FarmerProfilePage() {
           <div className="text-5xl">👨‍🌾</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
-            Loading profile
+            {t("loading", {}, language)}
           </h1>
         </div>
       </div>
@@ -378,11 +435,11 @@ export default function FarmerProfilePage() {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-3">
             <div>
               <h1 className="text-3xl font-bold">
-                👨‍🌾 My Profile
+                👨‍🌾 {t("myProfile", {}, language)}
               </h1>
 
               <p className="text-green-100 mt-1">
-                Personal and farm information.
+                {t("personalFarmInformation", {}, language)}
               </p>
             </div>
 
@@ -454,6 +511,57 @@ export default function FarmerProfilePage() {
                 crop and product recommendations.
               </p>
             )}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-purple-100 shadow-sm p-5 mt-5">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-2xl">
+              🌐
+            </div>
+
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-purple-900">
+                {t("appLanguage", {}, language)}
+              </h2>
+
+              <p className="text-sm text-gray-600 mt-1">
+                {t(
+                  "changeLanguageAnytime",
+                  {},
+                  language
+                )}
+              </p>
+
+              <div className="mt-4">
+                <LanguageSelector
+                  onLanguageChanged={(nextLanguage) => {
+                    setCurrentLanguage(nextLanguage);
+
+                    setFarmer((current) =>
+                      current
+                        ? {
+                            ...current,
+                            preferredLanguage:
+                              getLanguageName(
+                                nextLanguage
+                              ),
+                          }
+                        : current
+                    );
+
+                    showMessage(
+                      "success",
+                      t(
+                        "languageUpdated",
+                        {},
+                        nextLanguage
+                      )
+                    );
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -687,26 +795,6 @@ export default function FarmerProfilePage() {
                     <option value="Clay Soil">Clay Soil</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">
-                    Preferred Language
-                  </label>
-
-                  <select
-                    name="preferredLanguage"
-                    value={form.preferredLanguage}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1"
-                  >
-                    <option value="English">English</option>
-                    <option value="Telugu">Telugu</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Tamil">Tamil</option>
-                    <option value="Kannada">Kannada</option>
-                    <option value="Marathi">Marathi</option>
-                  </select>
-                </div>
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
@@ -886,9 +974,7 @@ export default function FarmerProfilePage() {
                   </p>
 
                   <p className="font-bold text-purple-900 mt-1">
-                    {getProfileValue(
-                      farmer.preferredLanguage
-                    )}
+                    {getLanguageName(language)}
                   </p>
                 </div>
               </div>
@@ -901,7 +987,7 @@ export default function FarmerProfilePage() {
                 className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 text-center"
               >
                 <div className="text-2xl">🌦️</div>
-                <p className="font-semibold mt-2">Weather</p>
+                <p className="font-semibold mt-2">{t("weather", {}, language)}</p>
               </button>
 
               <button
@@ -912,7 +998,7 @@ export default function FarmerProfilePage() {
                 className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 text-center"
               >
                 <div className="text-2xl">🏪</div>
-                <p className="font-semibold mt-2">Dealers</p>
+                <p className="font-semibold mt-2">{t("dealerProducts", {}, language)}</p>
               </button>
 
               <button
@@ -921,16 +1007,18 @@ export default function FarmerProfilePage() {
                 className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 text-center"
               >
                 <div className="text-2xl">👥</div>
-                <p className="font-semibold mt-2">Community</p>
+                <p className="font-semibold mt-2">{t("community", {}, language)}</p>
               </button>
 
               <button
                 type="button"
-                onClick={() => navigate("/sos")}
-                className="bg-white rounded-2xl border border-red-100 shadow-sm p-4 text-center"
+                onClick={() =>
+                  navigate("/farmer/orders")
+                }
+                className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 text-center"
               >
-                <div className="text-2xl">🚨</div>
-                <p className="font-semibold mt-2">SOS</p>
+                <div className="text-2xl">🛒</div>
+                <p className="font-semibold mt-2">{t("orders", {}, language)}</p>
               </button>
             </section>
           </>

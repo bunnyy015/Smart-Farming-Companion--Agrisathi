@@ -1,86 +1,39 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   getLanguage,
   languages,
   setLanguage,
+  t,
 } from "../../utils/language";
 import StatusMessage from "../../components/StatusMessage";
 
-const LANGUAGE_DETAILS = {
-  en: {
-    nativeName: "English",
-    voiceText: "Tap here to continue in English",
-    locale: "en-IN",
-    icon: "🇮🇳",
-  },
-  te: {
-    nativeName: "తెలుగు",
-    voiceText: "తెలుగులో కొనసాగడానికి ఇక్కడ నొక్కండి",
-    locale: "te-IN",
-    icon: "🇮🇳",
-  },
-  hi: {
-    nativeName: "हिन्दी",
-    voiceText: "हिन्दी में आगे बढ़ने के लिए यहाँ दबाएँ",
-    locale: "hi-IN",
-    icon: "🇮🇳",
-  },
-  ta: {
-    nativeName: "தமிழ்",
-    voiceText: "தமிழில் தொடர இங்கே அழுத்தவும்",
-    locale: "ta-IN",
-    icon: "🇮🇳",
-  },
-  kn: {
-    nativeName: "ಕನ್ನಡ",
-    voiceText: "ಕನ್ನಡದಲ್ಲಿ ಮುಂದುವರಿಯಲು ಇಲ್ಲಿ ಒತ್ತಿರಿ",
-    locale: "kn-IN",
-    icon: "🇮🇳",
-  },
-  ml: {
-    nativeName: "മലയാളം",
-    voiceText: "മലയാളത്തിൽ തുടരാൻ ഇവിടെ അമർത്തുക",
-    locale: "ml-IN",
-    icon: "🇮🇳",
-  },
-  mr: {
-    nativeName: "मराठी",
-    voiceText: "मराठीत पुढे जाण्यासाठी येथे दाबा",
-    locale: "mr-IN",
-    icon: "🇮🇳",
-  },
-  bn: {
-    nativeName: "বাংলা",
-    voiceText: "বাংলায় চালিয়ে যেতে এখানে চাপুন",
-    locale: "bn-IN",
-    icon: "🇮🇳",
-  },
-  gu: {
-    nativeName: "ગુજરાતી",
-    voiceText: "ગુજરાતીમાં આગળ વધવા અહીં દબાવો",
-    locale: "gu-IN",
-    icon: "🇮🇳",
-  },
-  pa: {
-    nativeName: "ਪੰਜਾਬੀ",
-    voiceText: "ਪੰਜਾਬੀ ਵਿੱਚ ਅੱਗੇ ਵਧਣ ਲਈ ਇੱਥੇ ਦਬਾਓ",
-    locale: "pa-IN",
-    icon: "🇮🇳",
-  },
-  ur: {
-    nativeName: "اردو",
-    voiceText: "اردو میں جاری رکھنے کے لیے یہاں دبائیں",
-    locale: "ur-IN",
-    icon: "🇮🇳",
-  },
-  or: {
-    nativeName: "ଓଡ଼ିଆ",
-    voiceText: "ଓଡ଼ିଆରେ ଆଗକୁ ବଢ଼ିବା ପାଇଁ ଏଠାରେ ଦବାନ୍ତୁ",
-    locale: "or-IN",
-    icon: "🇮🇳",
-  },
+const VOICE_PREVIEW_TEXT = {
+  en: "Tap here to continue in English",
+  te: "తెలుగులో కొనసాగడానికి ఇక్కడ నొక్కండి",
+  hi: "हिन्दी में आगे बढ़ने के लिए यहाँ दबाएँ",
+  ta: "தமிழில் தொடர இங்கே அழுத்தவும்",
+  kn: "ಕನ್ನಡದಲ್ಲಿ ಮುಂದುವರಿಯಲು ಇಲ್ಲಿ ಒತ್ತಿರಿ",
+  ml: "മലയാളത്തിൽ തുടരാൻ ഇവിടെ അമർത്തുക",
+  mr: "मराठीत पुढे जाण्यासाठी येथे दाबा",
+  bn: "বাংলায় চালিয়ে যেতে এখানে চাপুন",
+  gu: "ગુજરાતીમાં આગળ વધવા અહીં દબાવો",
+  pa: "ਪੰਜਾਬੀ ਵਿੱਚ ਅੱਗੇ ਵਧਣ ਲਈ ਇੱਥੇ ਦਬਾਓ",
+  ur: "اردو میں جاری رکھنے کے لیے یہاں دبائیں",
+  or: "ଓଡ଼ିଆରେ ଆଗକୁ ବଢ଼ିବା ପାଇଁ ଏଠାରେ ଦବାନ୍ତୁ",
 };
+
+function getDestination(role) {
+  const destinations = {
+    farmer: "/dashboard",
+    dealer: "/dealer",
+    kvk: "/kvk",
+    admin: "/admin",
+  };
+
+  return destinations[role] || "/role-selection";
+}
 
 export default function LanguageSelection() {
   const navigate = useNavigate();
@@ -99,25 +52,17 @@ export default function LanguageSelection() {
       return languages;
     }
 
-    return languages.filter((language) => {
-      const details =
-        LANGUAGE_DETAILS[language.code] || {};
-
-      return [
+    return languages.filter((language) =>
+      [
         language.name,
-        details.nativeName,
+        language.nativeName,
         language.code,
       ]
-        .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(query);
-    });
+        .includes(query)
+    );
   }, [searchText]);
-
-  function showMessage(type, text) {
-    setMessage({ type, text });
-  }
 
   function chooseVoice(locale, code) {
     const voices =
@@ -140,33 +85,25 @@ export default function LanguageSelection() {
 
   function speakLanguage(language) {
     if (!window.speechSynthesis) {
-      showMessage(
-        "warning",
-        "Voice preview is not supported on this browser."
-      );
-      return;
-    }
-
-    const details =
-      LANGUAGE_DETAILS[language.code];
-
-    if (!details) {
+      setMessage({
+        type: "warning",
+        text: "Voice preview is not supported on this browser.",
+      });
       return;
     }
 
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(
-      details.voiceText
+      VOICE_PREVIEW_TEXT[language.code] ||
+        language.nativeName
     );
 
-    utterance.lang = details.locale;
+    utterance.lang = language.locale;
     utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
 
     const voice = chooseVoice(
-      details.locale,
+      language.locale,
       language.code
     );
 
@@ -184,11 +121,10 @@ export default function LanguageSelection() {
 
     utterance.onerror = () => {
       setSpeakingCode("");
-
-      showMessage(
-        "warning",
-        "This language voice is not available on the current device."
-      );
+      setMessage({
+        type: "warning",
+        text: "This language voice is not available on this device.",
+      });
     };
 
     window.speechSynthesis.speak(utterance);
@@ -197,43 +133,13 @@ export default function LanguageSelection() {
   function handleLanguageSelect(code) {
     window.speechSynthesis?.cancel();
 
-    setSelectedLanguage(code);
-    setLanguage(code);
+    const appliedLanguage = setLanguage(code);
+    setSelectedLanguage(appliedLanguage);
 
-    const selectedRole =
-      localStorage.getItem("role");
-
-    if (selectedRole === "farmer") {
-      navigate("/dashboard", {
-        replace: true,
-      });
-      return;
-    }
-
-    if (selectedRole === "dealer") {
-      navigate("/dealer", {
-        replace: true,
-      });
-      return;
-    }
-
-    if (selectedRole === "kvk") {
-      navigate("/kvk", {
-        replace: true,
-      });
-      return;
-    }
-
-    if (selectedRole === "admin") {
-      navigate("/admin", {
-        replace: true,
-      });
-      return;
-    }
-
-    navigate("/role-selection", {
-      replace: true,
-    });
+    navigate(
+      getDestination(localStorage.getItem("role")),
+      { replace: true }
+    );
   }
 
   return (
@@ -248,11 +154,11 @@ export default function LanguageSelection() {
           <div className="text-6xl">🌾</div>
 
           <h1 className="text-3xl md:text-4xl font-bold mt-4">
-            Choose Your Language
+            {t("selectLanguage")}
           </h1>
 
           <p className="text-green-100 mt-2">
-            Select the language that is easiest for you.
+            {t("chooseLanguage")}
           </p>
 
           <div className="bg-white/15 rounded-xl p-3 mt-4 text-sm">
@@ -287,20 +193,10 @@ export default function LanguageSelection() {
             <h2 className="text-xl font-bold text-green-900 mt-4">
               No language found
             </h2>
-
-            <p className="text-gray-600 mt-2">
-              Try another language name.
-            </p>
           </section>
         ) : (
           <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-5">
             {filteredLanguages.map((language) => {
-              const details =
-                LANGUAGE_DETAILS[language.code] || {
-                  nativeName: language.name,
-                  icon: "🌍",
-                };
-
               const selected =
                 selectedLanguage === language.code;
 
@@ -326,9 +222,7 @@ export default function LanguageSelection() {
                     className="w-full text-left"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="text-3xl">
-                        {details.icon}
-                      </div>
+                      <div className="text-3xl">🌐</div>
 
                       {selected && (
                         <span className="bg-green-700 text-white px-2.5 py-1 rounded-full text-xs font-semibold">
@@ -338,7 +232,7 @@ export default function LanguageSelection() {
                     </div>
 
                     <h2 className="text-xl font-bold text-green-900 mt-3">
-                      {details.nativeName}
+                      {language.nativeName}
                     </h2>
 
                     <p className="text-sm text-gray-500 mt-1">
@@ -364,8 +258,7 @@ export default function LanguageSelection() {
         )}
 
         <section className="bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl p-4 mt-6 text-sm">
-          You can change the selected language later from
-          Farmer Settings.
+          You can change the language anytime from the Farmer Profile.
         </section>
       </main>
     </div>

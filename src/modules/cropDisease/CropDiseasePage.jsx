@@ -595,6 +595,7 @@ Required JSON structure:
     "name": "",
     "purpose": ""
   },
+  "immediateActions": [],
   "treatment": [],
   "prevention": [],
   "expertAdvice": "",

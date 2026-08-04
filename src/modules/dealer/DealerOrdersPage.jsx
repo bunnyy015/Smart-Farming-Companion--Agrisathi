@@ -7,7 +7,6 @@ import {
   push,
   query,
   ref,
-  runTransaction,
   set,
   update,
 } from "firebase/database";
@@ -519,133 +518,119 @@ export default function DealerOrdersPage() {
     try {
       setUpdatingId(order.id);
 
-      const productMatch = await findOrderProduct(order);
-
-      if (!productMatch) {
-        showMessage(
-          "error",
-          "The linked product could not be found. Restore the product before completing this sale."
-        );
-        return;
-      }
-
       const orderQuantity = Number(order.quantity || 0);
-      let failureReason = "";
 
-      const productResult = await runTransaction(
-        productMatch.reference,
-        (product) => {
-          if (!product) {
-            failureReason = "missing";
-            return;
-          }
-
-          const reservedQuantity = Number(
-            product.reservedQuantity || 0
-          );
-
-          if (reservedQuantity < orderQuantity) {
-            failureReason = "reserved";
-            return;
-          }
-
-          return {
-            ...product,
-
-            reservedQuantity:
-              reservedQuantity - orderQuantity,
-
-            soldQuantity:
-              Number(product.soldQuantity || 0) +
-              orderQuantity,
-
-            updatedAt: new Date().toISOString(),
-          };
-        }
-      );
-
-      if (!productResult.committed) {
+      if (
+        !Number.isInteger(orderQuantity) ||
+        orderQuantity <= 0
+      ) {
         showMessage(
           "error",
-          failureReason === "reserved"
-            ? "The reserved stock is lower than the order quantity. Check the product inventory."
-            : "The product could not be found."
+          "This order contains an invalid quantity."
         );
         return;
       }
 
       const completedAt = new Date().toISOString();
+
+      let productMatch = null;
+      let inventoryUpdated = false;
+
+      try {
+        productMatch = await findOrderProduct(order);
+
+        if (productMatch) {
+          const productSnapshot = await get(
+            productMatch.reference
+          );
+
+          if (productSnapshot.exists()) {
+            const product = productSnapshot.val();
+
+            const currentReserved = Number(
+              product.reservedQuantity || 0
+            );
+
+            const reservedToMove = Math.min(
+              currentReserved,
+              orderQuantity
+            );
+
+            await update(productMatch.reference, {
+              reservedQuantity:
+                currentReserved - reservedToMove,
+
+              soldQuantity:
+                Number(product.soldQuantity || 0) +
+                orderQuantity,
+
+              updatedAt: completedAt,
+            });
+
+            inventoryUpdated = true;
+          }
+        }
+      } catch (inventoryError) {
+        console.error(
+          "Inventory completion warning:",
+          inventoryError
+        );
+      }
+
       const saleReference = push(
         ref(database, `sales/${order.dealerUid}`)
       );
 
-      try {
-        await set(saleReference, {
-          orderId: order.id,
-          dealerUid: order.dealerUid,
-          farmerUid: order.farmerUid,
-          farmerName: order.farmerName || "Farmer",
+      await set(saleReference, {
+        orderId: order.id,
+        dealerUid: order.dealerUid,
+        farmerUid: order.farmerUid,
+        farmerName: order.farmerName || "Farmer",
 
-          productId: productMatch.id,
-          productName: order.productName || "",
-          category: order.category || "",
-          brand: order.brand || "",
+        productId:
+          productMatch?.id ||
+          order.productId ||
+          "",
 
-          quantity: orderQuantity,
-          unit: order.unit || "",
+        productName: order.productName || "",
+        category: order.category || "",
+        brand: order.brand || "",
 
-          price: Number(order.price || 0),
-          totalAmount: Number(order.totalAmount || 0),
+        quantity: orderQuantity,
+        unit: order.unit || "",
 
-          paymentMode:
-            order.paymentMode || "Cash on Delivery",
+        price: Number(order.price || 0),
+        totalAmount: Number(order.totalAmount || 0),
 
+        paymentMode:
+          order.paymentMode || "Cash on Delivery",
+
+        inventoryUpdated,
+        completedAt,
+        createdAt: completedAt,
+      });
+
+      await update(
+        ref(database, `dealerOrders/${order.id}`),
+        {
+          productId:
+            productMatch?.id ||
+            order.productId ||
+            "",
+
+          status: "completed",
+          saleRecorded: true,
+          inventoryUpdated,
           completedAt,
-          createdAt: completedAt,
-        });
-
-        await update(
-          ref(database, `dealerOrders/${order.id}`),
-          {
-            productId: productMatch.id,
-            status: "completed",
-            saleRecorded: true,
-            completedAt,
-            updatedAt: completedAt,
-          }
-        );
-      } catch (completionError) {
-        await runTransaction(
-          productMatch.reference,
-          (product) => {
-            if (!product) {
-              return product;
-            }
-
-            return {
-              ...product,
-
-              reservedQuantity:
-                Number(product.reservedQuantity || 0) +
-                orderQuantity,
-
-              soldQuantity: Math.max(
-                0,
-                Number(product.soldQuantity || 0) -
-                  orderQuantity
-              ),
-
-              updatedAt: new Date().toISOString(),
-            };
-          }
-        );
-
-        throw completionError;
-      }
+          updatedAt: completedAt,
+        }
+      );
 
       showMessage(
-        "success",
-        "Sale completed and inventory updated."
+        inventoryUpdated ? "success" : "warning",
+        inventoryUpdated
+          ? "Sale completed and inventory updated."
+          : "Sale completed. The old product record was missing, so inventory could not be updated."
       );
 
       setConfirmAction(null);
@@ -655,7 +640,11 @@ export default function DealerOrdersPage() {
 
       showMessage(
         "error",
-        "Sale could not be completed."
+        String(error?.message || "")
+          .toLowerCase()
+          .includes("permission denied")
+          ? "Firebase denied the sale update. Check the sales and order rules."
+          : "Sale could not be completed."
       );
     } finally {
       setUpdatingId("");

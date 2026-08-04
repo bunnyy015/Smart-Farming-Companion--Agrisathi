@@ -1,5 +1,5 @@
 const LANGUAGE_STORAGE_KEY = "agrisathi-language";
-const LANGUAGE_CHANGE_EVENT = "agrisathi-language-changed";
+export const LANGUAGE_CHANGE_EVENT = "agrisathi-language-changed";
 
 export const DEFAULT_LANGUAGE = "en";
 
@@ -138,6 +138,30 @@ export const translations = {
 
     languageChanged: "Language changed successfully.",
     noInformation: "Information is not available.",
+    openingAgriSaathi: "Opening AgriSaathi...",
+    latestOrder: "Latest Order",
+    farmProduct: "Farm product",
+    quantity: "Quantity",
+    trackOrder: "Track Order",
+    schemes: "Schemes",
+    nearbyServices: "Nearby Services",
+    nearbyServicesDescription: "Find agriculture offices, soil-testing labs, equipment services and other farming support nearby.",
+    openNearbyServices: "Open Nearby Services",
+    voice: "Voice",
+    waitingForDealer: "Waiting for dealer",
+    dealerAccepted: "Dealer accepted",
+    orderRejected: "Order rejected",
+    markedDelivered: "Marked delivered",
+    deliveryConfirmed: "Delivery confirmed",
+    paymentConfirmed: "Payment confirmed",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    orderUpdate: "Order update",
+    appLanguage: "App Language",
+    changeLanguageAnytime: "Change the whole Farmer Module language anytime.",
+    languageUpdated: "Application language changed.",
+    myProfile: "My Profile",
+    personalFarmInformation: "Personal and farm information.",
   },
 
   te: {
@@ -187,6 +211,30 @@ export const translations = {
 
     languageChanged: "భాష విజయవంతంగా మార్చబడింది.",
     noInformation: "సమాచారం అందుబాటులో లేదు.",
+    openingAgriSaathi: "అగ్రిసాథి తెరుచుకుంటోంది...",
+    latestOrder: "తాజా ఆర్డర్",
+    farmProduct: "వ్యవసాయ ఉత్పత్తి",
+    quantity: "పరిమాణం",
+    trackOrder: "ఆర్డర్‌ను చూడండి",
+    schemes: "పథకాలు",
+    nearbyServices: "సమీప వ్యవసాయ సేవలు",
+    nearbyServicesDescription: "సమీపంలోని వ్యవసాయ కార్యాలయాలు, నేల పరీక్ష కేంద్రాలు, పరికర సేవలు మరియు ఇతర రైతు సహాయాన్ని కనుగొనండి.",
+    openNearbyServices: "సమీప సేవలను తెరవండి",
+    voice: "వాయిస్",
+    waitingForDealer: "డీలర్ స్పందన కోసం వేచి ఉంది",
+    dealerAccepted: "డీలర్ అంగీకరించారు",
+    orderRejected: "ఆర్డర్ తిరస్కరించబడింది",
+    markedDelivered: "డెలివరీ చేసినట్లు గుర్తించారు",
+    deliveryConfirmed: "డెలివరీ నిర్ధారించబడింది",
+    paymentConfirmed: "చెల్లింపు నిర్ధారించబడింది",
+    completed: "పూర్తైంది",
+    cancelled: "రద్దైంది",
+    orderUpdate: "ఆర్డర్ సమాచారం",
+    appLanguage: "యాప్ భాష",
+    changeLanguageAnytime: "రైతు మాడ్యూల్ భాషను ఎప్పుడైనా మార్చండి.",
+    languageUpdated: "యాప్ భాష మార్చబడింది.",
+    myProfile: "నా ప్రొఫైల్",
+    personalFarmInformation: "వ్యక్తిగత మరియు వ్యవసాయ సమాచారం.",
   },
 
   hi: {
@@ -236,6 +284,30 @@ export const translations = {
 
     languageChanged: "भाषा सफलतापूर्वक बदल दी गई है।",
     noInformation: "जानकारी उपलब्ध नहीं है।",
+    openingAgriSaathi: "एग्रीसाथी खुल रहा है...",
+    latestOrder: "नवीनतम ऑर्डर",
+    farmProduct: "कृषि उत्पाद",
+    quantity: "मात्रा",
+    trackOrder: "ऑर्डर देखें",
+    schemes: "योजनाएं",
+    nearbyServices: "नजदीकी कृषि सेवाएं",
+    nearbyServicesDescription: "नजदीकी कृषि कार्यालय, मिट्टी जांच केंद्र, उपकरण सेवाएं और अन्य किसान सहायता खोजें।",
+    openNearbyServices: "नजदीकी सेवाएं खोलें",
+    voice: "आवाज़",
+    waitingForDealer: "डीलर की प्रतीक्षा",
+    dealerAccepted: "डीलर ने स्वीकार किया",
+    orderRejected: "ऑर्डर अस्वीकार हुआ",
+    markedDelivered: "डिलीवर बताया गया",
+    deliveryConfirmed: "डिलीवरी की पुष्टि",
+    paymentConfirmed: "भुगतान की पुष्टि",
+    completed: "पूरा हुआ",
+    cancelled: "रद्द हुआ",
+    orderUpdate: "ऑर्डर अपडेट",
+    appLanguage: "ऐप की भाषा",
+    changeLanguageAnytime: "किसान मॉड्यूल की भाषा कभी भी बदलें।",
+    languageUpdated: "ऐप की भाषा बदल दी गई।",
+    myProfile: "मेरी प्रोफाइल",
+    personalFarmInformation: "व्यक्तिगत और खेती की जानकारी।",
   },
 
   ta: {
@@ -704,8 +776,16 @@ export function getLanguage() {
     return DEFAULT_LANGUAGE;
   }
 
+  const savedLanguage = window.localStorage.getItem(
+    LANGUAGE_STORAGE_KEY
+  );
+
+  if (savedLanguage) {
+    return normalizeLanguage(savedLanguage);
+  }
+
   return normalizeLanguage(
-    window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    window.navigator.language || DEFAULT_LANGUAGE
   );
 }
 
@@ -836,4 +916,8 @@ export function initializeLanguage() {
   applyLanguageToDocument(language);
 
   return language;
+}
+
+export function getLanguageStorageKey() {
+  return LANGUAGE_STORAGE_KEY;
 }
