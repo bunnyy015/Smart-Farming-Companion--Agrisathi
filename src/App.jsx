@@ -33,7 +33,8 @@ import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import KVKRequestsPage from "./modules/admin/KVKRequestsPage";
 
 import KVKDashboard from "./modules/kvk/KVKDashboard";
-
+import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
+import ApprovedKVKOfficersPage from "./modules/admin/ApprovedKVKOfficersPage";
 import DealerDashboard from "./modules/dealer/DealerDashboard";
 import DealerRegistrationPage from "./modules/dealer/DealerRegistrationPage";
 import DealerProductsPage from "./modules/dealer/DealerProductsPage";
@@ -106,7 +107,35 @@ function App() {
           path="/market-prices"
           element={<MarketPricesPage />}
         />
+        <Route
+  path="/admin"
+  element={<AdminDashboard />}
+/>
 
+<Route
+  path="/admin/farmers"
+  element={<FarmersListPage />}
+/>
+
+<Route
+  path="/admin/dealer-requests"
+  element={<DealerRequestsPage />}
+/>
+
+<Route
+  path="/admin/kvk-requests"
+  element={<KVKRequestsPage />}
+/>
+
+        <Route
+  path="/admin/dealers"
+  element={<ApprovedDealersPage />}
+/>
+
+<Route
+  path="/admin/kvk-officers"
+  element={<ApprovedKVKOfficersPage />}
+/>
         <Route
           path="/crop-disease"
           element={<CropDiseasePage />}

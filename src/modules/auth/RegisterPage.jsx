@@ -301,12 +301,24 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-100 to-green-50 p-4 md:p-6">
       <main className="max-w-3xl mx-auto">
+
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-4 inline-flex items-center gap-2 bg-white text-green-700 px-4 py-2 rounded-lg shadow-sm border border-green-200 hover:bg-green-50 transition font-medium"
+        >
+          ← Back
+        </button>
+
         <StatusMessage
           message={message}
           onClose={clearMessage}
         />
 
         <section className="bg-white rounded-3xl shadow-xl overflow-hidden">
+
+          {/* Header */}
           <header className="bg-gradient-to-r from-green-800 to-green-600 text-white p-6 text-center">
             <div className="w-20 h-20 mx-auto rounded-full bg-white/20 flex items-center justify-center text-5xl">
               👨‍🌾
@@ -325,12 +337,15 @@ export default function RegisterPage() {
             onSubmit={handleRegister}
             className="p-5 md:p-7 space-y-6"
           >
+
+            {/* Personal Details */}
             <section>
               <h2 className="text-lg font-bold text-green-900">
                 👤 Personal Details
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4">
+
                 <div>
                   <label
                     htmlFor="farmer-name"
@@ -395,6 +410,7 @@ export default function RegisterPage() {
                   />
                 </div>
 
+                {/* Password */}
                 <div>
                   <label
                     htmlFor="farmer-password"
@@ -407,7 +423,11 @@ export default function RegisterPage() {
                     <input
                       id="farmer-password"
                       name="password"
-                      type={showPassword ? "text" : "password"}
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
                       value={form.password}
                       onChange={handleChange}
                       disabled={loading}
@@ -420,7 +440,9 @@ export default function RegisterPage() {
                       type="button"
                       disabled={loading}
                       onClick={() =>
-                        setShowPassword((current) => !current)
+                        setShowPassword(
+                          (current) => !current
+                        )
                       }
                       className="absolute inset-y-0 right-3 text-sm font-semibold text-green-700 disabled:text-gray-400"
                     >
@@ -429,6 +451,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                {/* Confirm Password */}
                 <div>
                   <label
                     htmlFor="confirm-password"
@@ -442,7 +465,9 @@ export default function RegisterPage() {
                       id="confirm-password"
                       name="confirmPassword"
                       type={
-                        showConfirmPassword ? "text" : "password"
+                        showConfirmPassword
+                          ? "text"
+                          : "password"
                       }
                       value={form.confirmPassword}
                       onChange={handleChange}
@@ -462,19 +487,24 @@ export default function RegisterPage() {
                       }
                       className="absolute inset-y-0 right-3 text-sm font-semibold text-green-700 disabled:text-gray-400"
                     >
-                      {showConfirmPassword ? "Hide" : "Show"}
+                      {showConfirmPassword
+                        ? "Hide"
+                        : "Show"}
                     </button>
                   </div>
                 </div>
+
               </div>
             </section>
 
+            {/* Location Details */}
             <section className="border-t border-gray-100 pt-6">
               <h2 className="text-lg font-bold text-green-900">
                 📍 Location Details
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4">
+
                 <div>
                   <label
                     htmlFor="farmer-village"
@@ -548,24 +578,32 @@ export default function RegisterPage() {
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                   >
-                    <option value="">Select state</option>
+                    <option value="">
+                      Select state
+                    </option>
 
                     {STATES.map((state) => (
-                      <option key={state} value={state}>
+                      <option
+                        key={state}
+                        value={state}
+                      >
                         {state}
                       </option>
                     ))}
                   </select>
                 </div>
+
               </div>
             </section>
 
+            {/* Farm Details */}
             <section className="border-t border-gray-100 pt-6">
               <h2 className="text-lg font-bold text-green-900">
                 🌾 Farm Details
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4">
+
                 <div>
                   <label
                     htmlFor="main-crop"
@@ -582,10 +620,15 @@ export default function RegisterPage() {
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                   >
-                    <option value="">Select main crop</option>
+                    <option value="">
+                      Select main crop
+                    </option>
 
                     {CROPS.map((crop) => (
-                      <option key={crop} value={crop}>
+                      <option
+                        key={crop}
+                        value={crop}
+                      >
                         {crop}
                       </option>
                     ))}
@@ -640,8 +683,12 @@ export default function RegisterPage() {
                       disabled={loading}
                       className="border border-gray-300 rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                     >
-                      <option value="acres">Acres</option>
-                      <option value="hectares">Hectares</option>
+                      <option value="acres">
+                        Acres
+                      </option>
+                      <option value="hectares">
+                        Hectares
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -662,14 +709,30 @@ export default function RegisterPage() {
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                   >
-                    <option value="">Select irrigation</option>
-                    <option value="Rainfed">Rainfed</option>
-                    <option value="Borewell">Borewell</option>
-                    <option value="Canal">Canal</option>
-                    <option value="Drip">Drip</option>
-                    <option value="Sprinkler">Sprinkler</option>
-                    <option value="Tank">Tank</option>
-                    <option value="Other">Other</option>
+                    <option value="">
+                      Select irrigation
+                    </option>
+                    <option value="Rainfed">
+                      Rainfed
+                    </option>
+                    <option value="Borewell">
+                      Borewell
+                    </option>
+                    <option value="Canal">
+                      Canal
+                    </option>
+                    <option value="Drip">
+                      Drip
+                    </option>
+                    <option value="Sprinkler">
+                      Sprinkler
+                    </option>
+                    <option value="Tank">
+                      Tank
+                    </option>
+                    <option value="Other">
+                      Other
+                    </option>
                   </select>
                 </div>
 
@@ -689,13 +752,27 @@ export default function RegisterPage() {
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                   >
-                    <option value="">Select soil type</option>
-                    <option value="Black Soil">Black Soil</option>
-                    <option value="Red Soil">Red Soil</option>
-                    <option value="Sandy Soil">Sandy Soil</option>
-                    <option value="Loamy Soil">Loamy Soil</option>
-                    <option value="Clay Soil">Clay Soil</option>
-                    <option value="Other">Other</option>
+                    <option value="">
+                      Select soil type
+                    </option>
+                    <option value="Black Soil">
+                      Black Soil
+                    </option>
+                    <option value="Red Soil">
+                      Red Soil
+                    </option>
+                    <option value="Sandy Soil">
+                      Sandy Soil
+                    </option>
+                    <option value="Loamy Soil">
+                      Loamy Soil
+                    </option>
+                    <option value="Clay Soil">
+                      Clay Soil
+                    </option>
+                    <option value="Other">
+                      Other
+                    </option>
                   </select>
                 </div>
 
@@ -715,28 +792,55 @@ export default function RegisterPage() {
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
                   >
-                    <option value="English">English</option>
-                    <option value="Telugu">Telugu</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Tamil">Tamil</option>
-                    <option value="Kannada">Kannada</option>
-                    <option value="Malayalam">Malayalam</option>
-                    <option value="Marathi">Marathi</option>
-                    <option value="Bengali">Bengali</option>
-                    <option value="Gujarati">Gujarati</option>
-                    <option value="Punjabi">Punjabi</option>
-                    <option value="Urdu">Urdu</option>
-                    <option value="Odia">Odia</option>
+                    <option value="English">
+                      English
+                    </option>
+                    <option value="Telugu">
+                      Telugu
+                    </option>
+                    <option value="Hindi">
+                      Hindi
+                    </option>
+                    <option value="Tamil">
+                      Tamil
+                    </option>
+                    <option value="Kannada">
+                      Kannada
+                    </option>
+                    <option value="Malayalam">
+                      Malayalam
+                    </option>
+                    <option value="Marathi">
+                      Marathi
+                    </option>
+                    <option value="Bengali">
+                      Bengali
+                    </option>
+                    <option value="Gujarati">
+                      Gujarati
+                    </option>
+                    <option value="Punjabi">
+                      Punjabi
+                    </option>
+                    <option value="Urdu">
+                      Urdu
+                    </option>
+                    <option value="Odia">
+                      Odia
+                    </option>
                   </select>
                 </div>
+
               </div>
             </section>
 
+            {/* Verification Notice */}
             <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-4 text-sm">
               A verification link will be sent to the registered
               email address.
             </div>
 
+            {/* Register Button */}
             <button
               type="submit"
               disabled={loading}
@@ -752,6 +856,7 @@ export default function RegisterPage() {
               )}
             </button>
 
+            {/* Login Button */}
             <button
               type="button"
               disabled={loading}
@@ -760,6 +865,7 @@ export default function RegisterPage() {
             >
               Already Have an Account? Login
             </button>
+
           </form>
         </section>
       </main>

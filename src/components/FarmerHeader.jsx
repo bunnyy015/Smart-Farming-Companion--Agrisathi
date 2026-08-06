@@ -1,15 +1,23 @@
-function getGreeting() {
+import { useEffect, useState } from "react";
+
+import {
+  getLanguage,
+  subscribeLanguageChange,
+  t,
+} from "../utils/language";
+
+function getGreeting(language) {
   const hour = new Date().getHours();
 
   if (hour < 12) {
-    return "Good Morning";
+    return t("goodMorning", {}, language);
   }
 
   if (hour < 17) {
-    return "Good Afternoon";
+    return t("goodAfternoon", {}, language);
   }
 
-  return "Good Evening";
+  return t("goodEvening", {}, language);
 }
 
 function getWeatherIcon(code) {
@@ -17,7 +25,12 @@ function getWeatherIcon(code) {
   if ([1, 2].includes(code)) return "🌤️";
   if (code === 3) return "☁️";
   if ([45, 48].includes(code)) return "🌫️";
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
+
+  if (
+    [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(
+      code
+    )
+  ) {
     return "🌧️";
   }
 
@@ -35,11 +48,21 @@ export default function FarmerHeader({
   unreadNotifications,
   onNotifications,
 }) {
+  const [language, setCurrentLanguage] = useState(
+    getLanguage()
+  );
+
+  useEffect(() => {
+    return subscribeLanguageChange((nextLanguage) => {
+      setCurrentLanguage(nextLanguage);
+    });
+  }, []);
+
   const farmerName =
     farmer?.name ||
     farmer?.fullName ||
     farmer?.farmerName ||
-    "Farmer";
+    t("farmer", {}, language);
 
   const location = [
     farmer?.village,
@@ -53,7 +76,7 @@ export default function FarmerHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-green-100">
-            {getGreeting()}
+            {getGreeting(language)}
           </p>
 
           <h1 className="text-2xl font-bold truncate mt-1">
@@ -61,7 +84,13 @@ export default function FarmerHeader({
           </h1>
 
           <p className="text-sm text-green-100 mt-2 truncate">
-            📍 {location || "Farm location not added"}
+            📍{" "}
+            {location ||
+              t(
+                "farmLocationNotAdded",
+                {},
+                language
+              )}
           </p>
         </div>
 
@@ -69,7 +98,11 @@ export default function FarmerHeader({
           type="button"
           onClick={onNotifications}
           className="relative w-12 h-12 shrink-0 rounded-full bg-white/15 flex items-center justify-center text-xl"
-          aria-label="Open notifications"
+          aria-label={t(
+            "openNotifications",
+            {},
+            language
+          )}
         >
           🔔
 
@@ -89,14 +122,22 @@ export default function FarmerHeader({
             <div className="w-8 h-8 rounded-full border-2 border-white/40 border-t-white animate-spin" />
 
             <p className="text-sm text-green-100">
-              Loading local weather...
+              {t(
+                "loadingLocalWeather",
+                {},
+                language
+              )}
             </p>
           </div>
         ) : weather ? (
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-green-100">
-                Current weather
+                {t(
+                  "currentWeather",
+                  {},
+                  language
+                )}
               </p>
 
               <p className="text-3xl font-bold mt-1">
@@ -117,18 +158,28 @@ export default function FarmerHeader({
               </div>
 
               <p className="text-xs text-green-100 mt-1">
-                Humidity {weather.humidity ?? "--"}%
+                {t("humidity", {}, language)}{" "}
+                {weather.humidity ?? "--"}%
               </p>
             </div>
           </div>
         ) : (
           <div>
             <p className="font-semibold">
-              🌦️ Weather unavailable
+              🌦️{" "}
+              {t(
+                "weatherUnavailable",
+                {},
+                language
+              )}
             </p>
 
             <p className="text-sm text-green-100 mt-1">
-              Allow location access for local farm weather.
+              {t(
+                "allowLocationForWeather",
+                {},
+                language
+              )}
             </p>
           </div>
         )}

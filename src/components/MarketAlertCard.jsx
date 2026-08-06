@@ -1,9 +1,21 @@
-function formatPrice(value) {
-  return Number(value || 0).toLocaleString("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  });
+import { useEffect, useState } from "react";
+
+import {
+  getLanguage,
+  getSpeechLocale,
+  subscribeLanguageChange,
+  t,
+} from "../utils/language";
+
+function formatPrice(value, language) {
+  return Number(value || 0).toLocaleString(
+    getSpeechLocale(language),
+    {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }
+  );
 }
 
 export default function MarketAlertCard({
@@ -12,6 +24,16 @@ export default function MarketAlertCard({
   loading,
   onOpenMarket,
 }) {
+  const [language, setCurrentLanguage] = useState(
+    getLanguage()
+  );
+
+  useEffect(() => {
+    return subscribeLanguageChange((nextLanguage) => {
+      setCurrentLanguage(nextLanguage);
+    });
+  }, []);
+
   if (loading) {
     return (
       <section className="bg-white border border-green-100 rounded-2xl shadow-sm p-4 mt-5">
@@ -19,7 +41,11 @@ export default function MarketAlertCard({
           <div className="w-8 h-8 rounded-full border-2 border-green-200 border-t-green-700 animate-spin" />
 
           <p className="text-sm text-gray-600">
-            Loading crop market price...
+            {t(
+              "loadingMarketPrice",
+              {},
+              language
+            )}
           </p>
         </div>
       </section>
@@ -34,16 +60,20 @@ export default function MarketAlertCard({
 
           <div className="flex-1">
             <p className="text-xs text-gray-500">
-              MARKET PRICE
+              {t("marketPrice", {}, language)}
             </p>
 
             <h2 className="font-bold text-green-900 mt-1">
-              {cropName || "Crop prices"}
+              {cropName ||
+                t("cropPrices", {}, language)}
             </h2>
 
             <p className="text-sm text-gray-600 mt-1">
-              No current price record was found. Open the
-              market page to view all crops and mandis.
+              {t(
+                "noCurrentMarketRecord",
+                {},
+                language
+              )}
             </p>
 
             <button
@@ -51,7 +81,12 @@ export default function MarketAlertCard({
               onClick={onOpenMarket}
               className="text-sm font-bold text-green-700 mt-3"
             >
-              View market prices →
+              {t(
+                "viewMarketPrices",
+                {},
+                language
+              )}{" "}
+              →
             </button>
           </div>
         </div>
@@ -64,7 +99,11 @@ export default function MarketAlertCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-gray-500">
-            LOCAL MARKET PRICE
+            {t(
+              "localMarketPrice",
+              {},
+              language
+            )}
           </p>
 
           <h2 className="text-lg font-bold text-green-900 mt-1">
@@ -72,39 +111,56 @@ export default function MarketAlertCard({
           </h2>
 
           <p className="text-sm text-gray-600 mt-1 truncate">
-            🏪 {marketRecord.market || "Local mandi"}
+            🏪{" "}
+            {marketRecord.market ||
+              t("localMandi", {}, language)}
           </p>
 
           <p className="text-xs text-gray-500 mt-1">
-            📍 {marketRecord.district || "Nearby market"}
+            📍{" "}
+            {marketRecord.district ||
+              t("nearbyMarket", {}, language)}
           </p>
         </div>
 
         <div className="text-right shrink-0">
           <p className="text-xl font-bold text-green-800">
-            {formatPrice(marketRecord.modalPrice)}
+            {formatPrice(
+              marketRecord.modalPrice,
+              language
+            )}
           </p>
 
           <p className="text-xs text-gray-500">
-            per quintal
+            {t("perQuintal", {}, language)}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="bg-red-50 rounded-xl p-3">
-          <p className="text-xs text-gray-500">Minimum</p>
+          <p className="text-xs text-gray-500">
+            {t("minimum", {}, language)}
+          </p>
 
           <p className="font-bold text-red-700 mt-1">
-            {formatPrice(marketRecord.minimumPrice)}
+            {formatPrice(
+              marketRecord.minimumPrice,
+              language
+            )}
           </p>
         </div>
 
         <div className="bg-blue-50 rounded-xl p-3">
-          <p className="text-xs text-gray-500">Maximum</p>
+          <p className="text-xs text-gray-500">
+            {t("maximum", {}, language)}
+          </p>
 
           <p className="font-bold text-blue-700 mt-1">
-            {formatPrice(marketRecord.maximumPrice)}
+            {formatPrice(
+              marketRecord.maximumPrice,
+              language
+            )}
           </p>
         </div>
       </div>
@@ -114,7 +170,11 @@ export default function MarketAlertCard({
         onClick={onOpenMarket}
         className="w-full bg-green-50 text-green-800 py-3 rounded-xl font-semibold mt-4"
       >
-        Compare All Markets
+        {t(
+          "compareAllMarkets",
+          {},
+          language
+        )}
       </button>
     </section>
   );
