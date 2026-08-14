@@ -1,20 +1,17 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ref, get, update } from "firebase/database";
 import { database } from "../../firebase";
 
-export default function FarmersPage() {
-  const navigate = useNavigate();
-
-  const [farmers, setFarmers] = useState([]);
+export default function DealerManagementPage() {
+  const [dealers, setDealers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
-    loadFarmers();
+    loadDealers();
   }, []);
 
-  async function loadFarmers() {
+  async function loadDealers() {
     try {
       setLoading(true);
 
@@ -23,26 +20,26 @@ export default function FarmersPage() {
       );
 
       if (!snapshot.exists()) {
-        setFarmers([]);
+        setDealers([]);
         return;
       }
 
       const users = snapshot.val();
 
-      const farmerList = Object.entries(users)
+      const dealerList = Object.entries(users)
         .filter(
           ([, user]) =>
-            user && user.role === "farmer"
+            user && user.role === "dealer"
         )
         .map(([uid, user]) => ({
           uid,
           ...user,
         }));
 
-      setFarmers(farmerList);
+      setDealers(dealerList);
     } catch (error) {
       console.error(
-        "Error loading farmers:",
+        "Error loading dealers:",
         error
       );
     } finally {
@@ -50,50 +47,48 @@ export default function FarmersPage() {
     }
   }
 
-  async function toggleFarmerStatus(farmer) {
-    if (!farmer?.uid) {
-      return;
-    }
+  async function toggleDealerStatus(dealer) {
+    if (!dealer?.uid) return;
 
     try {
-      setProcessingId(farmer.uid);
+      setProcessingId(dealer.uid);
 
       const newStatus =
-        farmer.status === "disabled"
+        dealer.status === "disabled"
           ? "approved"
           : "disabled";
 
       await update(
-        ref(database, `users/${farmer.uid}`),
+        ref(database, `users/${dealer.uid}`),
         {
           status: newStatus,
         }
       );
 
-      setFarmers((currentFarmers) =>
-        currentFarmers.map((currentFarmer) =>
-          currentFarmer.uid === farmer.uid
+      setDealers((currentDealers) =>
+        currentDealers.map((currentDealer) =>
+          currentDealer.uid === dealer.uid
             ? {
-                ...currentFarmer,
+                ...currentDealer,
                 status: newStatus,
               }
-            : currentFarmer
+            : currentDealer
         )
       );
 
       alert(
         newStatus === "disabled"
-          ? "Farmer account disabled successfully."
-          : "Farmer account enabled successfully."
+          ? "Dealer account disabled successfully."
+          : "Dealer account enabled successfully."
       );
     } catch (error) {
       console.error(
-        "Error updating farmer status:",
+        "Error updating dealer status:",
         error
       );
 
       alert(
-        "Failed to update farmer account status."
+        "Failed to update dealer account status."
       );
     } finally {
       setProcessingId(null);
@@ -107,43 +102,43 @@ export default function FarmersPage() {
         {/* Back Button */}
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => window.history.back()}
           className="mb-5 inline-flex items-center gap-2 bg-white text-green-700 px-4 py-2 rounded-lg shadow-sm border border-green-200 hover:bg-green-50 transition font-medium"
         >
           ← Back
         </button>
 
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-green-700">
-              👨‍🌾 Registered Farmers
+              🏪 Manage Dealers
             </h1>
 
             <p className="text-gray-600 mt-2">
-              View and manage registered farmer accounts.
+              View and manage approved dealer accounts.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={loadFarmers}
+            onClick={loadDealers}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 bg-green-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
+            className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
           >
             ↻ Refresh
           </button>
         </div>
 
-        {/* Farmer Count */}
+        {/* Dealer Count */}
         {!loading && (
           <div className="bg-white rounded-xl shadow-sm border border-green-100 p-4 mb-6">
             <p className="text-gray-600">
-              Total Registered Farmers
+              Total Registered Dealers
             </p>
 
             <p className="text-3xl font-bold text-green-700 mt-1">
-              {farmers.length}
+              {dealers.length}
             </p>
           </div>
         )}
@@ -154,49 +149,52 @@ export default function FarmersPage() {
             <div className="w-8 h-8 mx-auto rounded-full border-4 border-green-200 border-t-green-700 animate-spin" />
 
             <p className="text-gray-600 mt-4">
-              Loading farmers...
+              Loading dealers...
             </p>
           </div>
-        ) : farmers.length === 0 ? (
+        ) : dealers.length === 0 ? (
           /* Empty State */
           <div className="bg-white p-8 rounded-2xl shadow text-center">
             <div className="text-5xl mb-4">
-              👨‍🌾
+              🏪
             </div>
 
             <h2 className="text-xl font-bold text-gray-800">
-              No Registered Farmers
+              No Dealers Found
             </h2>
 
             <p className="text-gray-500 mt-2">
-              No farmer accounts were found in the
-              system.
+              There are currently no approved dealer
+              accounts.
             </p>
           </div>
         ) : (
-          /* Farmers List */
+          /* Dealer List */
           <div className="space-y-5">
-            {farmers.map((farmer) => {
+            {dealers.map((dealer) => {
               const isDisabled =
-                farmer.status === "disabled";
+                dealer.status === "disabled";
 
               const isProcessing =
-                processingId === farmer.uid;
+                processingId === dealer.uid;
 
               return (
                 <div
-                  key={farmer.uid}
+                  key={dealer.uid}
                   className="bg-white p-6 rounded-2xl shadow border border-green-100"
                 >
-                  {/* Farmer Header */}
+                  {/* Dealer Header */}
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
                     <div>
                       <h2 className="text-2xl font-bold text-green-800">
-                        {farmer.name || "Farmer"}
+                        {dealer.shopName ||
+                          "Dealer Shop"}
                       </h2>
 
                       <p className="text-gray-500 mt-1">
-                        Registered Farmer
+                        {dealer.dealerName ||
+                          dealer.ownerName ||
+                          "Dealer"}
                       </p>
                     </div>
 
@@ -213,8 +211,33 @@ export default function FarmersPage() {
                     </span>
                   </div>
 
-                  {/* Farmer Information */}
+                  {/* Dealer Information */}
                   <div className="grid md:grid-cols-2 gap-4">
+
+                    {/* Dealer Name */}
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-sm text-gray-500">
+                        Dealer Name
+                      </p>
+
+                      <p className="font-semibold text-gray-800 mt-1">
+                        {dealer.dealerName ||
+                          dealer.ownerName ||
+                          "Not available"}
+                      </p>
+                    </div>
+
+                    {/* Owner */}
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="text-sm text-gray-500">
+                        Owner Name
+                      </p>
+
+                      <p className="font-semibold text-gray-800 mt-1">
+                        {dealer.ownerName ||
+                          "Not available"}
+                      </p>
+                    </div>
 
                     {/* Email */}
                     <div className="bg-gray-50 p-4 rounded-xl">
@@ -223,7 +246,7 @@ export default function FarmersPage() {
                       </p>
 
                       <p className="font-semibold text-gray-800 mt-1 break-all">
-                        {farmer.email ||
+                        {dealer.email ||
                           "Not available"}
                       </p>
                     </div>
@@ -235,19 +258,7 @@ export default function FarmersPage() {
                       </p>
 
                       <p className="font-semibold text-gray-800 mt-1">
-                        {farmer.phone ||
-                          "Not available"}
-                      </p>
-                    </div>
-
-                    {/* Village */}
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <p className="text-sm text-gray-500">
-                        Village
-                      </p>
-
-                      <p className="font-semibold text-gray-800 mt-1">
-                        {farmer.village ||
+                        {dealer.phone ||
                           "Not available"}
                       </p>
                     </div>
@@ -259,44 +270,55 @@ export default function FarmersPage() {
                       </p>
 
                       <p className="font-semibold text-gray-800 mt-1">
-                        {farmer.district ||
+                        {dealer.district ||
                           "Not available"}
                       </p>
                     </div>
 
-                    {/* Main Crop */}
-                    <div className="bg-gray-50 p-4 rounded-xl md:col-span-2">
+                    {/* State */}
+                    <div className="bg-gray-50 p-4 rounded-xl">
                       <p className="text-sm text-gray-500">
-                        Main Crop
+                        State
                       </p>
 
                       <p className="font-semibold text-gray-800 mt-1">
-                        {farmer.mainCrop ||
+                        {dealer.state ||
+                          "Not available"}
+                      </p>
+                    </div>
+
+                    {/* License */}
+                    <div className="bg-gray-50 p-4 rounded-xl md:col-span-2">
+                      <p className="text-sm text-gray-500">
+                        License Number
+                      </p>
+
+                      <p className="font-semibold text-gray-800 mt-1">
+                        {dealer.licenseNumber ||
                           "Not available"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Account Actions */}
-                  <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-5 border-t border-gray-100">
-
+                  {/* Actions */}
+                  <div className="mt-6 pt-5 border-t border-gray-100">
                     <button
                       type="button"
                       disabled={isProcessing}
                       onClick={() =>
-                        toggleFarmerStatus(farmer)
+                        toggleDealerStatus(dealer)
                       }
                       className={
                         isDisabled
-                          ? "flex-1 bg-green-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-                          : "flex-1 bg-red-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-red-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          ? "w-full sm:w-auto bg-green-700 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
+                          : "w-full sm:w-auto bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition disabled:bg-gray-400"
                       }
                     >
                       {isProcessing
                         ? "Processing..."
                         : isDisabled
-                        ? "✓ Enable Farmer"
-                        : "Disable Farmer"}
+                        ? "✓ Enable Dealer"
+                        : "Disable Dealer"}
                     </button>
                   </div>
                 </div>
@@ -304,7 +326,6 @@ export default function FarmersPage() {
             })}
           </div>
         )}
-
       </div>
     </div>
   );

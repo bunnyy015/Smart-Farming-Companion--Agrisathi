@@ -4,6 +4,9 @@ import {
   Routes,
 } from "react-router-dom";
 
+// ==============================
+// Authentication
+// ==============================
 import SplashPage from "./modules/splash/SplashPage";
 import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
@@ -11,9 +14,11 @@ import LanguageSelection from "./modules/auth/LanguageSelection";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
 import KVKRegistrationPage from "./modules/auth/KVKRegistrationPage";
 
-import VoiceAssistantPage from "./utils/VoiceAssistantPage";
-
+// ==============================
+// Farmer
+// ==============================
 import DashboardPage from "./modules/dashboard/DashboardPage";
+import VoiceAssistantPage from "./utils/VoiceAssistantPage";
 import WeatherPage from "./modules/weather/WeatherPage";
 import MarketPricesPage from "./modules/market/MarketPricesPage";
 import CropDiseasePage from "./modules/cropDisease/CropDiseasePage";
@@ -27,14 +32,36 @@ import FarmerNotificationsPage from "./modules/farmer/FarmerNotificationsPage";
 
 import CommunityPage from "./modules/community/CommunityPage";
 
+// ==============================
+// Admin
+// ==============================
 import AdminDashboard from "./modules/admin/AdminDashboard";
 import FarmersListPage from "./modules/admin/FarmersListPage";
+import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
+
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import KVKRequestsPage from "./modules/admin/KVKRequestsPage";
 
-import KVKDashboard from "./modules/kvk/KVKDashboard";
 import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
 import ApprovedKVKOfficersPage from "./modules/admin/ApprovedKVKOfficersPage";
+
+import DealerManagementPage from "./modules/admin/DealerManagementPage";
+import KVKManagementPage from "./modules/admin/KVKManagementPage";
+
+import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
+
+// IMPORTANT:
+// Admin product management page
+import AdminProductsPage from "./modules/admin/AdminProductsPage";
+
+// ==============================
+// KVK
+// ==============================
+import KVKDashboard from "./modules/kvk/KVKDashboard";
+
+// ==============================
+// Dealer
+// ==============================
 import DealerDashboard from "./modules/dealer/DealerDashboard";
 import DealerRegistrationPage from "./modules/dealer/DealerRegistrationPage";
 import DealerProductsPage from "./modules/dealer/DealerProductsPage";
@@ -43,13 +70,40 @@ import DealerOrdersPage from "./modules/dealer/DealerOrdersPage";
 import DealerSalesPage from "./modules/dealer/DealerSalesPage";
 import DealerNotificationsPage from "./modules/dealer/DealerNotificationsPage";
 
+
+
+
+
+import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
+
+
+
+
+
+
+
+
+
+
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<SplashPage />} />
 
-        <Route path="/login" element={<LoginPage />} />
+        {/* =====================================================
+            AUTHENTICATION ROUTES
+        ===================================================== */}
+
+        <Route
+          path="/"
+          element={<SplashPage />}
+        />
+
+        <Route
+          path="/login"
+          element={<LoginPage />}
+        />
 
         <Route
           path="/register"
@@ -66,7 +120,10 @@ function App() {
           element={<RoleSelectionPage />}
         />
 
-        {/* Farmer routes */}
+
+        {/* =====================================================
+            FARMER ROUTES
+        ===================================================== */}
 
         <Route
           path="/dashboard"
@@ -107,35 +164,7 @@ function App() {
           path="/market-prices"
           element={<MarketPricesPage />}
         />
-        <Route
-  path="/admin"
-  element={<AdminDashboard />}
-/>
 
-<Route
-  path="/admin/farmers"
-  element={<FarmersListPage />}
-/>
-
-<Route
-  path="/admin/dealer-requests"
-  element={<DealerRequestsPage />}
-/>
-
-<Route
-  path="/admin/kvk-requests"
-  element={<KVKRequestsPage />}
-/>
-
-        <Route
-  path="/admin/dealers"
-  element={<ApprovedDealersPage />}
-/>
-
-<Route
-  path="/admin/kvk-officers"
-  element={<ApprovedKVKOfficersPage />}
-/>
         <Route
           path="/crop-disease"
           element={<CropDiseasePage />}
@@ -156,12 +185,20 @@ function App() {
           element={<CommunityPage />}
         />
 
-        {/* Admin routes */}
+
+        {/* =====================================================
+            ADMIN DASHBOARD
+        ===================================================== */}
 
         <Route
           path="/admin"
           element={<AdminDashboard />}
         />
+
+
+        {/* =====================================================
+            ADMIN - FARMERS
+        ===================================================== */}
 
         <Route
           path="/admin/farmers"
@@ -169,16 +206,88 @@ function App() {
         />
 
         <Route
+          path="/admin/farmer-management"
+          element={<FarmerManagementPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - DEALERS
+        ===================================================== */}
+
+        <Route
           path="/admin/dealer-requests"
           element={<DealerRequestsPage />}
         />
+
+        <Route
+          path="/admin/dealers"
+          element={<ApprovedDealersPage />}
+        />
+
+        <Route
+          path="/admin/dealer-management"
+          element={<DealerManagementPage />}
+        />
+
+        {/* Keep your old URL working */}
+        <Route
+          path="/admin/Dealer-management"
+          element={<DealerManagementPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - KVK
+        ===================================================== */}
 
         <Route
           path="/admin/kvk-requests"
           element={<KVKRequestsPage />}
         />
 
-        {/* KVK routes */}
+        {/* KVK management */}
+        <Route
+          path="/admin/kvk-management"
+          element={<KVKManagementPage />}
+        />
+
+        {/* Approved KVK officers */}
+        <Route
+          path="/admin/kvk-officers"
+          element={<ApprovedKVKOfficersPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - PRODUCT MANAGEMENT
+        ===================================================== */}
+
+        <Route
+          path="/admin/products"
+          element={<AdminProductsPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - REPORTS & STATISTICS
+        ===================================================== */}
+
+        <Route
+          path="/admin/reports"
+          element={<ReportsStatisticsPage />}
+        />
+
+        {/* Keep your existing URL working */}
+        <Route
+          path="/admin/reports-statistics"
+          element={<ReportsStatisticsPage />}
+        />
+
+
+        {/* =====================================================
+            KVK ROUTES
+        ===================================================== */}
 
         <Route
           path="/kvk/register"
@@ -190,7 +299,10 @@ function App() {
           element={<KVKDashboard />}
         />
 
-        {/* Dealer routes */}
+
+        {/* =====================================================
+            DEALER ROUTES
+        ===================================================== */}
 
         <Route
           path="/dealer/register"
@@ -227,12 +339,40 @@ function App() {
           element={<DealerNotificationsPage />}
         />
 
-        {/* Invalid route */}
+
+        {/* =====================================================
+            INVALID ROUTE
+        ===================================================== */}
 
         <Route
           path="*"
           element={<SplashPage />}
         />
+
+
+
+            <Route
+  path="/forgot-password"
+  element={<ForgotPasswordPage />}
+/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       </Routes>
     </BrowserRouter>
   );
