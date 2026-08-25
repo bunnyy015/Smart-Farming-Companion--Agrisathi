@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -19,6 +19,9 @@ const ROLE_CONFIG = {
     subtitle:
       "Access crop services, orders and farm information.",
     path: "/dashboard",
+    gradient:
+      "from-green-700 via-green-600 to-emerald-500",
+    ring: "focus:ring-green-500",
   },
 
   dealer: {
@@ -27,14 +30,9 @@ const ROLE_CONFIG = {
     subtitle:
       "Manage products, stock, farmer orders and sales.",
     path: "/dealer",
-  },
-
-  kvk: {
-    title: "KVK Officer Login",
-    icon: "🏛️",
-    subtitle:
-      "Publish crop advisories and support farmers.",
-    path: "/kvk",
+    gradient:
+      "from-blue-700 via-blue-600 to-cyan-500",
+    ring: "focus:ring-blue-500",
   },
 
   admin: {
@@ -43,6 +41,9 @@ const ROLE_CONFIG = {
     subtitle:
       "Manage users, approvals and platform information.",
     path: "/admin",
+    gradient:
+      "from-purple-700 via-indigo-600 to-blue-500",
+    ring: "focus:ring-purple-500",
   },
 };
 
@@ -89,18 +90,32 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
 
   const [loading, setLoading] = useState(false);
   const [resettingPassword, setResettingPassword] =
     useState(false);
 
   const [message, setMessage] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [focusedField, setFocusedField] =
+    useState("");
 
   const normalizedEmail = useMemo(
     () => email.trim().toLowerCase(),
     [email]
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsVisible(true);
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   function showMessage(type, text) {
     setMessage({
@@ -114,42 +129,19 @@ export default function LoginPage() {
   }
 
   /*
-   * Check whether a dealer or KVK registration
+   * Check whether a dealer registration
    * is still waiting for administrator approval.
    */
   async function checkPendingRequest(uid) {
-    const [
-      dealerSnapshot,
-      kvkSnapshot,
-    ] = await Promise.all([
-      get(
-        ref(
-          database,
-          `dealerRequests/${uid}`
-        )
-      ),
-
-      get(
-        ref(
-          database,
-          `kvkRequests/${uid}`
-        )
-      ),
-    ]);
+    const dealerSnapshot = await get(
+      ref(database, `dealerRequests/${uid}`)
+    );
 
     if (dealerSnapshot.exists()) {
       return {
         type: "dealer",
         text:
           "Your dealer registration is waiting for admin approval.",
-      };
-    }
-
-    if (kvkSnapshot.exists()) {
-      return {
-        type: "kvk",
-        text:
-          "Your KVK registration is waiting for admin approval.",
       };
     }
 
@@ -211,10 +203,7 @@ export default function LoginPage() {
        * from Realtime Database.
        */
       const userSnapshot = await get(
-        ref(
-          database,
-          `users/${uid}`
-        )
+        ref(database, `users/${uid}`)
       );
 
       /*
@@ -244,15 +233,13 @@ export default function LoginPage() {
         return;
       }
 
-      const userData =
-        userSnapshot.val();
+      const userData = userSnapshot.val();
 
-      const registeredRole =
-        String(
-          userData.role || ""
-        )
-          .trim()
-          .toLowerCase();
+      const registeredRole = String(
+        userData.role || ""
+      )
+        .trim()
+        .toLowerCase();
 
       /*
        * Validate role configuration.
@@ -275,9 +262,7 @@ export default function LoginPage() {
        * Prevent users from selecting one role
        * and logging in using another role.
        */
-      if (
-        registeredRole !== selectedRole
-      ) {
+      if (registeredRole !== selectedRole) {
         await signOut(auth);
 
         showMessage(
@@ -285,10 +270,7 @@ export default function LoginPage() {
           `This account is registered as ${
             ROLE_CONFIG[
               registeredRole
-            ].title.replace(
-              " Login",
-              ""
-            )
+            ].title.replace(" Login", "")
           }. Change the selected role and log in again.`
         );
 
@@ -300,9 +282,8 @@ export default function LoginPage() {
        * this account.
        */
       if (
-        String(
-          userData.status || ""
-        ).toLowerCase() === "disabled"
+        String(userData.status || "").toLowerCase() ===
+        "disabled"
       ) {
         await signOut(auth);
 
@@ -323,12 +304,18 @@ export default function LoginPage() {
       );
 
       /*
+       * Small delay gives the user visual feedback
+       * before navigating to the dashboard.
+       */
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, 350)
+      );
+
+      /*
        * Send user to the correct dashboard.
        */
       navigate(
-        ROLE_CONFIG[
-          registeredRole
-        ].path,
+        ROLE_CONFIG[registeredRole].path,
         {
           replace: true,
         }
@@ -379,10 +366,6 @@ export default function LoginPage() {
         "Password reset instructions have been sent to your email. Check your inbox and spam folder."
       );
 
-      /*
-       * Clear the password field after
-       * requesting a reset.
-       */
       setPassword("");
     } catch (error) {
       console.error(
@@ -390,12 +373,9 @@ export default function LoginPage() {
         error
       );
 
-      const code =
-        error?.code || "";
+      const code = error?.code || "";
 
-      if (
-        code === "auth/invalid-email"
-      ) {
+      if (code === "auth/invalid-email") {
         showMessage(
           "error",
           "Enter a valid email address."
@@ -408,16 +388,14 @@ export default function LoginPage() {
           "No Firebase Authentication account was found with this email address."
         );
       } else if (
-        code ===
-        "auth/network-request-failed"
+        code === "auth/network-request-failed"
       ) {
         showMessage(
           "error",
           "Check your internet connection and try again."
         );
       } else if (
-        code ===
-        "auth/operation-not-allowed"
+        code === "auth/operation-not-allowed"
       ) {
         showMessage(
           "error",
@@ -438,45 +416,46 @@ export default function LoginPage() {
    * Registration navigation.
    */
   function openRegistration() {
-    if (
-      selectedRole === "farmer"
-    ) {
+    if (selectedRole === "farmer") {
       navigate("/register");
       return;
     }
 
-    if (
-      selectedRole === "dealer"
-    ) {
+    if (selectedRole === "dealer") {
       navigate("/dealer/register");
-      return;
-    }
-
-    if (
-      selectedRole === "kvk"
-    ) {
-      navigate("/kvk/register");
     }
   }
 
   /*
-   * If the user opened LoginPage without
-   * selecting a role first.
+   * If LoginPage is opened without selecting
+   * a role first.
    */
   if (!roleDetails) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-7 text-center">
-          <div className="text-5xl">
-            🌾
+      <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-emerald-50 to-green-100 flex items-center justify-center p-4">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-green-300/30 rounded-full blur-3xl animate-pulse" />
+
+        <div
+          className="absolute -bottom-20 -right-20 w-72 h-72 bg-emerald-300/30 rounded-full blur-3xl animate-pulse"
+          style={{
+            animationDelay: "800ms",
+          }}
+        />
+
+        <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-green-100 p-7 text-center animate-[fadeIn_0.5s_ease-out]">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-green-50 flex items-center justify-center shadow-inner">
+            <span className="text-5xl">
+              🌾
+            </span>
           </div>
 
-          <h1 className="text-2xl font-bold text-green-800 mt-4">
+          <h1 className="text-2xl font-bold text-green-800 mt-5">
             Select Your Role
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Choose Farmer, Dealer, KVK Officer or Admin before logging in.
+            Choose Farmer, Dealer or Admin before
+            logging in.
           </p>
 
           <button
@@ -489,7 +468,7 @@ export default function LoginPage() {
                 }
               )
             }
-            className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold mt-6 hover:bg-green-800 transition"
+            className="w-full bg-green-700 text-white py-3.5 rounded-xl font-semibold mt-6 hover:bg-green-800 hover:shadow-lg active:scale-[0.98] transition-all duration-200"
           >
             Select Role
           </button>
@@ -498,50 +477,88 @@ export default function LoginPage() {
     );
   }
 
-  const canRegister =
-    [
-      "farmer",
-      "dealer",
-      "kvk",
-    ].includes(selectedRole);
+  const canRegister = [
+    "farmer",
+    "dealer",
+  ].includes(selectedRole);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-100 to-green-50 flex items-center justify-center p-4">
-      <main className="w-full max-w-md">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-emerald-50 to-green-50 flex items-center justify-center p-4 sm:p-6">
+      {/* Decorative background */}
+      <div className="absolute -top-24 -left-24 w-80 h-80 bg-green-300/20 rounded-full blur-3xl animate-pulse" />
 
+      <div
+        className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
+        style={{
+          animationDelay: "900ms",
+        }}
+      />
+
+      <div
+        className="absolute top-1/4 right-5 w-24 h-24 bg-yellow-200/20 rounded-full blur-2xl animate-pulse"
+        style={{
+          animationDelay: "1500ms",
+        }}
+      />
+
+      <main
+        className={`relative z-10 w-full max-w-md transition-all duration-700 ease-out ${
+          isVisible
+            ? "opacity-100 translate-y-0 scale-100"
+            : "opacity-0 translate-y-8 scale-[0.98]"
+        }`}
+      >
         <StatusMessage
           message={message}
           onClose={clearMessage}
         />
 
-        <section className="bg-white rounded-3xl shadow-xl overflow-hidden">
-
+        <section className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white overflow-hidden">
           {/* Header */}
-          <header className="bg-gradient-to-r from-green-800 to-green-600 text-white p-6 text-center">
+          <header
+            className={`relative bg-gradient-to-r ${roleDetails.gradient} text-white p-7 text-center overflow-hidden`}
+          >
+            {/* Header decoration */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10" />
 
-            <div className="w-20 h-20 mx-auto rounded-full bg-white/20 flex items-center justify-center text-5xl">
-              {roleDetails.icon}
+            <div className="absolute -bottom-16 -left-10 w-40 h-40 rounded-full bg-white/10" />
+
+            <div className="relative z-10">
+              <div
+                className="w-20 h-20 mx-auto rounded-3xl bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center text-5xl shadow-lg transition-transform duration-500 hover:scale-110 hover:rotate-3"
+              >
+                {roleDetails.icon}
+              </div>
+
+              <h1 className="text-3xl font-extrabold mt-4">
+                {roleDetails.title}
+              </h1>
+
+              <p className="text-white/85 text-sm mt-2 leading-5">
+                {roleDetails.subtitle}
+              </p>
+
+              <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1.5 mt-4 text-xs font-medium">
+                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
+                Secure login
+              </div>
             </div>
-
-            <h1 className="text-3xl font-bold mt-4">
-              {roleDetails.title}
-            </h1>
-
-            <p className="text-green-100 text-sm mt-2">
-              {roleDetails.subtitle}
-            </p>
           </header>
 
-          {/* Login form */}
-          <div className="p-6">
-
+          {/* Form */}
+          <div className="p-6 sm:p-7">
             <form
               onSubmit={handleLogin}
-              className="space-y-4"
+              className="space-y-5"
             >
-
               {/* Email */}
-              <div>
+              <div
+                className={`transition-all duration-200 ${
+                  focusedField === "email"
+                    ? "translate-y-[-1px]"
+                    : ""
+                }`}
+              >
                 <label
                   htmlFor="login-email"
                   className="block text-sm font-semibold text-gray-700"
@@ -549,36 +566,85 @@ export default function LoginPage() {
                   Email Address
                 </label>
 
-                <input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  autoComplete="email"
-                  disabled={
-                    loading ||
-                    resettingPassword
-                  }
-                  onChange={(event) => {
-                    setEmail(
-                      event.target.value
-                    );
-                    clearMessage();
-                  }}
-                  placeholder="Enter your registered email"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
-                />
+                <div
+                  className={`relative mt-2 rounded-xl transition-all duration-200 ${
+                    focusedField === "email"
+                      ? "ring-2 ring-green-500/30"
+                      : ""
+                  }`}
+                >
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">
+                    ✉️
+                  </span>
+
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    autoComplete="email"
+                    disabled={
+                      loading ||
+                      resettingPassword
+                    }
+                    onFocus={() =>
+                      setFocusedField("email")
+                    }
+                    onBlur={() =>
+                      setFocusedField("")
+                    }
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      clearMessage();
+                    }}
+                    placeholder="Enter your registered email"
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:border-green-500 transition disabled:bg-gray-100"
+                  />
+                </div>
               </div>
 
               {/* Password */}
-              <div>
-                <label
-                  htmlFor="login-password"
-                  className="block text-sm font-semibold text-gray-700"
-                >
-                  Password
-                </label>
+              <div
+                className={`transition-all duration-200 ${
+                  focusedField === "password"
+                    ? "translate-y-[-1px]"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="login-password"
+                    className="block text-sm font-semibold text-gray-700"
+                  >
+                    Password
+                  </label>
 
-                <div className="relative mt-2">
+                  <button
+                    type="button"
+                    disabled={
+                      loading ||
+                      resettingPassword
+                    }
+                    onClick={
+                      handleForgotPassword
+                    }
+                    className="text-sm font-semibold text-green-700 hover:text-green-800 hover:underline disabled:text-gray-400 transition"
+                  >
+                    {resettingPassword
+                      ? "Sending..."
+                      : "Forgot Password?"}
+                  </button>
+                </div>
+
+                <div
+                  className={`relative mt-2 rounded-xl transition-all duration-200 ${
+                    focusedField === "password"
+                      ? "ring-2 ring-green-500/30"
+                      : ""
+                  }`}
+                >
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">
+                    🔒
+                  </span>
 
                   <input
                     id="login-password"
@@ -593,6 +659,14 @@ export default function LoginPage() {
                       loading ||
                       resettingPassword
                     }
+                    onFocus={() =>
+                      setFocusedField(
+                        "password"
+                      )
+                    }
+                    onBlur={() =>
+                      setFocusedField("")
+                    }
                     onChange={(event) => {
                       setPassword(
                         event.target.value
@@ -600,7 +674,7 @@ export default function LoginPage() {
                       clearMessage();
                     }}
                     placeholder="Enter your password"
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-20 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-20 py-3.5 outline-none focus:border-green-500 transition disabled:bg-gray-100"
                   />
 
                   <button
@@ -611,11 +685,10 @@ export default function LoginPage() {
                     }
                     onClick={() =>
                       setShowPassword(
-                        (current) =>
-                          !current
+                        (current) => !current
                       )
                     }
-                    className="absolute inset-y-0 right-3 text-sm font-semibold text-green-700 disabled:text-gray-400"
+                    className="absolute inset-y-0 right-3 px-2 text-sm font-semibold text-green-700 hover:text-green-900 disabled:text-gray-400 transition"
                     aria-label={
                       showPassword
                         ? "Hide password"
@@ -626,40 +699,7 @@ export default function LoginPage() {
                       ? "Hide"
                       : "Show"}
                   </button>
-
                 </div>
-              </div>
-
-              {/* Forgot Password */}
-              <div className="flex justify-end">
-
-                <button
-                  type="button"
-                  disabled={
-                    loading ||
-                    resettingPassword
-                  }
-                  onClick={
-                    handleForgotPassword
-                  }
-                  className="text-sm font-semibold text-green-700 hover:text-green-900 hover:underline disabled:text-gray-400"
-                >
-                  {resettingPassword
-                    ? "Sending reset email..."
-                    : "Forgot Password?"}
-                </button>
-
-              </div>
-
-              {/* Reset information */}
-              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-xs text-green-800">
-                <strong>
-                  Forgot your password?
-                </strong>
-
-                <p className="mt-1">
-                  Enter your registered email above and click "Forgot Password?". Firebase will send a secure password reset link to your email.
-                </p>
               </div>
 
               {/* Login button */}
@@ -669,34 +709,51 @@ export default function LoginPage() {
                   loading ||
                   resettingPassword
                 }
-                className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
+                className={`relative overflow-hidden w-full bg-gradient-to-r ${roleDetails.gradient} text-white py-3.5 rounded-xl font-bold shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none`}
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-
-                    <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-
-                    Logging in...
-
-                  </span>
-                ) : (
-                  "Login"
+                {loading && (
+                  <span className="absolute inset-0 bg-white/10 animate-pulse" />
                 )}
-              </button>
 
+                <span className="relative flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      Login
+                      <span className="text-lg">
+                        →
+                      </span>
+                    </>
+                  )}
+                </span>
+              </button>
             </form>
+
+            {/* Security information */}
+            <div className="flex items-center justify-center gap-2 mt-5 text-xs text-gray-500">
+              <span className="text-green-600">
+                🔐
+              </span>
+
+              <span>
+                Your login is protected by Firebase
+                Authentication.
+              </span>
+            </div>
 
             {/* Divider */}
             <div className="flex items-center gap-3 my-6">
-
               <div className="flex-1 h-px bg-gray-200" />
 
-              <span className="text-sm text-gray-500">
-                or
+              <span className="text-xs text-gray-400 uppercase tracking-wider">
+                options
               </span>
 
               <div className="flex-1 h-px bg-gray-200" />
-
             </div>
 
             {/* Change role */}
@@ -711,25 +768,25 @@ export default function LoginPage() {
                   "/role-selection"
                 )
               }
-              className="w-full border border-green-200 bg-green-50 text-green-800 py-3 rounded-xl font-semibold hover:bg-green-100 transition disabled:opacity-50"
+              className="group w-full border border-green-200 bg-green-50 text-green-800 py-3 rounded-xl font-semibold hover:bg-green-100 hover:border-green-300 active:scale-[0.98] transition-all duration-200 disabled:opacity-50"
             >
-              Change Role
+              <span className="inline-flex items-center gap-2">
+                <span className="transition-transform duration-200 group-hover:-translate-x-1">
+                  ←
+                </span>
+
+                Change Role
+              </span>
             </button>
 
             {/* Registration */}
             {canRegister && (
-              <div className="bg-gray-50 rounded-xl p-4 text-center mt-5">
-
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center mt-5">
                 <p className="text-sm text-gray-600">
-
                   {selectedRole ===
                   "farmer"
                     ? "New farmer?"
-                    : selectedRole ===
-                      "dealer"
-                    ? "Want to register as a dealer?"
-                    : "Want to register as a KVK officer?"}
-
+                    : "Want to register as a dealer?"}
                 </p>
 
                 <button
@@ -741,27 +798,44 @@ export default function LoginPage() {
                   onClick={
                     openRegistration
                   }
-                  className="text-green-700 font-bold mt-2 disabled:text-gray-400 hover:underline"
+                  className="text-green-700 font-bold mt-2 hover:text-green-900 hover:underline disabled:text-gray-400 transition"
                 >
                   {selectedRole ===
                   "farmer"
-                    ? "Create Farmer Account"
-                    : "Request Admin Approval"}
+                    ? "Create Farmer Account →"
+                    : "Request Admin Approval →"}
                 </button>
-
               </div>
             )}
 
             {/* Admin information */}
             {selectedRole ===
               "admin" && (
-              <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-4 text-sm text-center mt-5">
-                Admin accounts are created and managed centrally.
+              <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl p-4 text-sm text-center mt-5">
+                <div className="text-2xl mb-2">
+                  🛡️
+                </div>
+
+                <p className="font-semibold">
+                  Administrator Access
+                </p>
+
+                <p className="text-blue-700 mt-1">
+                  Admin accounts are created and
+                  managed centrally.
+                </p>
               </div>
             )}
-
           </div>
         </section>
+
+        {/* Bottom branding */}
+        <div className="text-center mt-5">
+          <p className="text-xs text-gray-500">
+            🌾 AgriSaathi • Smart Farming
+            Companion
+          </p>
+        </div>
       </main>
     </div>
   );

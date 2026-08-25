@@ -12,8 +12,6 @@ import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
 import LanguageSelection from "./modules/auth/LanguageSelection";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
-import KVKRegistrationPage from "./modules/auth/KVKRegistrationPage";
-
 // ==============================
 // Farmer
 // ==============================
@@ -40,24 +38,15 @@ import FarmersListPage from "./modules/admin/FarmersListPage";
 import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
 
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
-import KVKRequestsPage from "./modules/admin/KVKRequestsPage";
-
 import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
-import ApprovedKVKOfficersPage from "./modules/admin/ApprovedKVKOfficersPage";
 
 import DealerManagementPage from "./modules/admin/DealerManagementPage";
-import KVKManagementPage from "./modules/admin/KVKManagementPage";
-
 import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
 
 // IMPORTANT:
 // Admin product management page
 import AdminProductsPage from "./modules/admin/AdminProductsPage";
 
-// ==============================
-// KVK
-// ==============================
-import KVKDashboard from "./modules/kvk/KVKDashboard";
 
 // ==============================
 // Dealer
@@ -232,33 +221,12 @@ function App() {
 
         {/* Keep your old URL working */}
         <Route
-          path="/admin/Dealer-management"
-          element={<DealerManagementPage />}
-        />
+  path="/admin/dealer-management"
+  element={<DealerManagementPage />}
+/>
 
 
-        {/* =====================================================
-            ADMIN - KVK
-        ===================================================== */}
-
-        <Route
-          path="/admin/kvk-requests"
-          element={<KVKRequestsPage />}
-        />
-
-        {/* KVK management */}
-        <Route
-          path="/admin/kvk-management"
-          element={<KVKManagementPage />}
-        />
-
-        {/* Approved KVK officers */}
-        <Route
-          path="/admin/kvk-officers"
-          element={<ApprovedKVKOfficersPage />}
-        />
-
-
+        
         {/* =====================================================
             ADMIN - PRODUCT MANAGEMENT
         ===================================================== */}
@@ -282,21 +250,6 @@ function App() {
         <Route
           path="/admin/reports-statistics"
           element={<ReportsStatisticsPage />}
-        />
-
-
-        {/* =====================================================
-            KVK ROUTES
-        ===================================================== */}
-
-        <Route
-          path="/kvk/register"
-          element={<KVKRegistrationPage />}
-        />
-
-        <Route
-          path="/kvk"
-          element={<KVKDashboard />}
         />
 
 

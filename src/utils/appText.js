@@ -1,67 +1,325 @@
-import {
-  t,
-  getLanguage,
-  subscribeLanguageChange,
-} from "./language";
+import { getLanguage } from "./language";
 
-let currentLanguage = getLanguage();
+const text = {
+  en: {
+    responseLanguage: "English",
+    back: "Back",
+    loading: "Loading...",
+    unknown: "unknown",
+    notAvailable: "Not available",
+    email: "Email",
+    password: "Password",
+    login: "Login",
+    createAccount: "Create Account",
+    farmer: "Farmer",
+    phone: "Phone",
+    village: "Village",
+    district: "District",
+    state: "State",
+    mainCrop: "Main Crop",
+    loginSubtitle: "Sign in to continue",
+    enterEmail: "Enter email",
+    enterPassword: "Enter password",
+    forgotPassword: "Forgot password?",
+    loggingIn: "Logging in...",
+    continueDemo: "Continue as Demo Farmer",
+    newFarmer: "New farmer?",
+    createFarmerAccount: "Create Farmer Account",
+    enterFarmerDetails: "Enter farmer details",
+    farmerName: "Farmer name",
+    mobileNumber: "Mobile number",
+    villagePlaceholder: "Village",
+    districtPlaceholder: "District",
+    statePlaceholder: "State",
+    mainCropPlaceholder: "Main crop, example: Rice",
+    creatingAccount: "Creating Account...",
+    alreadyAccount: "Already have account? Login",
+    enterEmailError: "Please enter your email.",
+    enterPasswordError: "Please enter your password.",
+    wrongLoginError: "You entered wrong email or password.",
+    farmerNameError: "Please enter farmer name.",
+    emailError: "Please enter email.",
+    passwordError: "Please enter password.",
+    weakPasswordError: "Password should be at least 6 characters.",
+    phoneError: "Please enter mobile number.",
+    villageError: "Please enter village.",
+    districtError: "Please enter district.",
+    stateError: "Please enter state.",
+    mainCropError: "Please enter main crop.",
+    emailAlreadyUsed: "This email is already registered. Please login instead.",
+    invalidEmail: "Please enter a valid email address.",
+    accountFailed: "Account creation failed. Please try again.",
 
-subscribeLanguageChange((language) => {
-  currentLanguage = language;
-});
+    weatherTitle: "Weather",
+    weatherSubtitle: "Smart weather information for farming",
+    detectingLocation: "Detecting your location...",
+    currentLocation: "Current Location",
+    villageTown: "Village/Town",
+    mandalTaluk: "Mandal/Taluk",
+    country: "Country",
+    pinCode: "PIN Code",
+    humidity: "Humidity",
+    rain: "Rain",
+    wind: "Wind",
+    cropTip: "Crop Tip",
+    irrigateMorning: "Irrigate morning time",
+    locationUnsupported: "Location is not supported on this device",
+    weatherLoadError: "Unable to load weather or location details",
+    allowLocation: "Please allow location permission in browser",
 
-export function appText(key, variables = {}) {
-  return t(key, variables, currentLanguage);
+    cropDiseaseTitle: "Crop Disease",
+    cropDiseaseSubtitle: "Upload crop photo to identify disease and get treatment advice",
+    uploadCropImage: "Upload Crop Image",
+    detectDisease: "Detect Disease",
+    identifyingDisease: "Identifying Disease...",
+    uploadLeafFirst: "Please upload a crop leaf image first.",
+    missingGemini: "Missing Gemini API key. Add VITE_GEMINI_API_KEY in .env file.",
+    diseaseFailed: "Disease detection failed. Upload a clear leaf photo and try again.",
+    detectionResult: "Detection Result",
+    crop: "Crop",
+    disease: "Disease",
+    confidence: "Confidence",
+    cause: "Cause",
+    severity: "Severity",
+    visibleSymptoms: "Visible Symptoms",
+    suggestedProducts: "Suggested Pesticides / Fertilizers",
+    type: "Type",
+    suggested: "Suggested",
+    why: "Why",
+    farmerAdvice: "Farmer Advice",
+
+    marketSubtitle: "Real government mandi prices for your selected state and crop",
+    loadingFarmerDetails: "Loading farmer details...",
+    farmerMarketArea: "Farmer Market Area",
+    checkMandiPrices: "Check Mandi Prices",
+    statePlaceholderFull: "State, example: Telangana",
+    cropPlaceholderFull: "Crop, example: Rice",
+    loadingPrices: "Loading Prices...",
+    updatePrices: "Update Prices",
+    searchCropMarket: "Search crop, market, district",
+    govtMandiPrices: "Government Mandi Prices",
+    sourceMandi: "Source: data.gov.in Agmarknet mandi price data",
+    loadingRealPrices: "Loading real mandi prices...",
+    noMandiPrice: "No mandi price found for this crop and state. Try another crop name.",
+    modalPrice: "Modal Price",
+    minPrice: "Min Price",
+    maxPrice: "Max Price",
+    variety: "Variety",
+    date: "Date",
+    pricePerQuintal: "Price per quintal",
+    nearbyMills: "Nearby Mills / Selling Points",
+    nearbyMillsHelp: "Uses your current location to find nearby mills and markets.",
+    locationDetectedNear: "Location detected near",
+    searchingNearbyMills: "Searching nearby mills...",
+    nearbyMillMissing: "Nearby mill data not found. Use map search below.",
+    searchMillsMaps: "Search Mills on Google Maps",
+    openMaps: "Open in Maps",
+    dataGovMissing: "Missing data.gov.in API key. Add VITE_DATA_GOV_API_KEY in .env file.",
+    mandiFetchFailed: "Unable to fetch real government mandi prices.",
+    profileLoadFailed: "Unable to load farmer profile.",
+    millLocationUnsupported: "Location is not supported on this device.",
+    allowMillLocation: "Allow location permission to find nearby mills.",
+    millDataUnavailable: "Nearby mill data is temporarily unavailable.",
+    showingCommodity: "Showing Agmarknet commodity",
+
+    profileSubtitle: "Farmer account information",
+    loadingProfile: "Loading profile...",
+    noProfile: "No farmer profile found. Please create an account first.",
+    farmerSuffix: "Farmer",
+
+    valueLabels: {
+      high: "high",
+      medium: "medium",
+      low: "low",
+      emergency: "emergency",
+      today: "today",
+      monitor: "monitor",
+      cow: "cow",
+      buffalo: "buffalo",
+      goat: "goat",
+      sheep: "sheep",
+      poultry: "poultry",
+      dog: "dog",
+      other: "other",
+      unknown: "unknown",
+      healthy: "healthy",
+      fungal: "fungal",
+      bacterial: "bacterial",
+      viral: "viral",
+      pest: "pest",
+      "nutrient deficiency": "nutrient deficiency",
+    },
+  },
+  te: {
+    responseLanguage: "Telugu",
+    back: "వెనక్కి",
+    loading: "లోడ్ అవుతోంది...",
+    unknown: "తెలియదు",
+    notAvailable: "అందుబాటులో లేదు",
+    email: "ఇమెయిల్",
+    password: "పాస్‌వర్డ్",
+    login: "లాగిన్",
+    createAccount: "ఖాతా సృష్టించండి",
+    farmer: "రైతు",
+    phone: "ఫోన్",
+    village: "గ్రామం",
+    district: "జిల్లా",
+    state: "రాష్ట్రం",
+    mainCrop: "ప్రధాన పంట",
+    loginSubtitle: "కొనసాగడానికి లాగిన్ చేయండి",
+    enterEmail: "ఇమెయిల్ నమోదు చేయండి",
+    enterPassword: "పాస్‌వర్డ్ నమోదు చేయండి",
+    forgotPassword: "పాస్‌వర్డ్ మర్చిపోయారా?",
+    loggingIn: "లాగిన్ అవుతోంది...",
+    continueDemo: "డెమో రైతుగా కొనసాగండి",
+    newFarmer: "కొత్త రైతు?",
+    createFarmerAccount: "రైతు ఖాతా సృష్టించండి",
+    enterFarmerDetails: "రైతు వివరాలు నమోదు చేయండి",
+    farmerName: "రైతు పేరు",
+    mobileNumber: "మొబైల్ నంబర్",
+    villagePlaceholder: "గ్రామం",
+    districtPlaceholder: "జిల్లా",
+    statePlaceholder: "రాష్ట్రం",
+    mainCropPlaceholder: "ప్రధాన పంట, ఉదాహరణ: వరి",
+    creatingAccount: "ఖాతా సృష్టిస్తోంది...",
+    alreadyAccount: "ఇప్పటికే ఖాతా ఉందా? లాగిన్",
+    enterEmailError: "దయచేసి మీ ఇమెయిల్ నమోదు చేయండి.",
+    enterPasswordError: "దయచేసి మీ పాస్‌వర్డ్ నమోదు చేయండి.",
+    wrongLoginError: "మీరు తప్పు ఇమెయిల్ లేదా పాస్‌వర్డ్ నమోదు చేశారు.",
+    farmerNameError: "దయచేసి రైతు పేరు నమోదు చేయండి.",
+    emailError: "దయచేసి ఇమెయిల్ నమోదు చేయండి.",
+    passwordError: "దయచేసి పాస్‌వర్డ్ నమోదు చేయండి.",
+    weakPasswordError: "పాస్‌వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి.",
+    phoneError: "దయచేసి మొబైల్ నంబర్ నమోదు చేయండి.",
+    villageError: "దయచేసి గ్రామం నమోదు చేయండి.",
+    districtError: "దయచేసి జిల్లా నమోదు చేయండి.",
+    stateError: "దయచేసి రాష్ట్రం నమోదు చేయండి.",
+    mainCropError: "దయచేసి ప్రధాన పంట నమోదు చేయండి.",
+    emailAlreadyUsed: "ఈ ఇమెయిల్ ఇప్పటికే నమోదు చేయబడింది. దయచేసి లాగిన్ చేయండి.",
+    invalidEmail: "దయచేసి సరైన ఇమెయిల్ చిరునామా నమోదు చేయండి.",
+    accountFailed: "ఖాతా సృష్టించడంలో విఫలమైంది. మళ్లీ ప్రయత్నించండి.",
+
+    weatherTitle: "వాతావరణం",
+    weatherSubtitle: "వ్యవసాయానికి స్మార్ట్ వాతావరణ సమాచారం",
+    detectingLocation: "మీ స్థానాన్ని గుర్తిస్తోంది...",
+    currentLocation: "ప్రస్తుత స్థానం",
+    villageTown: "గ్రామం/పట్టణం",
+    mandalTaluk: "మండలం/తాలూకా",
+    country: "దేశం",
+    pinCode: "పిన్ కోడ్",
+    humidity: "తేమ",
+    rain: "వర్షం",
+    wind: "గాలి",
+    cropTip: "పంట సూచన",
+    irrigateMorning: "ఉదయం సమయంలో నీరు పెట్టండి",
+    locationUnsupported: "ఈ పరికరంలో లొకేషన్‌కు మద్దతు లేదు",
+    weatherLoadError: "వాతావరణం లేదా స్థానం వివరాలు లోడ్ చేయలేకపోయాం",
+    allowLocation: "దయచేసి బ్రౌజర్‌లో లొకేషన్ అనుమతించండి",
+
+    cropDiseaseTitle: "పంట వ్యాధి",
+    cropDiseaseSubtitle: "వ్యాధి గుర్తించడానికి మరియు చికిత్స సూచనలు పొందడానికి పంట ఫోటో అప్లోడ్ చేయండి",
+    uploadCropImage: "పంట చిత్రం అప్లోడ్ చేయండి",
+    detectDisease: "వ్యాధి గుర్తించండి",
+    identifyingDisease: "వ్యాధి గుర్తిస్తోంది...",
+    uploadLeafFirst: "ముందుగా పంట ఆకు ఫోటో అప్లోడ్ చేయండి.",
+    missingGemini: "Gemini API key లేదు. .env ఫైల్‌లో VITE_GEMINI_API_KEY జోడించండి.",
+    diseaseFailed: "వ్యాధి గుర్తింపు విఫలమైంది. స్పష్టమైన ఆకు ఫోటో అప్లోడ్ చేసి మళ్లీ ప్రయత్నించండి.",
+    detectionResult: "గుర్తింపు ఫలితం",
+    crop: "పంట",
+    disease: "వ్యాధి",
+    confidence: "నమ్మక స్థాయి",
+    cause: "కారణం",
+    severity: "తీవ్రత",
+    visibleSymptoms: "కనిపించే లక్షణాలు",
+    suggestedProducts: "సూచించిన పురుగుమందులు / ఎరువులు",
+    type: "రకం",
+    suggested: "సూచన",
+    why: "ఎందుకు",
+    farmerAdvice: "రైతు సూచనలు",
+
+    marketSubtitle: "మీ రాష్ట్రం మరియు పంటకు నిజమైన ప్రభుత్వ మండి ధరలు",
+    loadingFarmerDetails: "రైతు వివరాలు లోడ్ అవుతున్నాయి...",
+    farmerMarketArea: "రైతు మార్కెట్ ప్రాంతం",
+    checkMandiPrices: "మండి ధరలు చూడండి",
+    statePlaceholderFull: "రాష్ట్రం, ఉదాహరణ: తెలంగాణ",
+    cropPlaceholderFull: "పంట, ఉదాహరణ: వరి",
+    loadingPrices: "ధరలు లోడ్ అవుతున్నాయి...",
+    updatePrices: "ధరలు నవీకరించండి",
+    searchCropMarket: "పంట, మార్కెట్, జిల్లా వెతకండి",
+    govtMandiPrices: "ప్రభుత్వ మండి ధరలు",
+    sourceMandi: "మూలం: data.gov.in Agmarknet మండి ధర డేటా",
+    loadingRealPrices: "నిజమైన మండి ధరలు లోడ్ అవుతున్నాయి...",
+    noMandiPrice: "ఈ పంట మరియు రాష్ట్రానికి మండి ధర దొరకలేదు. మరో పంట పేరుతో ప్రయత్నించండి.",
+    modalPrice: "మోడల్ ధర",
+    minPrice: "కనిష్ట ధర",
+    maxPrice: "గరిష్ట ధర",
+    variety: "రకం",
+    date: "తేదీ",
+    pricePerQuintal: "క్వింటాల్‌కు ధర",
+    nearbyMills: "సమీప మిల్లులు / అమ్మకపు కేంద్రాలు",
+    nearbyMillsHelp: "సమీప మిల్లులు మరియు మార్కెట్లను కనుగొనడానికి మీ ప్రస్తుత స్థానాన్ని ఉపయోగిస్తుంది.",
+    locationDetectedNear: "స్థానం గుర్తించబడింది",
+    searchingNearbyMills: "సమీప మిల్లులు వెతుకుతోంది...",
+    nearbyMillMissing: "సమీప మిల్ డేటా దొరకలేదు. కింద మ్యాప్ శోధన ఉపయోగించండి.",
+    searchMillsMaps: "Google Maps లో మిల్లులు వెతకండి",
+    openMaps: "మ్యాప్స్‌లో తెరవండి",
+    dataGovMissing: "data.gov.in API key లేదు. .env ఫైల్‌లో VITE_DATA_GOV_API_KEY జోడించండి.",
+    mandiFetchFailed: "నిజమైన ప్రభుత్వ మండి ధరలు తెచ్చుకోలేకపోయాం.",
+    profileLoadFailed: "రైతు ప్రొఫైల్ లోడ్ చేయలేకపోయాం.",
+    millLocationUnsupported: "ఈ పరికరంలో లొకేషన్‌కు మద్దతు లేదు.",
+    allowMillLocation: "సమీప మిల్లులు కనుగొనడానికి లొకేషన్ అనుమతించండి.",
+    millDataUnavailable: "సమీప మిల్ డేటా తాత్కాలికంగా అందుబాటులో లేదు.",
+    showingCommodity: "చూపిస్తున్న Agmarknet సరుకు",
+
+    profileSubtitle: "రైతు ఖాతా సమాచారం",
+    loadingProfile: "ప్రొఫైల్ లోడ్ అవుతోంది...",
+    noProfile: "రైతు ప్రొఫైల్ దొరకలేదు. ముందుగా ఖాతా సృష్టించండి.",
+    farmerSuffix: "రైతు",
+
+    valueLabels: {
+      high: "అధికం",
+      medium: "మధ్యస్థం",
+      low: "తక్కువ",
+      emergency: "అత్యవసరం",
+      today: "ఈరోజు",
+      monitor: "గమనించండి",
+      cow: "ఆవు",
+      buffalo: "గేదె",
+      goat: "మేక",
+      sheep: "గొర్రె",
+      poultry: "కోళ్లు",
+      dog: "కుక్క",
+      other: "ఇతరము",
+      unknown: "తెలియదు",
+      healthy: "ఆరోగ్యంగా ఉంది",
+      fungal: "ఫంగస్",
+      bacterial: "బాక్టీరియా",
+      viral: "వైరస్",
+      pest: "పురుగు",
+      "nutrient deficiency": "పోషక లోపం",
+    },
+  },
+};
+
+export function appText(key) {
+  const language = getLanguage();
+
+  return text[language]?.[key] || text.en[key] || key;
 }
 
-export function currentAppLanguage() {
-  return currentLanguage;
+export function appTextGroup(key) {
+  const language = getLanguage();
+
+  return text[language]?.[key] || text.en[key] || [];
 }
 
-export function isTelugu() {
-  return currentLanguage === "te";
+export function appValue(value) {
+  const language = getLanguage();
+  const normalized = String(value || "").trim().toLowerCase();
+
+  return text[language]?.valueLabels?.[normalized] || text.en.valueLabels[normalized] || value;
 }
 
-export function isHindi() {
-  return currentLanguage === "hi";
-}
-
-export function isEnglish() {
-  return currentLanguage === "en";
-}
-
-export function isTamil() {
-  return currentLanguage === "ta";
-}
-
-export function isKannada() {
-  return currentLanguage === "kn";
-}
-
-export function isMalayalam() {
-  return currentLanguage === "ml";
-}
-
-export function isMarathi() {
-  return currentLanguage === "mr";
-}
-
-export function isGujarati() {
-  return currentLanguage === "gu";
-}
-
-export function isPunjabi() {
-  return currentLanguage === "pa";
-}
-
-export function isBengali() {
-  return currentLanguage === "bn";
-}
-
-export function isUrdu() {
-  return currentLanguage === "ur";
-}
-
-export function isOdia() {
-  return currentLanguage === "or";
+export function responseLanguage() {
+  return appText("responseLanguage");
 }

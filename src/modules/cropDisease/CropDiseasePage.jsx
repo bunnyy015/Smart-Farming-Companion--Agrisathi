@@ -1058,7 +1058,7 @@ Required JSON structure:
             <p className="text-sm text-gray-600 border-t mt-5 pt-4">
               ⚠️{" "}
               {result.safetyNote ||
-                "This AI result is not a final diagnosis. Confirm serious or spreading disease with a KVK or agriculture officer."}
+                "This AI result is not a final diagnosis. Confirm serious or spreading disease with a agriculture officer."}
             </p>
           </section>
         )}

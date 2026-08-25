@@ -305,10 +305,6 @@ export default function CommunityPage() {
         label: "Dealer",
         className: "bg-blue-100 text-blue-700",
       },
-      kvk: {
-        label: "KVK Officer",
-        className: "bg-purple-100 text-purple-700",
-      },
       admin: {
         label: "Admin",
         className: "bg-red-100 text-red-700",
@@ -339,7 +335,6 @@ export default function CommunityPage() {
     const role = currentProfile?.role;
 
     if (role === "dealer") return "/dealer";
-    if (role === "kvk") return "/kvk";
     if (role === "admin") return "/admin";
 
     return "/dashboard";

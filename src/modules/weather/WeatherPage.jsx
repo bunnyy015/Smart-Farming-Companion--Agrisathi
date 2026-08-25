@@ -1,3 +1,4 @@
+import { saveWeatherContext } from "../../utils/weatherContext";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
@@ -408,25 +409,50 @@ export default function WeatherPage() {
     const placeData =
       await placeResponse.json();
 
-    setLocation(
-      buildLocationDetails(
-        placeData,
-        latitude,
-        longitude
-      )
-    );
+   const locationDetails =
+  buildLocationDetails(
+    placeData,
+    latitude,
+    longitude
+  );
 
-    setCurrentWeather(
-      weatherData.current || null
-    );
+const currentWeatherDetails =
+  weatherData.current || null;
 
-    setHourlyForecast(
-      buildHourlyForecast(weatherData.hourly)
-    );
+const hourlyForecastDetails =
+  buildHourlyForecast(
+    weatherData.hourly
+  );
 
-    setDailyForecast(
-      buildDailyForecast(weatherData.daily)
-    );
+const dailyForecastDetails =
+  buildDailyForecast(
+    weatherData.daily
+  );
+
+setLocation(locationDetails);
+
+setCurrentWeather(
+  currentWeatherDetails
+);
+
+setHourlyForecast(
+  hourlyForecastDetails
+);
+
+setDailyForecast(
+  dailyForecastDetails
+);
+
+saveWeatherContext({
+  location: locationDetails,
+  currentWeather:
+    currentWeatherDetails,
+  hourlyForecast:
+    hourlyForecastDetails,
+  dailyForecast:
+    dailyForecastDetails,
+});
+
   }
 
   function buildLocationDetails(

@@ -28,7 +28,6 @@ function getDestination(role) {
   const destinations = {
     farmer: "/dashboard",
     dealer: "/dealer",
-    kvk: "/kvk",
     admin: "/admin",
   };
 
