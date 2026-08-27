@@ -603,6 +603,14 @@ export default function AdminDashboardPage() {
       icon: "📊",
       path: "/admin/reports",
     },
+    
+    {
+  title: "Market Prices",
+  description:
+    "Add, update and manage agricultural market prices.",
+  icon: "🌾",
+  path: "/admin/market-prices",
+},
   ];
 
   /*

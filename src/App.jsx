@@ -40,6 +40,7 @@ import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
 
+import MarketPricesManagementPage from "./modules/admin/MarketPricesManagementPage";
 import DealerManagementPage from "./modules/admin/DealerManagementPage";
 import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
 
@@ -213,6 +214,11 @@ function App() {
           path="/admin/dealers"
           element={<ApprovedDealersPage />}
         />
+
+           <Route
+  path="/admin/market-prices"
+  element={<MarketPricesManagementPage />}
+/>
 
         <Route
           path="/admin/dealer-management"
