@@ -12,6 +12,7 @@ import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
 import LanguageSelection from "./modules/auth/LanguageSelection";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
+
 // ==============================
 // Farmer
 // ==============================
@@ -48,6 +49,9 @@ import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
 // Admin product management page
 import AdminProductsPage from "./modules/admin/AdminProductsPage";
 
+// IMPORTANT:
+// Admin order management page
+import AdminOrderManagementPage from "./modules/admin/AdminOrderManagementPage";
 
 // ==============================
 // Dealer
@@ -60,21 +64,7 @@ import DealerOrdersPage from "./modules/dealer/DealerOrdersPage";
 import DealerSalesPage from "./modules/dealer/DealerSalesPage";
 import DealerNotificationsPage from "./modules/dealer/DealerNotificationsPage";
 
-
-
-
-
 import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
-
-
-
-
-
-
-
-
-
-
 
 function App() {
   return (
@@ -215,10 +205,10 @@ function App() {
           element={<ApprovedDealersPage />}
         />
 
-           <Route
-  path="/admin/market-prices"
-  element={<MarketPricesManagementPage />}
-/>
+        <Route
+          path="/admin/market-prices"
+          element={<MarketPricesManagementPage />}
+        />
 
         <Route
           path="/admin/dealer-management"
@@ -231,12 +221,11 @@ function App() {
 
         {/* Keep your old URL working */}
         <Route
-  path="/admin/dealer-management"
-  element={<DealerManagementPage />}
-/>
+          path="/admin/dealer-management"
+          element={<DealerManagementPage />}
+        />
 
 
-        
         {/* =====================================================
             ADMIN - PRODUCT MANAGEMENT
         ===================================================== */}
@@ -244,6 +233,16 @@ function App() {
         <Route
           path="/admin/products"
           element={<AdminProductsPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - ORDER MANAGEMENT
+        ===================================================== */}
+
+        <Route
+          path="/admin/orders"
+          element={<AdminOrderManagementPage />}
         />
 
 
@@ -313,28 +312,14 @@ function App() {
         />
 
 
+        {/* =====================================================
+            FORGOT PASSWORD
+        ===================================================== */}
 
-            <Route
-  path="/forgot-password"
-  element={<ForgotPasswordPage />}
-/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordPage />}
+        />
 
       </Routes>
     </BrowserRouter>
