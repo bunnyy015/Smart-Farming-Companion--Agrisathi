@@ -1,0 +1,27 @@
+/* Blue/cyan visual system used only inside dealer module pages. */
+.dealer-theme.bg-green-50,
+.dealer-theme .bg-green-50 { background-color: #eff6ff; }
+.dealer-theme .bg-green-100 { background-color: #dbeafe; }
+.dealer-theme .bg-green-600 { background-color: #2563eb; }
+.dealer-theme .bg-green-700 { background-color: #1d4ed8; }
+.dealer-theme .bg-green-800 { background-color: #1e40af; }
+.dealer-theme .text-green-100 { color: #dbeafe; }
+.dealer-theme .text-green-700 { color: #1d4ed8; }
+.dealer-theme .text-green-800 { color: #1e40af; }
+.dealer-theme .text-green-900 { color: #172554; }
+.dealer-theme .border-green-100 { border-color: #dbeafe; }
+.dealer-theme .border-green-200 { border-color: #bfdbfe; }
+.dealer-theme .border-green-300 { border-color: #93c5fd; }
+.dealer-theme .border-green-400 { border-color: #60a5fa; }
+.dealer-theme .border-green-700 { border-color: #1d4ed8; }
+.dealer-theme .ring-green-300 { --tw-ring-color: #93c5fd; }
+.dealer-theme .ring-green-500 { --tw-ring-color: #3b82f6; }
+.dealer-theme .focus\:ring-green-600:focus { --tw-ring-color: #2563eb; }
+.dealer-theme .hover\:bg-green-800:hover { background-color: #1e40af; }
+.dealer-theme .hover\:border-green-300:hover { border-color: #93c5fd; }
+.dealer-theme .from-green-800.to-green-600 {
+  background-image: linear-gradient(90deg, #1d4ed8, #06b6d4) !important;
+}
+.dealer-theme.from-green-50 {
+  background-image: linear-gradient(135deg, #eff6ff, #ffffff, #ecfeff) !important;
+}

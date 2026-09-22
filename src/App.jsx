@@ -36,7 +36,7 @@ import CommunityPage from "./modules/community/CommunityPage";
 import AdminDashboard from "./modules/admin/AdminDashboard";
 import FarmersListPage from "./modules/admin/FarmersListPage";
 import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
-
+import OrderManagementPage from "./modules/admin/OrderManagementPage";
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
 
@@ -224,6 +224,10 @@ function App() {
           path="/admin/dealer-management"
           element={<DealerManagementPage />}
         />
+        <Route
+  path="/admin/orders"
+  element={<OrderManagementPage />}
+/>
 
         {/* Keep your old URL working */}
         <Route

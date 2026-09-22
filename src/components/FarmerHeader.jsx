@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import {
   getLanguage,
   subscribeLanguageChange,
@@ -8,37 +7,27 @@ import {
 
 function getGreeting(language) {
   const hour = new Date().getHours();
-
   if (hour < 12) {
     return t("goodMorning", {}, language);
   }
-
   if (hour < 17) {
     return t("goodAfternoon", {}, language);
   }
-
   return t("goodEvening", {}, language);
 }
 
 function getWeatherIcon(code) {
   if (code === 0) return "☀️";
-  if ([1, 2].includes(code)) return "🌤️";
+  if ([1, 2].includes(code)) return "⛅";
   if (code === 3) return "☁️";
   if ([45, 48].includes(code)) return "🌫️";
-
-  if (
-    [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(
-      code
-    )
-  ) {
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
     return "🌧️";
   }
-
   if ([95, 96, 99].includes(code)) {
     return "⛈️";
   }
-
-  return "🌦️";
+  return "🌤️";
 }
 
 export default function FarmerHeader({
@@ -48,9 +37,7 @@ export default function FarmerHeader({
   unreadNotifications,
   onNotifications,
 }) {
-  const [language, setCurrentLanguage] = useState(
-    getLanguage()
-  );
+  const [language, setCurrentLanguage] = useState(getLanguage());
 
   useEffect(() => {
     return subscribeLanguageChange((nextLanguage) => {
@@ -71,92 +58,71 @@ export default function FarmerHeader({
     .filter(Boolean)
     .join(", ");
 
+  const greeting = getGreeting(language);
+  const weatherIcon = weather ? getWeatherIcon(weather.code) : "🌤️";
+
   return (
     <header className="bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white rounded-b-3xl px-4 pt-5 pb-6 shadow-lg">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-green-100">
-            {getGreeting(language)}
+      {/* Top Row: Greeting + Notifications */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-green-100 font-medium">
+            {greeting}
           </p>
-
-          <h1 className="text-2xl font-bold truncate mt-1">
-            👋 {farmerName}
+          <h1 className="text-2xl font-bold mt-1 truncate max-w-[180px]">
+            {farmerName}
           </h1>
-
-          <p className="text-sm text-green-100 mt-2 truncate">
-            📍{" "}
-            {location ||
-              t(
-                "farmLocationNotAdded",
-                {},
-                language
-              )}
-          </p>
+          {location && (
+            <p className="text-xs text-green-100 mt-0.5 flex items-center gap-1">
+              <span>📍</span> {location}
+            </p>
+          )}
         </div>
 
         <button
           type="button"
           onClick={onNotifications}
-          className="relative w-12 h-12 shrink-0 rounded-full bg-white/15 flex items-center justify-center text-xl"
-          aria-label={t(
-            "openNotifications",
-            {},
-            language
-          )}
+          className="relative w-12 h-12 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition"
+          aria-label={t("openNotifications", {}, language)}
         >
-          🔔
-
+          <span className="text-2xl">🔔</span>
           {unreadNotifications > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
-              {unreadNotifications > 99
-                ? "99+"
-                : unreadNotifications}
+            <span className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
             </span>
           )}
         </button>
       </div>
 
-      <div className="bg-white/15 border border-white/10 rounded-2xl p-4 mt-5">
+      {/* Weather Card */}
+      <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 mt-4">
         {weatherLoading ? (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-
+            <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-white animate-spin" />
             <p className="text-sm text-green-100">
-              {t(
-                "loadingLocalWeather",
-                {},
-                language
-              )}
+              {t("loadingLocalWeather", {}, language)}
             </p>
           </div>
         ) : weather ? (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-100">
-                {t(
-                  "currentWeather",
-                  {},
-                  language
-                )}
+              <p className="text-xs text-green-100">
+                {t("currentWeather", {}, language)}
               </p>
-
-              <p className="text-3xl font-bold mt-1">
-                {Math.round(
-                  Number(weather.temperature || 0)
-                )}
-                °C
-              </p>
-
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-3xl">{weatherIcon}</span>
+                <span className="text-2xl font-bold">
+                  {Math.round(weather.temperature)}°
+                </span>
+              </div>
               <p className="text-xs text-green-100 mt-1">
                 {weather.location}
               </p>
             </div>
-
             <div className="text-right">
               <div className="text-5xl">
-                {getWeatherIcon(weather.code)}
+                {weatherIcon}
               </div>
-
               <p className="text-xs text-green-100 mt-1">
                 {t("humidity", {}, language)}{" "}
                 {weather.humidity ?? "--"}%
@@ -166,20 +132,10 @@ export default function FarmerHeader({
         ) : (
           <div>
             <p className="font-semibold">
-              🌦️{" "}
-              {t(
-                "weatherUnavailable",
-                {},
-                language
-              )}
+              🌤️ {t("weatherUnavailable", {}, language)}
             </p>
-
             <p className="text-sm text-green-100 mt-1">
-              {t(
-                "allowLocationForWeather",
-                {},
-                language
-              )}
+              {t("allowLocationForWeather", {}, language)}
             </p>
           </div>
         )}

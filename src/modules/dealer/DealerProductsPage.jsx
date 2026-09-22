@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 import {
   get,
@@ -12,6 +15,7 @@ import {
 
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import "./DealerTheme.css";
 
 const emptyForm = {
   productName: "",
@@ -32,6 +36,9 @@ const allowedImageTypes = [
 
 export default function DealerProductsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const showLowStockOnly =
+    searchParams.get("filter") === "low-stock";
 
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState("");
@@ -635,7 +642,7 @@ export default function DealerProductsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="dealer-theme min-h-screen bg-green-50 flex items-center justify-center">
         <p className="text-xl font-bold text-green-700">
           Loading products...
         </p>
@@ -643,8 +650,19 @@ export default function DealerProductsPage() {
     );
   }
 
+  const visibleProducts = showLowStockOnly
+    ? products.filter((product) => {
+        const available = Number(product.quantity || 0);
+        const lowStockLevel = Number(
+          product.lowStockLevel || 5
+        );
+
+        return available <= lowStockLevel;
+      })
+    : products;
+
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}
@@ -707,16 +725,24 @@ export default function DealerProductsPage() {
           </button>
 
           <h1 className="text-3xl font-bold text-green-800 mt-3">
-            📦 Products & Stock
+            {showLowStockOnly
+              ? "⚠️ Low Stock Items"
+              : "📦 Products & Stock"}
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Add product images and update stock.
+            {showLowStockOnly
+              ? "Showing only products at or below their low-stock level."
+              : "Add product images and update stock."}
           </p>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-5">
-          <section className="bg-white rounded-2xl shadow p-5">
+          <section
+            className={`bg-white rounded-2xl shadow p-5 ${
+              showLowStockOnly ? "hidden" : ""
+            }`}
+          >
             <h2 className="text-xl font-bold text-green-800">
               {editingId
                 ? "Update Product"
@@ -871,19 +897,27 @@ export default function DealerProductsPage() {
             </form>
           </section>
 
-          <section className="lg:col-span-2 space-y-4">
-            {products.length === 0 ? (
+          <section
+            className={`space-y-4 ${
+              showLowStockOnly
+                ? "lg:col-span-3"
+                : "lg:col-span-2"
+            }`}
+          >
+            {visibleProducts.length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center">
                 <div className="text-4xl">
                   📦
                 </div>
 
                 <p className="text-gray-600 mt-3">
-                  No products added yet.
+                  {showLowStockOnly
+                    ? "No products are currently low in stock."
+                    : "No products added yet."}
                 </p>
               </div>
             ) : (
-              products.map((product) => {
+              visibleProducts.map((product) => {
                 const available = Number(
                   product.quantity || 0
                 );

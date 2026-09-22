@@ -7,6 +7,7 @@ import {
 } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import "./DealerTheme.css";
 
 export default function DealerStockPage() {
   const navigate = useNavigate();
@@ -403,7 +404,7 @@ export default function DealerStockPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+      <div className="dealer-theme min-h-screen bg-green-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
           <div className="text-5xl">📋</div>
 
@@ -416,7 +417,7 @@ export default function DealerStockPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}

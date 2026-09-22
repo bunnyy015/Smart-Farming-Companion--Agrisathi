@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
+import "./DealerTheme.css";
 
 export default function DealerRegistrationPage() {
   const navigate = useNavigate();
@@ -147,7 +148,7 @@ export default function DealerRegistrationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-6">
+    <div className="dealer-theme min-h-screen bg-green-50 p-6">
       <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6">
         <h1 className="text-3xl font-bold text-green-700 mb-2">
           🏪 Dealer Registration Request

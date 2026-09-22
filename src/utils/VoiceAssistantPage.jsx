@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { get, ref } from "firebase/database";
@@ -11,14 +6,10 @@ import { get, ref } from "firebase/database";
 import { auth, database } from "../firebase";
 
 import {
+  getLanguageName,
   getLanguage,
-  setLanguage,
+  setLanguage as persistLanguage,
 } from "./language";
-
-import {
-  getPreferredLanguage,
-  setPreferredLanguage,
-} from "./languageProfile";
 
 import {
   createVoiceLanguagePrompt,
@@ -27,22 +18,29 @@ import {
 import {
   addFarmerMessage,
   addAssistantMessage,
+  getVoiceMemory,
   getVoiceMemoryForPrompt,
   clearVoiceMemory,
 } from "./voiceMemory";
-
 import {
   detectLocalVoiceCommand,
 } from "./voiceLocalCommands";
 
-import {
-  createWeatherPromptContext,
-} from "./weatherContext";
+import { createWeatherPromptContext } from "./weatherContext";
+
+/* =========================================================
+   GEMINI MODELS
+========================================================= */
 
 const MODELS = [
   "gemini-2.5-flash",
   "gemini-1.5-flash",
 ];
+
+
+/* =========================================================
+   SPEECH LOCALES
+========================================================= */
 
 const speechLocales = {
   en: "en-IN",
@@ -59,104 +57,147 @@ const speechLocales = {
   or: "or-IN",
 };
 
-const greetings = {
-  en: "Namaste. I am your AgriSaathi crop farming assistant. How can I help you today?",
 
-  te: "నమస్కారం రైతు గారు. నేను మీ అగ్రిసాథి పంటల వ్యవసాయ సహాయకుడిని. ఈ రోజు మీకు ఎలా సహాయం చేయగలను?",
+/* =========================================================
+   LANGUAGE NAMES
+========================================================= */
 
-  hi: "नमस्ते किसान जी। मैं आपका एग्रीसाथी फसल कृषि सहायक हूँ। आज मैं आपकी कैसे मदद कर सकता हूँ?",
-
-  ta: "வணக்கம் விவசாயி. நான் உங்கள் அக்ரிசாதி பயிர் விவசாய உதவியாளர். இன்று எப்படி உதவலாம்?",
-
-  kn: "ನಮಸ್ಕಾರ ರೈತರೇ. ನಾನು ನಿಮ್ಮ ಅಗ್ರಿಸಾಥಿ ಬೆಳೆ ಕೃಷಿ ಸಹಾಯಕ. ಇಂದು ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
-
-  ml: "നമസ്കാരം കർഷകരേ. ഞാൻ നിങ്ങളുടെ അഗ്രിസാഥി വിള കൃഷി സഹായിയാണ്. ഇന്ന് എങ്ങനെ സഹായിക്കാം?",
-
-  mr: "नमस्कार शेतकरी मित्रा. मी तुमचा अॅग्रीसाथी पीक शेती सहाय्यक आहे. आज कशी मदत करू?",
-
-  bn: "নমস্কার কৃষক বন্ধু। আমি আপনার এগ্রিসাথি ফসল কৃষি সহায়ক। আজ কীভাবে সাহায্য করতে পারি?",
-
-  gu: "નમસ્તે ખેડૂત મિત્ર. હું તમારો એગ્રીસાથી પાક કૃષિ સહાયક છું. આજે કેવી રીતે મદદ કરી શકું?",
-
-  pa: "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਕਿਸਾਨ ਜੀ। ਮੈਂ ਤੁਹਾਡਾ ਐਗਰੀਸਾਥੀ ਫਸਲ ਖੇਤੀ ਸਹਾਇਕ ਹਾਂ। ਅੱਜ ਕਿਵੇਂ ਮਦਦ ਕਰਾਂ?",
-
-  ur: "نمستے کسان صاحب۔ میں آپ کا ایگری ساتھی فصل زرعی معاون ہوں۔ آج کیسے مدد کر سکتا ہوں؟",
-
-  or: "ନମସ୍କାର ଚାଷୀ ଭାଇ। ମୁଁ ଆପଣଙ୍କ ଏଗ୍ରିସାଥୀ ଫସଲ କୃଷି ସହାୟକ। ଆଜି କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
+const languageNames = {
+  en: "English",
+  te: "Telugu",
+  hi: "Hindi",
+  ta: "Tamil",
+  kn: "Kannada",
+  ml: "Malayalam",
+  mr: "Marathi",
+  bn: "Bengali",
+  gu: "Gujarati",
+  pa: "Punjabi",
+  ur: "Urdu",
+  or: "Odia",
 };
+
+
+/* =========================================================
+   GREETINGS
+========================================================= */
+
+const greetings = {
+  en: "Hello! I am your AgriSaathi voice assistant. How can I help you today?",
+
+  te: "నమస్కారం! నేను మీ అగ్రిసాథి వాయిస్ అసిస్టెంట్‌ను. ఈరోజు మీకు ఎలా సహాయం చేయగలను?",
+
+  hi: "नमस्ते! मैं आपका एग्रीसाथी वॉइस असिस्टेंट हूँ। आज मैं आपकी कैसे मदद कर सकता हूँ?",
+
+  ta: "வணக்கம்! நான் உங்கள் அக்ரிசாத்தி குரல் உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவலாம்?",
+
+  kn: "ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಅಗ್ರಿಸಾಥಿ ಧ್ವನಿ ಸಹಾಯಕ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+
+  ml: "നമസ്കാരം! ഞാൻ നിങ്ങളുടെ അഗ്രിസാത്തി വോയ്സ് അസിസ്റ്റന്റാണ്. ഇന്ന് എങ്ങനെ സഹായിക്കാം?",
+
+  mr: "नमस्कार! मी तुमचा अ‍ॅग्रीसाथी व्हॉइस असिस्टंट आहे. आज मी तुमची कशी मदत करू शकतो?",
+
+  bn: "নমস্কার! আমি আপনার অ্যাগ্রিসাথি ভয়েস অ্যাসিস্ট্যান্ট। আজ আমি কীভাবে আপনাকে সাহায্য করতে পারি?",
+
+  gu: "નમસ્તે! હું તમારો એગ્રીસાથી વૉઇસ આસિસ્ટન્ટ છું. આજે હું તમારી કેવી રીતે મદદ કરી શકું?",
+
+  pa: "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ ਐਗਰੀਸਾਥੀ ਵੌਇਸ ਅਸਿਸਟੈਂਟ ਹਾਂ। ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ?",
+
+  ur: "السلام علیکم! میں آپ کا ایگری ساتھی وائس اسسٹنٹ ہوں۔ آج میں آپ کی کیسے مدد کر سکتا ہوں؟",
+
+  or: "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କର ଅଗ୍ରିସାଥୀ ଭଏସ୍ ଆସିଷ୍ଟାଣ୍ଟ। ଆଜି ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
+};
+
+
+/* =========================================================
+   SPEECH ERROR MESSAGES
+========================================================= */
 
 const retryMessages = {
-  en: "I could not understand that clearly. Please say it again.",
+  en: "I couldn't understand that. Please try speaking again.",
 
-  te: "స్పష్టంగా అర్థం కాలేదు. దయచేసి మళ్లీ చెప్పండి.",
+  te: "నేను దాన్ని సరిగ్గా అర్థం చేసుకోలేకపోయాను. దయచేసి మళ్లీ మాట్లాడండి.",
 
-  hi: "मैं ठीक से समझ नहीं पाया। कृपया फिर से कहें।",
+  hi: "मैं इसे ठीक से समझ नहीं पाया। कृपया फिर से बोलें।",
 
-  ta: "எனக்குத் தெளிவாகப் புரியவில்லை. மீண்டும் சொல்லுங்கள்.",
+  ta: "என்னால் அதை சரியாக புரிந்து கொள்ள முடியவில்லை. தயவுசெய்து மீண்டும் பேசுங்கள்.",
 
-  kn: "ನನಗೆ ಸ್ಪಷ್ಟವಾಗಿ ಅರ್ಥವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಹೇಳಿ.",
+  kn: "ನನಗೆ ಅದನ್ನು ಸರಿಯಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಮಾತನಾಡಿ.",
 
-  ml: "എനിക്ക് വ്യക്തമായി മനസ്സിലായില്ല. വീണ്ടും പറയൂ.",
+  ml: "എനിക്ക് അത് ശരിയായി മനസ്സിലാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും സംസാരിക്കുക.",
 
-  mr: "मला स्पष्ट समजले नाही. पुन्हा सांगा.",
+  mr: "मला ते नीट समजले नाही. कृपया पुन्हा बोला.",
 
-  bn: "আমি স্পষ্টভাবে বুঝতে পারিনি। আবার বলুন।",
+  bn: "আমি এটি ঠিকভাবে বুঝতে পারিনি। অনুগ্রহ করে আবার বলুন।",
 
-  gu: "મને સ્પષ્ટ રીતે સમજાયું નથી. ફરી કહો.",
+  gu: "હું તે યોગ્ય રીતે સમજી શક્યો નથી. કૃપા કરીને ફરીથી બોલો.",
 
-  pa: "ਮੈਨੂੰ ਸਾਫ਼ ਸਮਝ ਨਹੀਂ ਆਇਆ। ਦੁਬਾਰਾ ਕਹੋ।",
+  pa: "ਮੈਂ ਇਹ ਠੀਕ ਤਰ੍ਹਾਂ ਸਮਝ ਨਹੀਂ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਬੋਲੋ।",
 
-  ur: "مجھے واضح طور پر سمجھ نہیں آیا۔ دوبارہ کہیں۔",
+  ur: "میں اسے صحیح طور پر سمجھ نہیں سکا۔ براہ کرم دوبارہ بولیں۔",
 
-  or: "ମୁଁ ସ୍ପଷ୍ଟ ଭାବେ ବୁଝିପାରିଲି ନାହିଁ। ପୁଣି କୁହନ୍ତୁ।",
+  or: "ମୁଁ ଏହାକୁ ଠିକ୍ ଭାବରେ ବୁଝିପାରିଲି ନାହିଁ। ଦୟାକରି ପୁଣି କୁହନ୍ତୁ।",
 };
+
+
+/* =========================================================
+   INTERFACE TEXT
+========================================================= */
 
 const interfaceText = {
   en: {
     title: "AgriSaathi Voice Assistant",
-    ready: "Tap the microphone to begin",
-    listening: "Listening…",
-    thinking: "Thinking…",
-    speaking: "Speaking…",
-    stopped: "Conversation paused",
-    unsupported:
-      "Voice recognition is not supported on this browser. Please use Chrome.",
-    stop: "Stop",
-    back: "Back",
-    privacy:
-      "Your speech is processed only to provide farming guidance.",
+    subtitle:
+      "Ask about weather, crops, market prices, schemes and your orders.",
+    start: "Start Conversation",
+    stop: "Stop Conversation",
+    listening: "Listening...",
+    thinking: "Thinking...",
+    speaking: "Speaking...",
+    idle: "Ready",
+    speechNotSupported:
+      "Speech recognition is not supported in this browser.",
+    tapToSpeak:
+      "Tap the microphone and speak.",
   },
 
   te: {
-    title: "అగ్రిసాథి వాయిస్ సహాయకుడు",
-    ready: "ప్రారంభించడానికి మైక్రోఫోన్ నొక్కండి",
-    listening: "వింటున్నాను…",
-    thinking: "ఆలోచిస్తున్నాను…",
-    speaking: "మాట్లాడుతున్నాను…",
-    stopped: "సంభాషణ నిలిపివేయబడింది",
-    unsupported:
-      "ఈ బ్రౌజర్‌లో వాయిస్ గుర్తింపు లేదు. Chrome ఉపయోగించండి.",
-    stop: "ఆపండి",
-    back: "వెనుకకు",
-    privacy:
-      "వ్యవసాయ సహాయం అందించడానికి మాత్రమే మీ మాటలను ప్రాసెస్ చేస్తాము.",
+    title: "అగ్రిసాథి వాయిస్ అసిస్టెంట్",
+    subtitle:
+      "వాతావరణం, పంటలు, మార్కెట్ ధరలు, పథకాలు మరియు ఆర్డర్ల గురించి అడగండి.",
+    start: "సంభాషణ ప్రారంభించండి",
+    stop: "సంభాషణ ఆపండి",
+    listening: "వింటున్నాను...",
+    thinking: "ఆలోచిస్తున్నాను...",
+    speaking: "మాట్లాడుతున్నాను...",
+    idle: "సిద్ధంగా ఉంది",
+    speechNotSupported:
+      "ఈ బ్రౌజర్‌లో స్పీచ్ రికగ్నిషన్‌కు మద్దతు లేదు.",
+    tapToSpeak:
+      "మైక్రోఫోన్‌ను నొక్కి మాట్లాడండి.",
   },
 
   hi: {
-    title: "एग्रीसाथी आवाज़ सहायक",
-    ready: "शुरू करने के लिए माइक्रोफ़ोन दबाएँ",
-    listening: "सुन रहा हूँ…",
-    thinking: "सोच रहा हूँ…",
-    speaking: "बोल रहा हूँ…",
-    stopped: "बातचीत रोक दी गई है",
-    unsupported:
-      "इस ब्राउज़र में आवाज़ पहचान उपलब्ध नहीं है। Chrome इस्तेमाल करें।",
-    stop: "रोकें",
-    back: "वापस",
-    privacy:
-      "आपकी आवाज़ का उपयोग केवल खेती से जुड़ी सहायता देने के लिए किया जाता है।",
+    title: "एग्रीसाथी वॉइस असिस्टेंट",
+    subtitle:
+      "मौसम, फसल, बाजार भाव, योजनाओं और ऑर्डर के बारे में पूछें।",
+    start: "बातचीत शुरू करें",
+    stop: "बातचीत रोकें",
+    listening: "सुन रहा हूँ...",
+    thinking: "सोच रहा हूँ...",
+    speaking: "बोल रहा हूँ...",
+    idle: "तैयार",
+    speechNotSupported:
+      "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
+    tapToSpeak:
+      "माइक्रोफ़ोन दबाकर बोलें।",
   },
 };
+
+
+/* =========================================================
+   ACTION ROUTES
+========================================================= */
 
 const actionRoutes = {
   weather: "/weather",
@@ -170,240 +211,70 @@ const actionRoutes = {
   dashboard: "/dashboard",
 };
 
-const allowedActions = new Set([
+const allowedActions = [
   "none",
   ...Object.keys(actionRoutes),
-]);
+];
 
-const emptyFarmerProfile = {
-  name: "",
-  village: "",
-  district: "",
-  state: "",
-  mainCrop: "",
-  phone: "",
-};
 
-function getUi(language) {
-  return interfaceText[language] || interfaceText.en;
+/* =========================================================
+   NORMALIZE
+========================================================= */
+
+function normalize(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
-function getValidLanguage(language) {
-  return speechLocales[language]
-    ? language
-    : "en";
-}
 
-function getInitialLanguage() {
-  const preferredLanguage =
-    getPreferredLanguage();
-
-  if (speechLocales[preferredLanguage]) {
-    return preferredLanguage;
-  }
-
-  return getValidLanguage(getLanguage());
-}
-
-function cleanProfileValue(value) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return "";
-  }
-
-  return String(value).trim();
-}
-
-function normalizeFarmerProfile(profile) {
-  if (
-    !profile ||
-    typeof profile !== "object"
-  ) {
-    return emptyFarmerProfile;
-  }
-
-  return {
-    name: cleanProfileValue(
-      profile.name ||
-        profile.fullName
-    ),
-
-    village: cleanProfileValue(
-      profile.village
-    ),
-
-    district: cleanProfileValue(
-      profile.district
-    ),
-
-    state: cleanProfileValue(
-      profile.state
-    ),
-
-    mainCrop: cleanProfileValue(
-      profile.mainCrop ||
-        profile.primaryCrop ||
-        profile.crop
-    ),
-
-    phone: cleanProfileValue(
-      profile.phone
-    ),
-  };
-}
-
-function createFarmerProfilePrompt(
-  profile,
-  preferredLanguage
-) {
-  const safeProfile =
-    normalizeFarmerProfile(profile);
-
-  const availableDetails = [];
-
-  if (safeProfile.name) {
-    availableDetails.push(
-      `Farmer name: ${safeProfile.name}`
-    );
-  }
-
-  if (safeProfile.village) {
-    availableDetails.push(
-      `Village: ${safeProfile.village}`
-    );
-  }
-
-  if (safeProfile.district) {
-    availableDetails.push(
-      `District: ${safeProfile.district}`
-    );
-  }
-
-  if (safeProfile.state) {
-    availableDetails.push(
-      `State: ${safeProfile.state}`
-    );
-  }
-
-  if (safeProfile.mainCrop) {
-    availableDetails.push(
-      `Main crop: ${safeProfile.mainCrop}`
-    );
-  }
-
-  availableDetails.push(
-    `Preferred language code: ${getValidLanguage(
-      preferredLanguage
-    )}`
-  );
-
-  if (availableDetails.length === 1) {
-    return "No detailed farmer profile is available.";
-  }
-
-  return availableDetails.join("\n");
-}
-
-function extractJson(responseText) {
-  if (
-    typeof responseText !== "string" ||
-    !responseText.trim()
-  ) {
-    throw new Error(
-      "The assistant returned an empty response."
-    );
-  }
-
-  const cleanedText = responseText
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-
-  const firstBrace =
-    cleanedText.indexOf("{");
-
-  const lastBrace =
-    cleanedText.lastIndexOf("}");
-
-  if (
-    firstBrace === -1 ||
-    lastBrace === -1 ||
-    lastBrace <= firstBrace
-  ) {
-    throw new Error(
-      "The assistant response was not valid JSON."
-    );
-  }
-
-  const jsonText = cleanedText.slice(
-    firstBrace,
-    lastBrace + 1
-  );
-
-  return JSON.parse(jsonText);
-}
-
-function validateGeminiResult(result) {
-  if (
-    !result ||
-    typeof result !== "object"
-  ) {
-    throw new Error(
-      "The assistant returned an invalid result."
-    );
-  }
-
-  const reply =
-    typeof result.reply === "string"
-      ? result.reply.trim()
-      : "";
-
-  if (!reply) {
-    throw new Error(
-      "The assistant did not provide a reply."
-    );
-  }
-
-  const languageCode =
-    getValidLanguage(
-      result.languageCode
-    );
-
-  const action =
-    allowedActions.has(result.action)
-      ? result.action
-      : "none";
-
-  return {
-    reply,
-    languageCode,
-    action,
-  };
-}
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function VoiceAssistantPage() {
   const navigate = useNavigate();
 
-  const initialLanguageRef =
-    useRef(getInitialLanguage());
+  const [language, setLanguageState] =
+    useState(() => getLanguage() || "en");
 
-  const [
-    languageCode,
-    setLanguageCode,
-  ] = useState(
-    initialLanguageRef.current
-  );
+  function setLanguage(nextLanguage) {
+    if (!speechLocales[nextLanguage]) {
+      return;
+    }
 
-  const [status, setStatus] =
-    useState("ready");
+    languageRef.current = nextLanguage;
+    setLanguageState(nextLanguage);
 
-  const [error, setError] =
+    try {
+      persistLanguage(nextLanguage);
+    } catch (languageError) {
+      console.warn("Unable to persist voice language:", languageError);
+    }
+  }
+
+const weatherContext = createWeatherPromptContext();
+
+  const [status, setStatus] = useState("idle");
+
+  const [error, setError] = useState("");
+
+  const [active, setActive] = useState(false);
+
+  const [transcript, setTranscript] =
     useState("");
 
-  const [authorized, setAuthorized] =
-    useState(false);
+  const [lastResponse, setLastResponse] =
+    useState("");
+
+  const [farmer, setFarmer] =
+    useState(null);
+
+  const [authLoading, setAuthLoading] =
+    useState(true);
+
+  const [history, setHistory] =
+    useState([]);
 
   const recognitionRef =
     useRef(null);
@@ -412,19 +283,73 @@ export default function VoiceAssistantPage() {
     useRef(false);
 
   const languageRef =
-    useRef(initialLanguageRef.current);
+    useRef(language);
 
-  const farmerProfileRef =
-    useRef(emptyFarmerProfile);
+  const statusRef =
+    useRef(status);
 
-  const ui = getUi(languageCode);
+  const speakingRef =
+    useRef(false);
+
+  const responseInProgressRef =
+    useRef(false);
+
+
+  /* =======================================================
+     KEEP REFS UPDATED
+  ======================================================= */
+
+  useEffect(() => {
+    languageRef.current =
+      language;
+  }, [language]);
+
+  useEffect(() => {
+    statusRef.current =
+      status;
+  }, [status]);
+
+  useEffect(() => {
+    activeRef.current =
+      active;
+  }, [active]);
+
+
+  /* =======================================================
+     LOAD VOICE MEMORY
+  ======================================================= */
+
+  useEffect(() => {
+    try {
+      const memory = getVoiceMemory();
+      if (Array.isArray(memory)) {
+        setHistory(memory.map((item) => ({
+          role: item.role,
+          text: item.message,
+          timestamp: item.createdAt,
+        })));
+      }
+    } catch (memoryError) {
+      console.warn(
+        "Unable to load voice memory:",
+        memoryError
+      );
+    }
+  }, []);
+
+
+  /* =======================================================
+     AUTH + FARMER PROFILE
+  ======================================================= */
 
   useEffect(() => {
     const unsubscribe =
       onAuthStateChanged(
         auth,
-        async (user) => {
-          if (!user) {
+        async (currentUser) => {
+          if (!currentUser) {
+            setAuthLoading(false);
+
             navigate("/login", {
               replace: true,
             });
@@ -437,178 +362,207 @@ export default function VoiceAssistantPage() {
               await get(
                 ref(
                   database,
-                  `users/${user.uid}`
+                  `users/${currentUser.uid}`
                 )
               );
 
             if (
-              !userSnapshot.exists() ||
-              userSnapshot.val()?.role !==
-                "farmer"
+              userSnapshot.exists()
             ) {
-              navigate(
-                "/role-selection",
-                {
+              const userData =
+                userSnapshot.val();
+
+              const role =
+                normalize(userData.role);
+
+              if (role !== "farmer") {
+                navigate("/role-selection", {
                   replace: true,
-                }
-              );
+                });
 
-              return;
-            }
-
-            try {
-              const farmerSnapshot =
-                await get(
-                  ref(
-                    database,
-                    `farmers/${user.uid}`
-                  )
-                );
-
-              if (
-                farmerSnapshot.exists()
-              ) {
-                farmerProfileRef.current =
-                  normalizeFarmerProfile(
-                    farmerSnapshot.val()
-                  );
-              } else {
-                farmerProfileRef.current =
-                  emptyFarmerProfile;
+                return;
               }
-            } catch (profileError) {
-              console.error(
-                "Farmer profile loading error:",
-                profileError
-              );
-
-              farmerProfileRef.current =
-                emptyFarmerProfile;
             }
 
-            setAuthorized(true);
-          } catch (authorizationError) {
-            console.error(
-              "Voice assistant authorization error:",
-              authorizationError
-            );
+            const farmerSnapshot =
+              await get(
+                ref(
+                  database,
+                  `farmers/${currentUser.uid}`
+                )
+              );
 
-            navigate("/login", {
-              replace: true,
-            });
+            if (
+              farmerSnapshot.exists()
+            ) {
+              setFarmer(
+                farmerSnapshot.val()
+              );
+            }
+          } catch (profileError) {
+            console.warn(
+              "Unable to load farmer profile:",
+              profileError
+            );
+          } finally {
+            setAuthLoading(false);
           }
         }
       );
 
     return () => {
-      activeRef.current = false;
-
-      recognitionRef.current?.abort();
-
-      window.speechSynthesis?.cancel();
-
-      clearVoiceMemory();
-
       unsubscribe();
     };
   }, [navigate]);
 
-  function updateLanguage(code) {
-    const validCode =
-      getValidLanguage(code);
 
-    languageRef.current =
-      validCode;
+  /* =======================================================
+     CLEANUP
+  ======================================================= */
 
-    setLanguageCode(validCode);
+  useEffect(() => {
+    return () => {
+      activeRef.current = false;
 
-    setLanguage(validCode);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Ignore cleanup errors.
+        }
+      }
 
-    setPreferredLanguage(validCode);
-  }
+      recognitionRef.current = null;
+
+      try {
+        window.speechSynthesis?.cancel();
+      } catch {
+        // Ignore cleanup errors.
+      }
+    };
+  }, []);
+
+
+  /* =======================================================
+     SPEECH SYNTHESIS VOICE
+  ======================================================= */
 
   function chooseVoice(code) {
-    const validCode =
-      getValidLanguage(code);
-
-    const locale =
-      speechLocales[validCode];
+    if (
+      typeof window === "undefined" ||
+      !window.speechSynthesis
+    ) {
+      return null;
+    }
 
     const voices =
-      window.speechSynthesis
-        ?.getVoices?.() || [];
+      window.speechSynthesis.getVoices();
+
+    if (!voices.length) {
+      return null;
+    }
+
+    const locale =
+      speechLocales[code] ||
+      speechLocales.en;
+
+    const exact =
+      voices.find(
+        (voice) =>
+          normalize(voice.lang) ===
+          normalize(locale)
+      );
+
+    if (exact) {
+      return exact;
+    }
+
+    const prefix =
+      normalize(locale).split("-")[0];
 
     return (
       voices.find(
         (voice) =>
-          voice.lang.toLowerCase() ===
-          locale.toLowerCase()
-      ) ||
-      voices.find((voice) =>
-        voice.lang
-          .toLowerCase()
-          .startsWith(
-            validCode.toLowerCase()
-          )
-      ) ||
-      null
+          normalize(
+            voice.lang
+          ).startsWith(prefix)
+      ) || null
     );
   }
 
+
+  /* =======================================================
+     SPEAK
+  ======================================================= */
+
   function speak(
     text,
-    code,
+    code = languageRef.current,
     onFinished
   ) {
-    if (
-      !activeRef.current ||
-      !window.speechSynthesis
-    ) {
+    if (!text) {
+      if (onFinished) {
+        onFinished();
+      }
+
       return;
     }
 
-    const validCode =
-      getValidLanguage(code);
+    if (
+      typeof window === "undefined" ||
+      !window.speechSynthesis
+    ) {
+      if (onFinished) {
+        onFinished();
+      }
 
-    window.speechSynthesis.cancel();
+      return;
+    }
 
-    setStatus("speaking");
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore cancellation errors.
+    }
 
     const utterance =
       new SpeechSynthesisUtterance(
-        text
+        String(text)
       );
 
-    utterance.lang =
-      speechLocales[validCode];
+    const locale =
+      speechLocales[code] ||
+      speechLocales.en;
 
+    utterance.lang = locale;
     utterance.rate = 0.94;
     utterance.pitch = 1;
     utterance.volume = 1;
 
     const voice =
-      chooseVoice(validCode);
+      chooseVoice(code);
 
     if (voice) {
       utterance.voice = voice;
     }
 
+    speakingRef.current = true;
+
+    setStatus("speaking");
+
     utterance.onend = () => {
-      if (activeRef.current) {
-        onFinished?.();
+      speakingRef.current = false;
+
+      if (onFinished) {
+        onFinished();
       }
     };
 
-    utterance.onerror = (
-      speechError
-    ) => {
-      console.error(
-        "Speech synthesis error:",
-        speechError
-      );
+    utterance.onerror = () => {
+      speakingRef.current = false;
 
-      if (activeRef.current) {
-        onFinished?.();
+      if (onFinished) {
+        onFinished();
       }
     };
 
@@ -617,8 +571,49 @@ export default function VoiceAssistantPage() {
     );
   }
 
+
+  /* =======================================================
+     STOP RECOGNITION
+  ======================================================= */
+
+  function stopRecognition() {
+    const recognition =
+      recognitionRef.current;
+
+    if (!recognition) {
+      return;
+    }
+
+    recognitionRef.current = null;
+
+    try {
+      recognition.abort();
+    } catch {
+      // Ignore abort errors.
+    }
+  }
+
+
+  /* =======================================================
+     START LISTENING
+  ======================================================= */
+
   function startListening() {
     if (!activeRef.current) {
+      return;
+    }
+
+    /*
+     * Do not start while the assistant is speaking.
+     */
+    if (speakingRef.current) {
+      return;
+    }
+
+    /*
+     * Do not start another recognition instance.
+     */
+    if (recognitionRef.current) {
       return;
     }
 
@@ -627,19 +622,19 @@ export default function VoiceAssistantPage() {
       window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setError(
-        getUi(
+      const message =
+        interfaceText[
           languageRef.current
-        ).unsupported
-      );
+        ]?.speechNotSupported ||
+        interfaceText.en.speechNotSupported;
 
-      setStatus("ready");
-      activeRef.current = false;
+      setError(message);
+      setStatus("idle");
 
       return;
     }
 
-    recognitionRef.current?.abort();
+    setError("");
 
     const recognition =
       new SpeechRecognition();
@@ -650,50 +645,136 @@ export default function VoiceAssistantPage() {
     recognition.lang =
       speechLocales[
         languageRef.current
-      ] || speechLocales.en;
+      ] ||
+      speechLocales.en;
 
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    setStatus("listening");
-    setError("");
-
-    recognition.onresult = (
-      event
-    ) => {
-      const transcript =
-        event.results?.[0]?.[0]
-          ?.transcript?.trim();
-
-      if (transcript) {
-        respondToFarmer(transcript);
-      }
-    };
-
-    recognition.onerror = (
-      recognitionError
-    ) => {
-      if (
-        !activeRef.current ||
-        recognitionError.error ===
-          "aborted"
-      ) {
+    recognition.onstart = () => {
+      if (!activeRef.current) {
         return;
       }
 
-      const retryMessage =
-        retryMessages[
-          languageRef.current
-        ] || retryMessages.en;
+      setError("");
+      setStatus("listening");
+    };
 
-      setError(retryMessage);
+    recognition.onresult = async (
+      event
+    ) => {
+      if (!activeRef.current) {
+        return;
+      }
 
-      speak(
-        retryMessage,
-        languageRef.current,
-        startListening
+      const result =
+        event.results?.[0]?.[0];
+
+      const spokenText =
+        result?.transcript?.trim() ||
+        "";
+
+      if (!spokenText) {
+        setStatus("idle");
+        return;
+      }
+
+      setTranscript(
+        spokenText
       );
+
+      try {
+        recognition.stop();
+      } catch {
+        // Ignore stop errors.
+      }
+
+      recognitionRef.current = null;
+
+      await respondToFarmer(
+        spokenText
+      );
+    };
+
+    recognition.onerror = (
+      event
+    ) => {
+      if (!activeRef.current) {
+        return;
+      }
+
+      console.warn(
+        "Speech recognition error:",
+        event.error
+      );
+
+      if (
+        recognitionRef.current ===
+        recognition
+      ) {
+        recognitionRef.current =
+          null;
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * We DO NOT speak the error and
+       * immediately restart recognition.
+       *
+       * That was causing:
+       *
+       * listen -> error -> speak -> listen
+       * -> error -> speak -> ...
+       */
+
+      switch (event.error) {
+        case "no-speech":
+          setError(
+            "I didn't hear anything. Please tap the microphone and speak."
+          );
+          break;
+
+        case "audio-capture":
+          setError(
+            "I couldn't access your microphone. Please check your microphone connection and permission."
+          );
+          break;
+
+        case "not-allowed":
+          setError(
+            "Microphone permission was denied. Please allow microphone access in your browser."
+          );
+          break;
+
+        case "network":
+          setError(
+            "Speech recognition needs an internet connection."
+          );
+          break;
+
+        case "language-not-supported":
+          setError(
+            "Speech recognition is not available for the selected language."
+          );
+          break;
+
+        case "aborted":
+          /*
+           * Abort can be intentional when
+           * stopping the conversation.
+           */
+          setError("");
+          break;
+
+        default:
+          setError(
+            "I couldn't hear you properly. Please try again."
+          );
+      }
+
+      setStatus("idle");
     };
 
     recognition.onend = () => {
@@ -704,28 +785,75 @@ export default function VoiceAssistantPage() {
         recognitionRef.current =
           null;
       }
+
+      /*
+       * Do not restart automatically.
+       */
+      if (
+        activeRef.current &&
+        statusRef.current ===
+          "listening"
+      ) {
+        setStatus("idle");
+      }
     };
 
     try {
       recognition.start();
-    } catch (recognitionStartError) {
-      console.error(
-        "Speech recognition start error:",
-        recognitionStartError
+    } catch (startError) {
+      console.warn(
+        "Unable to start speech recognition:",
+        startError
       );
 
-      setStatus("ready");
-      activeRef.current = false;
+      if (
+        recognitionRef.current ===
+        recognition
+      ) {
+        recognitionRef.current =
+          null;
+      }
+
+      setStatus("idle");
 
       setError(
-        getUi(
-          languageRef.current
-        ).unsupported
+        "Unable to start the microphone. Please tap the microphone again."
       );
     }
   }
 
-  async function askGemini(transcript) {
+
+  /* =======================================================
+     SAVE MEMORY
+  ======================================================= */
+
+  function addMemory(role, text) {
+    const cleanedText = String(text || "").trim();
+    if (!cleanedText) return;
+
+    try {
+      if (role === "farmer") {
+        addFarmerMessage(cleanedText);
+      } else if (role === "assistant") {
+        addAssistantMessage(cleanedText);
+      }
+    } catch (memoryError) {
+      console.warn("Unable to save voice memory:", memoryError);
+    }
+
+    setHistory((previous) => [
+      ...previous,
+      { role, text: cleanedText, timestamp: Date.now() },
+    ].slice(-8));
+  }
+
+  /* =======================================================
+     GEMINI
+  ======================================================= */
+
+  async function askGemini(
+    userText
+  ) {
     const apiKey =
       import.meta.env
         .VITE_GEMINI_API_KEY;
@@ -736,441 +864,1250 @@ export default function VoiceAssistantPage() {
       );
     }
 
-    const languageContext =
-      createVoiceLanguagePrompt();
+    const currentLanguage =
+      languageRef.current || "en";
 
-    const conversationHistory =
-      getVoiceMemoryForPrompt();
+    const languageName =
+      languageNames[
+        currentLanguage
+      ] || "English";
 
-    const farmerProfileContext =
-      createFarmerProfilePrompt(
-        farmerProfileRef.current,
-        languageRef.current
+    const farmerContext =
+      farmer
+        ? `
+Farmer profile:
+Name: ${farmer.name || "Unknown"}
+Village: ${farmer.village || "Unknown"}
+District: ${farmer.district || "Unknown"}
+State: ${farmer.state || "Unknown"}
+Main crop: ${farmer.mainCrop || "Unknown"}
+Phone: ${farmer.phone || "Unknown"}
+`
+        : "Farmer profile is not available.";
+
+    const weatherData =
+      weatherContext || {};
+
+    const weatherInformation =
+      JSON.stringify(
+        weatherData
       );
 
-    const weatherContext =
-      createWeatherPromptContext();
+    const conversation = getVoiceMemoryForPrompt();
+    const languageProfilePrompt = createVoiceLanguagePrompt();
 
     const prompt = `
-You are AgriSaathi, a patient crop-farming assistant for Indian farmers.
+You are AgriSaathi, an agriculture-focused
+voice assistant for Indian farmers.
 
-Rules:
-- Detect the language of the current farmer message.
-- Reply completely in the same language.
-- Keep the reply short, clear and easy to understand.
-- The farmer may use local village slang or mix Indian languages with English.
-- Use the farmer profile only when it is relevant to the question.
-- Use village, district and state details for location-aware farming guidance.
-- Use the main crop detail when giving crop-related guidance.
-- Use the saved weather context only when the farmer asks a weather-related or weather-dependent farming question.
-- For spraying, irrigation, sowing, harvesting or field-work questions, consider the available temperature, humidity, rain probability and wind data.
-- If live weather is unavailable or expired, do not guess current weather.
-- Clearly say that the farmer should open the Weather page and refresh location when current weather is required.
-- Treat weather forecasts as guidance, not certainty.
-- Do not repeatedly mention the farmer's personal details.
-- Never reveal the farmer's phone number.
-- Do not claim that profile information is complete or verified.
-- Use the saved language context only to improve understanding.
-- Do not mention language detection, dialect detection, saved vocabulary, farmer profile context or conversation memory.
-- Focus on crop farming, weather, mandi prices, crop disease, seeds, fertilizers, government schemes, farmer orders and community.
-- The application does not contain SOS or complete animal-care services.
-- For animal health questions, advise the farmer to contact a nearby government veterinary hospital or qualified veterinarian.
-- Do not provide animal medicine dosages.
-- For crop disease diagnosis, ask the farmer to use the crop photo scanner.
-- Never provide pesticide dosage.
-- Ask the farmer to follow the product label and agriculture-officer guidance.
-- Do not claim that a purchase, call, location share, order or profile update was completed.
-- Select an action only when the farmer clearly asks to open a page.
-- When no page should be opened, use the action "none".
+${languageProfilePrompt}
 
-Allowed actions:
-none
-weather
-crop_disease
-market_prices
-government_schemes
-dealer_products
-farmer_orders
-community
-profile
-dashboard
+The farmer is communicating through voice.
 
-Return only valid JSON in this exact structure:
+Current response language:
+${languageName}
+
+Current language code:
+${currentLanguage}
+
+IMPORTANT:
+Reply in the same language requested by the
+current language code.
+
+Keep the response concise and useful because
+the response will be spoken aloud.
+
+You can help with:
+- weather
+- agriculture
+- crops
+- crop disease guidance
+- market prices
+- government schemes
+- dealer products
+- farmer orders
+- community
+- farmer profile
+- dashboard
+
+You may request navigation using one of these
+actions only:
+
+${allowedActions.join(", ")}
+
+Return ONLY valid JSON.
+
+Required format:
+
 {
-  "reply": "spoken response",
-  "languageCode": "en|te|hi|ta|kn|ml|mr|bn|gu|pa|ur|or",
+  "reply": "short spoken response",
+  "languageCode": "${currentLanguage}",
   "action": "none"
 }
 
-Farmer profile:
-${farmerProfileContext}
+If navigation is useful, set action to one of
+the allowed action names.
 
-Saved weather context:
-${weatherContext}
+Do not put markdown around the JSON.
 
-Saved farmer language context:
-${languageContext}
+${farmerContext}
 
-Current session conversation:
-${conversationHistory}
+Weather context:
+${weatherInformation}
 
-Current farmer message:
-${JSON.stringify(transcript)}
-`.trim();
+Previous conversation:
+${conversation || "No previous conversation."}
 
-    let lastError = null;
+Farmer's new request:
+${userText}
+`;
+
+    let lastError =
+      null;
 
     for (const model of MODELS) {
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
+        const response =
+          await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-
-                  parts: [
-                    {
-                      text: prompt,
-                    },
-                  ],
-                },
-              ],
-
-              generationConfig: {
-                temperature: 0.3,
-                responseMimeType:
+              headers: {
+                "Content-Type":
                   "application/json",
               },
-            }),
-          }
-        );
+
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [
+                      {
+                        text: prompt,
+                      },
+                    ],
+                  },
+                ],
+
+                generationConfig: {
+                  temperature: 0.25,
+                  maxOutputTokens: 500,
+                  responseMimeType:
+                    "application/json",
+                },
+              }),
+            }
+          );
+
+        if (!response.ok) {
+          const errorText =
+            await response.text();
+
+          throw new Error(
+            `Gemini ${model} failed: ${response.status} ${errorText}`
+          );
+        }
 
         const data =
           await response.json();
 
-        if (!response.ok) {
-          lastError = new Error(
-            data?.error?.message ||
-              `Gemini request failed with status ${response.status}.`
-          );
-
-          continue;
-        }
-
-        const responseText =
+        const generatedText =
           data?.candidates?.[0]
             ?.content?.parts?.[0]
-            ?.text;
+            ?.text
+            ?.trim();
 
-        const parsedResult =
-          extractJson(responseText);
+        if (!generatedText) {
+          throw new Error(
+            "Gemini returned an empty response."
+          );
+        }
 
-        return validateGeminiResult(
-          parsedResult
-        );
+        let parsed;
+
+        try {
+          parsed =
+            JSON.parse(
+              generatedText
+            );
+        } catch {
+          /*
+           * Fallback if Gemini accidentally
+           * returns markdown/code fences.
+           */
+          const cleaned =
+            generatedText
+              .replace(
+                /^```json/i,
+                ""
+              )
+              .replace(
+                /^```/i,
+                ""
+              )
+              .replace(
+                /```$/i,
+                ""
+              )
+              .trim();
+
+          parsed =
+            JSON.parse(cleaned);
+        }
+
+        const reply =
+          String(
+            parsed.reply || ""
+          ).trim();
+
+        const languageCode =
+          speechLocales[
+            parsed.languageCode
+          ]
+            ? parsed.languageCode
+            : currentLanguage;
+
+        const action =
+          allowedActions.includes(
+            parsed.action
+          )
+            ? parsed.action
+            : "none";
+
+        if (!reply) {
+          throw new Error(
+            "Gemini returned no reply text."
+          );
+        }
+
+        return {
+          reply,
+          languageCode,
+          action,
+        };
       } catch (modelError) {
-        console.error(
-          `Gemini model ${model} failed:`,
+        console.warn(
+          `Gemini model ${model} error:`,
           modelError
         );
 
-        lastError = modelError;
+        lastError =
+          modelError;
       }
     }
 
     throw (
       lastError ||
       new Error(
-        "Voice assistant is temporarily unavailable."
+        "Unable to get a response from Gemini."
       )
     );
   }
 
-  function handleLocalCommand(
-    localCommand,
-    transcript
+
+  /* =======================================================
+     LOCAL COMMAND
+  ======================================================= */
+
+  async function handleLocalCommand(
+    text
   ) {
-    const commandLanguage =
-      getValidLanguage(
-        localCommand.languageCode
-      );
-
-    updateLanguage(commandLanguage);
-
-    addFarmerMessage(transcript);
-
-    addAssistantMessage(
-      localCommand.reply
-    );
-
-    speak(
-      localCommand.reply,
-      commandLanguage,
-      () => {
-        activeRef.current = false;
-
-        clearVoiceMemory();
-
-        navigate(localCommand.route);
-      }
-    );
-  }
-
-  async function respondToFarmer(
-    transcript
-  ) {
-    if (!transcript) {
-      return;
-    }
-
-    recognitionRef.current?.abort();
-
-    setError("");
-
-    const localCommand =
-      detectLocalVoiceCommand(
-        transcript,
-        languageRef.current
-      );
-
-    if (localCommand) {
-      handleLocalCommand(
-        localCommand,
-        transcript
-      );
-
-      return;
-    }
-
     try {
-      setStatus("thinking");
-
       const result =
-        await askGemini(transcript);
-
-      if (!activeRef.current) {
-        return;
-      }
-
-      const detectedLanguage =
-        getValidLanguage(
-          result.languageCode
+        await detectLocalVoiceCommand(
+          text,
+          languageRef.current
         );
 
-      updateLanguage(
-        detectedLanguage
-      );
-
-      addFarmerMessage(transcript);
-
-      addAssistantMessage(
-        result.reply
-      );
-
-      const route =
-        actionRoutes[result.action];
-
-      speak(
-        result.reply,
-        detectedLanguage,
-        () => {
-          if (route) {
-            activeRef.current = false;
-
-            clearVoiceMemory();
-
-            navigate(route);
-
-            return;
-          }
-
-          startListening();
-        }
-      );
-    } catch (requestError) {
-      console.error(
-        "Voice assistant error:",
-        requestError
-      );
-
-      if (!activeRef.current) {
-        return;
+      if (!result) {
+        return false;
       }
 
-      const retryMessage =
-        retryMessages[
-          languageRef.current
-        ] || retryMessages.en;
+      const reply =
+        result.reply ||
+        result.response ||
+        "";
 
-      setError(retryMessage);
+      const newLanguage =
+        result.languageCode ||
+        result.language ||
+        null;
+
+      const action =
+        result.action || "none";
+
+      if (
+        newLanguage &&
+        speechLocales[newLanguage]
+      ) {
+        languageRef.current =
+          newLanguage;
+
+        setLanguage(
+          newLanguage
+        );
+      }
+
+      if (reply) {
+        addMemory(
+          "assistant",
+          reply
+        );
+
+        setLastResponse(
+          reply
+        );
+      }
 
       speak(
-        retryMessage,
-        languageRef.current,
-        startListening
+        reply,
+        newLanguage ||
+          languageRef.current,
+        () => {
+          if (
+            activeRef.current
+          ) {
+            if (
+              action !== "none" &&
+              actionRoutes[action]
+            ) {
+              navigate(
+                actionRoutes[action]
+              );
+
+              return;
+            }
+
+            setStatus("idle");
+
+            /*
+             * Give the browser a small
+             * gap before another listen.
+             */
+            setTimeout(() => {
+              if (
+                activeRef.current
+              ) {
+                startListening();
+              }
+            }, 250);
+          }
+        }
       );
+
+
+
+      return true;
+    } catch (commandError) {
+      /*
+       * Local-command failure should not
+       * break the entire voice assistant.
+       */
+      console.warn(
+        "Local voice command error:",
+        commandError
+      );
+
+      return false;
     }
   }
 
-  function beginConversation() {
+
+  /* =======================================================
+     RESPOND TO FARMER
+  ======================================================= */
+
+  async function respondToFarmer(
+    spokenText
+  ) {
     if (
-      !authorized ||
-      activeRef.current
+      !spokenText ||
+      responseInProgressRef.current
     ) {
       return;
     }
 
-    clearVoiceMemory();
+    if (!activeRef.current) {
+      return;
+    }
 
-    activeRef.current = true;
+    responseInProgressRef.current =
+      true;
+
+    stopRecognition();
 
     setError("");
 
-    const code =
-      languageRef.current;
+    setStatus("thinking");
+
+    addMemory(
+      "farmer",
+      spokenText
+    );
+
+    try {
+      /*
+       * First check local commands.
+       */
+      const handled =
+        await handleLocalCommand(
+          spokenText
+        );
+
+      if (handled) {
+        return;
+      }
+
+      /*
+       * Otherwise use Gemini.
+       */
+      const result =
+        await askGemini(
+          spokenText
+        );
+
+      const reply =
+        result.reply;
+
+      const responseLanguage =
+        result.languageCode ||
+        languageRef.current;
+
+      if (
+        responseLanguage &&
+        speechLocales[
+          responseLanguage
+        ]
+      ) {
+        languageRef.current =
+          responseLanguage;
+
+        setLanguage(
+          responseLanguage
+        );
+      }
+
+      addMemory(
+        "assistant",
+        reply
+      );
+
+      setLastResponse(
+        reply
+      );
+
+      speak(
+        reply,
+        responseLanguage,
+        () => {
+          if (
+            !activeRef.current
+          ) {
+            return;
+          }
+
+          if (
+            result.action !==
+              "none" &&
+            actionRoutes[
+              result.action
+            ]
+          ) {
+            navigate(
+              actionRoutes[
+                result.action
+              ]
+            );
+
+            return;
+          }
+
+          setStatus("idle");
+
+          setTimeout(() => {
+            if (
+              activeRef.current
+            ) {
+              startListening();
+            }
+          }, 250);
+        }
+      );
+    } catch (responseError) {
+      console.error(
+        "Voice assistant response error:",
+        responseError
+      );
+
+      const currentLanguage =
+        languageRef.current ||
+        "en";
+
+      const retryMessage =
+        retryMessages[
+          currentLanguage
+        ] ||
+        retryMessages.en;
+
+      setError(
+        retryMessage
+      );
+
+      setStatus("idle");
+
+      /*
+       * Speak the error ONCE.
+       *
+       * Do not automatically restart
+       * recognition from the error handler.
+       */
+      speak(
+        retryMessage,
+        currentLanguage
+      );
+    } finally {
+      responseInProgressRef.current =
+        false;
+    }
+  }
+
+
+  /* =======================================================
+     BEGIN CONVERSATION
+  ======================================================= */
+
+  function beginConversation() {
+    if (authLoading) {
+      return;
+    }
+
+    /*
+     * Stop anything from a previous session.
+     */
+    stopRecognition();
+
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      // Ignore.
+    }
+
+    try {
+      clearVoiceMemory();
+    } catch (memoryError) {
+      console.warn(
+        "Unable to clear voice memory:",
+        memoryError
+      );
+    }
+
+    setHistory([]);
+
+    setTranscript("");
+
+    setLastResponse("");
+
+    setError("");
+
+    responseInProgressRef.current =
+      false;
+
+    speakingRef.current =
+      false;
+
+    activeRef.current =
+      true;
+
+    setActive(true);
+
+    const currentLanguage =
+      languageRef.current ||
+      "en";
+
+    const greeting =
+      greetings[
+        currentLanguage
+      ] ||
+      greetings.en;
 
     speak(
-      greetings[code] ||
-        greetings.en,
-      code,
-      startListening
+      greeting,
+      currentLanguage,
+      () => {
+        if (
+          !activeRef.current
+        ) {
+          return;
+        }
+
+        setStatus("idle");
+
+        setTimeout(() => {
+          if (
+            activeRef.current
+          ) {
+            startListening();
+          }
+        }, 300);
+      }
     );
   }
 
+
+  /* =======================================================
+     STOP CONVERSATION
+  ======================================================= */
+
   function stopConversation() {
-    activeRef.current = false;
+    activeRef.current =
+      false;
 
-    recognitionRef.current?.abort();
+    setActive(false);
 
-    recognitionRef.current = null;
+    responseInProgressRef.current =
+      false;
 
-    window.speechSynthesis?.cancel();
+    speakingRef.current =
+      false;
 
-    clearVoiceMemory();
+    stopRecognition();
 
-    setStatus("stopped");
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      // Ignore.
+    }
+
+    setStatus("idle");
+
+    setError("");
   }
 
-  if (!authorized) {
+
+  /* =======================================================
+     CHANGE LANGUAGE
+  ======================================================= */
+
+  function handleLanguageChange(
+    event
+  ) {
+    const nextLanguage =
+      event.target.value;
+
+    if (
+      !speechLocales[nextLanguage]
+    ) {
+      return;
+    }
+
+    languageRef.current =
+      nextLanguage;
+
+    setLanguage(
+      nextLanguage
+    );
+
+    /*
+     * If currently listening,
+     * stop the old recognition.
+     * User can tap microphone again
+     * using the new language.
+     */
+    if (
+      statusRef.current ===
+      "listening"
+    ) {
+      stopRecognition();
+
+      setStatus("idle");
+
+      setError(
+        "Language changed. Tap the microphone to speak again."
+      );
+    }
+  }
+
+
+  /* =======================================================
+     STATUS TEXT
+  ======================================================= */
+
+  function getStatusText() {
+    const current =
+      interfaceText[
+        languageRef.current
+      ] ||
+      interfaceText.en;
+
+    if (
+      status === "listening"
+    ) {
+      return current.listening;
+    }
+
+    if (
+      status === "thinking"
+    ) {
+      return current.thinking;
+    }
+
+    if (
+      status === "speaking"
+    ) {
+      return current.speaking;
+    }
+
+    return current.idle;
+  }
+
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-green-200 border-t-green-700 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl shadow-xl border border-green-100 p-8 text-center max-w-md w-full">
+
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center text-3xl shadow-lg">
+            🎙️
+          </div>
+
+          <h2 className="text-xl font-bold text-slate-900 mt-5">
+            Loading Voice Assistant
+          </h2>
+
+          <p className="text-sm text-slate-500 mt-2">
+            Preparing your AgriSaathi assistant...
+          </p>
+
+        </div>
       </div>
     );
   }
 
-  const conversationActive =
-    !["ready", "stopped"].includes(
-      status
-    );
+
+  const currentInterface =
+    interfaceText[
+      languageRef.current
+    ] ||
+    interfaceText.en;
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-800 to-green-600 p-4 flex items-center justify-center">
-      <main className="w-full max-w-xl text-center text-white">
-        <button
-          type="button"
-          onClick={() => {
-            stopConversation();
-            navigate("/dashboard");
-          }}
-          className="absolute top-5 left-5 bg-white/15 px-4 py-2 rounded-full hover:bg-white/25"
-        >
-          ← {ui.back}
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 p-4 md:p-6">
 
-        <div className="mb-10">
-          <div className="text-6xl mb-4">
-            🌾
+      <div className="max-w-5xl mx-auto">
+
+        {/* =================================================
+            HEADER
+        ================================================== */}
+
+        <header className="relative overflow-hidden bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 text-white rounded-3xl shadow-xl p-6 md:p-8">
+
+          <div className="absolute -top-20 -right-16 w-52 h-52 bg-white/10 rounded-full" />
+
+          <div className="absolute -bottom-24 -left-16 w-56 h-56 bg-white/10 rounded-full" />
+
+          <div className="relative">
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+
+              <div>
+
+                <div className="flex items-center gap-3">
+
+                  <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-3xl">
+                    🎙️
+                  </div>
+
+                  <div>
+
+                    <p className="text-blue-100 text-xs font-bold uppercase tracking-wider">
+                      AgriSaathi
+                    </p>
+
+                    <h1 className="text-2xl md:text-3xl font-bold">
+                      {currentInterface.title}
+                    </h1>
+
+                  </div>
+
+                </div>
+
+                <p className="text-blue-100 mt-4 max-w-2xl">
+                  {currentInterface.subtitle}
+                </p>
+
+              </div>
+
+
+              {/* LANGUAGE */}
+
+              <div className="bg-white/10 border border-white/20 rounded-2xl p-3">
+
+                <label className="block text-xs text-blue-100 font-semibold mb-1">
+                  Language
+                </label>
+
+                <select
+                  value={
+                    languageRef.current
+                  }
+                  onChange={
+                    handleLanguageChange
+                  }
+                  className="bg-white text-slate-800 rounded-xl px-3 py-2 text-sm font-semibold outline-none"
+                >
+
+                  {Object.entries(
+                    languageNames
+                  ).map(
+                    ([
+                      code,
+                      name,
+                    ]) => (
+                      <option
+                        key={code}
+                        value={code}
+                      >
+                        {name}
+                      </option>
+                    )
+                  )}
+
+                </select>
+
+              </div>
+
+            </div>
+
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold">
-            {ui.title}
-          </h1>
-        </div>
+        </header>
 
-        <button
-          type="button"
-          onClick={
-            conversationActive
-              ? stopConversation
-              : beginConversation
-          }
-          aria-label={
-            conversationActive
-              ? ui.stop
-              : ui.ready
-          }
-          className={`relative w-52 h-52 rounded-full shadow-2xl border-8 border-white/25 transition-all ${
-            status === "listening"
-              ? "bg-emerald-400 scale-105"
-              : status === "thinking"
-              ? "bg-amber-400 animate-pulse"
-              : status === "speaking"
-              ? "bg-blue-400 scale-105"
-              : "bg-white text-green-700 hover:scale-105"
-          }`}
-        >
-          {(status === "listening" ||
-            status === "speaking") && (
-            <span className="absolute inset-0 rounded-full border-4 border-white animate-ping opacity-30" />
+
+        {/* =================================================
+            MAIN VOICE CARD
+        ================================================== */}
+
+        <main className="bg-white border border-blue-100 rounded-3xl shadow-xl mt-6 overflow-hidden">
+
+          <div className="p-6 md:p-10">
+
+            {/* STATUS */}
+
+            <div className="flex justify-center">
+
+              <div
+                className={`
+                  inline-flex
+                  items-center
+                  gap-2
+                  px-4
+                  py-2
+                  rounded-full
+                  text-sm
+                  font-semibold
+                  border
+                  ${
+                    status ===
+                    "listening"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : status ===
+                        "thinking"
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : status ===
+                        "speaking"
+                      ? "bg-cyan-50 text-cyan-700 border-cyan-200"
+                      : "bg-slate-50 text-slate-600 border-slate-200"
+                  }
+                `}
+              >
+
+                <span
+                  className={`
+                    w-2.5
+                    h-2.5
+                    rounded-full
+                    ${
+                      status ===
+                      "listening"
+                        ? "bg-blue-500"
+                        : status ===
+                          "thinking"
+                        ? "bg-amber-500"
+                        : status ===
+                          "speaking"
+                        ? "bg-cyan-500"
+                        : "bg-slate-400"
+                    }
+                  `}
+                />
+
+                {getStatusText()}
+
+              </div>
+
+            </div>
+
+
+            {/* MICROPHONE */}
+
+            <div className="flex justify-center mt-10">
+
+              <button
+                type="button"
+               onClick={() => {
+  if (!active) {
+    beginConversation();
+    return;
+  }
+
+  // Already listening → stop only listening.
+  if (status === "listening") {
+    stopRecognition();
+    setStatus("idle");
+    return;
+  }
+
+  // Conversation is active but currently idle.
+  // Start listening instead of starting the greeting again.
+  if (status === "idle") {
+    startListening();
+    return;
+  }
+
+  // If speaking/thinking, don't restart the whole conversation.
+  // The current response should finish normally.
+}}
+                aria-label={
+                  active
+                    ? currentInterface.stop
+                    : currentInterface.start
+                }
+                className={`
+                  relative
+                  w-40
+                  h-40
+                  md:w-48
+                  md:h-48
+                  rounded-full
+                  flex
+                  items-center
+                  justify-center
+                  shadow-2xl
+                  transition-all
+                  duration-200
+                  focus:outline-none
+                  focus:ring-4
+                  focus:ring-blue-200
+
+                  ${
+                    status ===
+                    "listening"
+                      ? "bg-blue-600 scale-105 shadow-blue-200"
+                      : status ===
+                        "thinking"
+                      ? "bg-amber-500"
+                      : status ===
+                        "speaking"
+                      ? "bg-cyan-500 scale-105 shadow-cyan-200"
+                      : "bg-gradient-to-br from-blue-600 to-cyan-500 hover:scale-105"
+                  }
+                `}
+              >
+
+                {/* STATIC LISTENING RING
+                    No animate-ping.
+                */}
+
+                {status ===
+                  "listening" && (
+                  <span className="absolute inset-[-8px] rounded-full border-4 border-blue-300/50" />
+                )}
+
+                <span className="text-6xl md:text-7xl text-white">
+
+                  {status ===
+                  "thinking"
+                    ? "⏳"
+                    : status ===
+                      "speaking"
+                    ? "🔊"
+                    : "🎙️"}
+
+                </span>
+
+              </button>
+
+            </div>
+
+
+            {/* TAP MESSAGE */}
+
+            <div className="text-center mt-8">
+
+              <h2 className="text-xl md:text-2xl font-bold text-slate-900">
+                {active
+                  ? getStatusText()
+                  : currentInterface.start}
+              </h2>
+
+              <p className="text-sm text-slate-500 mt-2">
+                {active
+                  ? status ===
+                    "listening"
+                    ? "Speak clearly. Your request will be processed automatically."
+                    : status ===
+                      "thinking"
+                    ? "AgriSaathi is preparing your answer."
+                    : status ===
+                      "speaking"
+                    ? "AgriSaathi is responding."
+                    : currentInterface.tapToSpeak
+                  : currentInterface.tapToSpeak}
+              </p>
+
+            </div>
+
+
+            {/* ERROR */}
+
+            {error && (
+              <div className="max-w-2xl mx-auto mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="text-xl">
+                    ⚠️
+                  </div>
+
+                  <div>
+
+                    <p className="font-semibold text-amber-900">
+                      Voice Assistant
+                    </p>
+
+                    <p className="text-sm text-amber-800 mt-1">
+                      {error}
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+
+            {/* TRANSCRIPT */}
+
+            {transcript && (
+              <div className="max-w-2xl mx-auto mt-6 bg-blue-50 border border-blue-100 rounded-2xl p-5">
+
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-600">
+                  You said
+                </p>
+
+                <p className="text-slate-800 font-medium mt-2">
+                  {transcript}
+                </p>
+
+              </div>
+            )}
+
+
+            {/* RESPONSE */}
+
+            {lastResponse && (
+              <div className="max-w-2xl mx-auto mt-4 bg-cyan-50 border border-cyan-100 rounded-2xl p-5">
+
+                <p className="text-xs font-bold uppercase tracking-wide text-cyan-700">
+                  AgriSaathi
+                </p>
+
+                <p className="text-slate-800 mt-2 leading-6">
+                  {lastResponse}
+                </p>
+
+              </div>
+            )}
+
+
+            {/* STOP BUTTON */}
+
+            {active && (
+              <div className="flex justify-center mt-8">
+
+                <button
+                  type="button"
+                  onClick={
+                    stopConversation
+                  }
+                  className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition border border-slate-200"
+                >
+                  Stop Conversation
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+
+          {/* =================================================
+              FARMER CONTEXT
+          ================================================== */}
+
+          {farmer && (
+            <div className="border-t border-slate-100 bg-slate-50 p-6 md:p-8">
+
+              <div className="max-w-4xl mx-auto">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center text-xl">
+                    👨‍🌾
+                  </div>
+
+                  <div>
+
+                    <h2 className="font-bold text-slate-900">
+                      Farmer Context
+                    </h2>
+
+                    <p className="text-sm text-slate-500">
+                      Used to provide more relevant answers.
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-4">
+
+                    <p className="text-xs text-slate-400">
+                      Name
+                    </p>
+
+                    <p className="font-semibold text-slate-800 mt-1">
+                      {farmer.name ||
+                        "Not available"}
+                    </p>
+
+                  </div>
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-4">
+
+                    <p className="text-xs text-slate-400">
+                      Village
+                    </p>
+
+                    <p className="font-semibold text-slate-800 mt-1">
+                      {farmer.village ||
+                        "Not available"}
+                    </p>
+
+                  </div>
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-4">
+
+                    <p className="text-xs text-slate-400">
+                      District
+                    </p>
+
+                    <p className="font-semibold text-slate-800 mt-1">
+                      {farmer.district ||
+                        "Not available"}
+                    </p>
+
+                  </div>
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-4">
+
+                    <p className="text-xs text-slate-400">
+                      Main Crop
+                    </p>
+
+                    <p className="font-semibold text-slate-800 mt-1">
+                      {farmer.mainCrop ||
+                        "Not available"}
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
           )}
 
-          <span className="relative text-7xl">
-            {status === "thinking"
-              ? "●●●"
-              : status === "speaking"
-              ? "🔊"
-              : "🎤"}
-          </span>
-        </button>
+        </main>
 
-        <p
-          className="text-2xl font-semibold mt-8"
-          aria-live="polite"
-        >
-          {status === "listening"
-            ? ui.listening
-            : status === "thinking"
-            ? ui.thinking
-            : status === "speaking"
-            ? ui.speaking
-            : status === "stopped"
-            ? ui.stopped
-            : ui.ready}
-        </p>
 
-        {error && (
-          <p
-            className="mt-5 bg-red-900/40 border border-red-200/40 rounded-xl p-4"
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
+        {/* =================================================
+            HELP CARD
+        ================================================== */}
 
-        {conversationActive && (
-          <button
-            type="button"
-            onClick={stopConversation}
-            className="mt-8 bg-red-600 hover:bg-red-700 px-8 py-3 rounded-full font-bold"
-          >
-            {ui.stop}
-          </button>
-        )}
+        <section className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl shadow-lg mt-6 p-6">
 
-        <p className="mt-10 text-green-100 text-sm">
-          {ui.privacy}
-        </p>
-      </main>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+
+            <div>
+
+              <h2 className="text-xl font-bold">
+                What can you ask?
+              </h2>
+
+              <p className="text-blue-100 text-sm mt-2">
+                Try questions about weather, crop disease,
+                market prices, government schemes or your orders.
+              </p>
+
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+
+              {[
+                "Weather",
+                "Crop Disease",
+                "Market Prices",
+                "Government Schemes",
+                "My Orders",
+              ].map(
+                (item) => (
+                  <span
+                    key={item}
+                    className="bg-white/15 border border-white/20 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  >
+                    {item}
+                  </span>
+                )
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* =================================================
+            FOOTER
+        ================================================== */}
+
+        <footer className="text-center py-8 text-sm text-slate-400">
+          AgriSaathi · Voice Assistant
+        </footer>
+
+      </div>
     </div>
   );
 }
