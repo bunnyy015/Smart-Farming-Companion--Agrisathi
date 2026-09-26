@@ -13,8 +13,18 @@ import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 function formatCurrency(value) {
-  return Number(value || 0).toLocaleString("en-IN", {
+  const number = Number(value || 0);
+
+  if (!Number.isFinite(number)) {
+    return "₹0";
+  }
+
+  return number.toLocaleString("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
@@ -22,7 +32,13 @@ function formatCurrency(value) {
 }
 
 function formatNumber(value) {
-  return Number(value || 0).toLocaleString("en-IN");
+  const number = Number(value || 0);
+
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+
+  return number.toLocaleString("en-IN");
 }
 
 function getOrderStatusLabel(status) {
@@ -34,6 +50,7 @@ function getOrderStatusLabel(status) {
     received_by_farmer: "Received by Farmer",
     payment_received: "Payment Received",
     completed: "Completed",
+    delivered_by_dealer: "Delivered",
   };
 
   return (
@@ -43,7 +60,9 @@ function getOrderStatusLabel(status) {
 }
 
 function getOrderStatusStyle(status) {
-  const normalized = String(status || "").toLowerCase();
+  const normalized = String(
+    status || ""
+  ).toLowerCase();
 
   if (normalized === "completed") {
     return "bg-emerald-100 text-emerald-700 border-emerald-200";
@@ -63,12 +82,19 @@ function getOrderStatusStyle(status) {
     return "bg-blue-100 text-blue-700 border-blue-200";
   }
 
-  if (normalized === "accepted") {
+  if (
+    normalized === "accepted" ||
+    normalized === "delivered_by_dealer"
+  ) {
     return "bg-cyan-100 text-cyan-700 border-cyan-200";
   }
 
   return "bg-amber-100 text-amber-700 border-amber-200";
 }
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function DealerDashboard() {
   const navigate = useNavigate();
@@ -91,9 +117,9 @@ export default function DealerDashboard() {
 
   const [message, setMessage] = useState(null);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  /* =======================================================
+     NOTIFICATIONS
+  ======================================================= */
 
   const unreadNotifications = useMemo(() => {
     const currentUser = auth.currentUser;
@@ -120,6 +146,14 @@ export default function DealerDashboard() {
     }
   }, [notifications]);
 
+  /* =======================================================
+     LOAD DASHBOARD
+  ======================================================= */
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
   async function loadDashboard() {
     try {
       setLoading(true);
@@ -136,22 +170,20 @@ export default function DealerDashboard() {
         return;
       }
 
-      /*
-       * PRODUCTS
-       *
-       * dealerProducts/{dealerUid}/{productId}
-       */
+      /* ===================================================
+         PRODUCTS
+         dealerProducts/{dealerUid}/{productId}
+      =================================================== */
 
       const productsReference = ref(
         database,
         `dealerProducts/${currentUser.uid}`
       );
 
-      /*
-       * ORDERS
-       *
-       * dealerOrders/{orderId}
-       */
+      /* ===================================================
+         ORDERS
+         dealerOrders/{orderId}
+      =================================================== */
 
       const ordersQuery = query(
         ref(database, "dealerOrders"),
@@ -159,11 +191,10 @@ export default function DealerDashboard() {
         equalTo(currentUser.uid)
       );
 
-      /*
-       * SALES
-       *
-       * sales/{dealerUid}/{saleId}
-       */
+      /* ===================================================
+         SALES
+         sales/{dealerUid}/{saleId}
+      =================================================== */
 
       const salesReference = ref(
         database,
@@ -180,6 +211,10 @@ export default function DealerDashboard() {
         get(salesReference),
       ]);
 
+      /* ===================================================
+         PRODUCTS DATA
+      =================================================== */
+
       const products = productsSnapshot.exists()
         ? Object.entries(
             productsSnapshot.val()
@@ -188,6 +223,10 @@ export default function DealerDashboard() {
             ...(value || {}),
           }))
         : [];
+
+      /* ===================================================
+         ORDERS DATA
+      =================================================== */
 
       const orders = ordersSnapshot.exists()
         ? Object.entries(
@@ -198,6 +237,10 @@ export default function DealerDashboard() {
           }))
         : [];
 
+      /* ===================================================
+         SALES DATA
+      =================================================== */
+
       const recordedSales = salesSnapshot.exists()
         ? Object.entries(
             salesSnapshot.val()
@@ -207,35 +250,31 @@ export default function DealerDashboard() {
           }))
         : [];
 
-      /*
-       * ORDER COUNTS
-       */
+      /* ===================================================
+         ORDER COUNTS
+      =================================================== */
 
       const pendingOrders = orders.filter(
         (order) =>
-          String(order.status || "").toLowerCase() ===
-          "pending"
+          String(order.status || "")
+            .toLowerCase() === "pending"
       );
 
       const acceptedOrders = orders.filter(
         (order) =>
-          String(order.status || "").toLowerCase() ===
-          "accepted"
+          String(order.status || "")
+            .toLowerCase() === "accepted"
       );
 
       const completedOrders = orders.filter(
         (order) =>
-          String(order.status || "").toLowerCase() ===
-          "completed"
+          String(order.status || "")
+            .toLowerCase() === "completed"
       );
 
-      /*
-       * SALES COMPATIBILITY
-       *
-       * Existing sales records are used first.
-       * Older completed orders are included if they
-       * do not already have a sales record.
-       */
+      /* ===================================================
+         SALES COMPATIBILITY
+      =================================================== */
 
       const recordedOrderIds = new Set(
         recordedSales
@@ -273,9 +312,9 @@ export default function DealerDashboard() {
         recordedRevenue +
         olderOrderRevenue;
 
-      /*
-       * LOW STOCK
-       */
+      /* ===================================================
+         LOW STOCK
+      =================================================== */
 
       const lowStockProducts =
         products.filter((product) => {
@@ -287,38 +326,41 @@ export default function DealerDashboard() {
             product.lowStockLevel || 5
           );
 
-          return quantity <= lowStockLevel;
+          return (
+            quantity <=
+            lowStockLevel
+          );
         });
 
-      /*
-       * RECENT ORDERS
-       */
+      /* ===================================================
+         RECENT ORDERS
+      =================================================== */
 
-      const sortedOrders = [...orders].sort(
-        (a, b) => {
-          const dateA = new Date(
-            a.updatedAt ||
-              a.createdAt ||
-              0
-          ).getTime();
+      const sortedOrders = [
+        ...orders,
+      ].sort((a, b) => {
+        const dateA = new Date(
+          a.updatedAt ||
+            a.createdAt ||
+            0
+        ).getTime();
 
-          const dateB = new Date(
-            b.updatedAt ||
-              b.createdAt ||
-              0
-          ).getTime();
+        const dateB = new Date(
+          b.updatedAt ||
+            b.createdAt ||
+            0
+        ).getTime();
 
-          return dateB - dateA;
-        }
-      );
+        return dateB - dateA;
+      });
 
       setRecentOrders(
         sortedOrders.slice(0, 5)
       );
 
-      /*
-       * DASHBOARD STATISTICS
-       */
+      /* ===================================================
+         DASHBOARD STATISTICS
+      =================================================== */
 
       setStats({
         products: products.length,
@@ -342,9 +384,9 @@ export default function DealerDashboard() {
         totalRevenue,
       });
 
-      /*
-       * NOTIFICATIONS
-       */
+      /* ===================================================
+         NOTIFICATIONS
+      =================================================== */
 
       const notificationIds = [];
 
@@ -357,6 +399,7 @@ export default function DealerDashboard() {
           "completed",
           "accepted",
           "rejected",
+          "delivered_by_dealer",
         ];
 
         const status = String(
@@ -364,7 +407,9 @@ export default function DealerDashboard() {
         ).toLowerCase();
 
         if (
-          notificationStatuses.includes(status)
+          notificationStatuses.includes(
+            status
+          )
         ) {
           notificationIds.push(
             `order-${order.id}-${status}`
@@ -381,27 +426,32 @@ export default function DealerDashboard() {
           product.lowStockLevel || 5
         );
 
-        if (quantity <= lowStockLevel) {
+        if (
+          quantity <=
+          lowStockLevel
+        ) {
           notificationIds.push(
             `stock-${product.id}-${quantity}`
           );
         }
       });
 
-      setNotifications(notificationIds);
+      setNotifications(
+        notificationIds
+      );
     } catch (error) {
       console.error(
         "Dealer dashboard error:",
         error
       );
 
-      const errorMessage = String(
-        error?.message || ""
-      ).toLowerCase();
+      const errorMessage =
+        String(
+          error?.message || ""
+        ).toLowerCase();
 
       setMessage({
         type: "error",
-
         text: errorMessage.includes(
           "permission denied"
         )
@@ -414,15 +464,24 @@ export default function DealerDashboard() {
     }
   }
 
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
   async function handleLogout() {
     try {
       await signOut(auth);
 
-      localStorage.removeItem("role");
+      localStorage.removeItem(
+        "role"
+      );
 
-      navigate("/role-selection", {
-        replace: true,
-      });
+      navigate(
+        "/role-selection",
+        {
+          replace: true,
+        }
+      );
     } catch (error) {
       console.error(
         "Dealer logout error:",
@@ -431,112 +490,23 @@ export default function DealerDashboard() {
 
       setMessage({
         type: "error",
-        text: "Logout failed. Please try again.",
+        text:
+          "Logout failed. Please try again.",
       });
     }
   }
 
-  /*
-   * MAIN STAT CARDS
-   */
-
-  const statCards = [
-    {
-      title: "Products",
-      value: stats.products,
-      icon: "📦",
-      description: "Listed products",
-      path: "/dealer/products",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-      valueColor: "text-blue-700",
-    },
-
-    {
-      title: "Pending Orders",
-      value: stats.pendingOrders,
-      icon: "🛒",
-      description: "Need your attention",
-      path: "/dealer/orders",
-      bg: "bg-amber-50",
-      border: "border-amber-100",
-      valueColor: "text-amber-700",
-    },
-
-    {
-      title: "Low Stock",
-      value: stats.lowStock,
-      icon: "⚠️",
-      description: "Products to restock",
-      path: "/dealer/products?filter=low-stock",
-      bg: "bg-red-50",
-      border: "border-red-100",
-      valueColor: "text-red-700",
-    },
-
-    {
-      title: "Completed Sales",
-      value: stats.completedSales,
-      icon: "📈",
-      description: "Successful sales",
-      path: "/dealer/sales",
-      bg: "bg-emerald-50",
-      border: "border-emerald-100",
-      valueColor: "text-emerald-700",
-    },
-  ];
-
-  /*
-   * QUICK ACTIONS
-   */
-
-  const quickActions = [
-    {
-      title: "Manage Products",
-      description:
-        "Add products, update prices and maintain stock.",
-      icon: "📦",
-      path: "/dealer/products",
-      className:
-        "bg-blue-600 hover:bg-blue-700",
-    },
-
-    {
-      title: "Manage Orders",
-      description:
-        "Review farmer orders and update order status.",
-      icon: "🛒",
-      path: "/dealer/orders",
-      className:
-        "bg-cyan-600 hover:bg-cyan-700",
-    },
-
-    {
-      title: "Sales & Revenue",
-      description:
-        "View completed sales and your revenue.",
-      icon: "💰",
-      path: "/dealer/sales",
-      className:
-        "bg-indigo-600 hover:bg-indigo-700",
-    },
-
-    {
-      title: "Dealer Profile",
-      description:
-        "View and manage your dealer information.",
-      icon: "👤",
-      path: "/dealer/profile",
-      className:
-        "bg-slate-700 hover:bg-slate-800",
-    },
-  ];
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <div className="dealer-theme min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* STATUS MESSAGE */}
+        {/* =================================================
+            STATUS MESSAGE
+        ================================================= */}
 
         <StatusMessage
           message={message}
@@ -545,13 +515,11 @@ export default function DealerDashboard() {
           }
         />
 
-        {/* =====================================
+        {/* =================================================
             HEADER
-        ====================================== */}
+        ================================================= */}
 
         <header className="relative overflow-hidden bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 text-white rounded-3xl shadow-xl p-6 md:p-8">
-
-          {/* Decorative circles */}
 
           <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full" />
 
@@ -560,6 +528,8 @@ export default function DealerDashboard() {
           <div className="relative">
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+
+              {/* BRAND */}
 
               <div className="flex items-center gap-4">
 
@@ -577,19 +547,25 @@ export default function DealerDashboard() {
                   </h1>
 
                   <p className="text-blue-100 mt-1">
-                    Manage products, farmer orders,
-                    stock and sales.
+                    Manage your products,
+                    orders, sales and dealer
+                    information.
                   </p>
                 </div>
 
               </div>
+
+              {/* HEADER ACTIONS */}
 
               <div className="flex flex-wrap gap-3">
 
                 <button
                   type="button"
                   onClick={loadDashboard}
-                  disabled={loading || refreshing}
+                  disabled={
+                    loading ||
+                    refreshing
+                  }
                   className="bg-white/15 hover:bg-white/25 border border-white/25 px-4 py-2.5 rounded-xl font-semibold transition disabled:opacity-50"
                 >
                   {refreshing
@@ -608,9 +584,11 @@ export default function DealerDashboard() {
                 >
                   🔔 Notifications
 
-                  {unreadNotifications > 0 && (
+                  {unreadNotifications >
+                    0 && (
                     <span className="absolute -top-2 -right-2 min-w-6 h-6 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                      {unreadNotifications > 99
+                      {unreadNotifications >
+                      99
                         ? "99+"
                         : unreadNotifications}
                     </span>
@@ -619,7 +597,9 @@ export default function DealerDashboard() {
 
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={
+                    handleLogout
+                  }
                   className="border border-white/40 hover:bg-white/10 px-4 py-2.5 rounded-xl font-semibold transition"
                 >
                   Logout
@@ -629,7 +609,7 @@ export default function DealerDashboard() {
 
             </div>
 
-            {/* Dealer status strip */}
+            {/* ACCOUNT STATUS */}
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
 
@@ -639,260 +619,346 @@ export default function DealerDashboard() {
               </div>
 
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 px-4 py-2 rounded-xl text-sm">
-                📊 {formatNumber(stats.totalOrders)} Total Orders
+                📊 {formatNumber(
+                  stats.totalOrders
+                )} Total Orders
               </div>
 
             </div>
 
           </div>
-
         </header>
 
-        {/* =====================================
-            OVERVIEW
-        ====================================== */}
-
-        <section className="mt-6">
-
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
-
-            <div>
-              <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">
-                Business Overview
-              </p>
-
-              <h2 className="text-2xl font-bold text-slate-900 mt-1">
-                Your Store at a Glance
-              </h2>
-            </div>
-
-            <p className="text-sm text-slate-500">
-              Updated from your Firebase data
-            </p>
-
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-            {statCards.map((card) => (
-              <button
-                key={card.title}
-                type="button"
-                onClick={() =>
-                  navigate(card.path)
-                }
-                className={`group ${card.bg} ${card.border} border rounded-2xl p-5 text-left shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all`}
-              >
-
-                <div className="flex items-start justify-between gap-3">
-
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {card.title}
-                    </p>
-
-                    <p
-                      className={`text-3xl md:text-4xl font-bold ${card.valueColor} mt-2`}
-                    >
-                      {loading
-                        ? "—"
-                        : formatNumber(
-                            card.value
-                          )}
-                    </p>
-                  </div>
-
-                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl shadow-sm group-hover:scale-110 transition">
-                    {card.icon}
-                  </div>
-
-                </div>
-
-                <p className="text-xs text-slate-500 mt-3">
-                  {card.description}
-                </p>
-
-                <div className="mt-4 text-sm font-semibold text-blue-600">
-                  Open →
-                </div>
-
-              </button>
-            ))}
-
-          </div>
-
-        </section>
-
-        {/* =====================================
-            REVENUE + ORDER STATUS
-        ====================================== */}
-
-        <section className="grid lg:grid-cols-3 gap-5 mt-6">
-
-          {/* Revenue */}
-
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/dealer/sales")
-            }
-            className="lg:col-span-2 relative overflow-hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl transition"
-          >
-
-            <div className="absolute -right-12 -top-12 w-36 h-36 bg-white/10 rounded-full" />
-
-            <div className="relative">
-
-              <div className="flex items-center justify-between gap-4">
-
-                <div>
-
-                  <p className="text-blue-100 text-sm font-semibold">
-                    TOTAL REVENUE
-                  </p>
-
-                  <h2 className="text-3xl md:text-4xl font-bold mt-2">
-                    {loading
-                      ? "—"
-                      : formatCurrency(
-                          stats.totalRevenue
-                        )}
-                  </h2>
-
-                  <p className="text-blue-100 text-sm mt-2">
-                    Revenue from completed sales
-                  </p>
-
-                </div>
-
-                <div className="w-16 h-16 rounded-2xl bg-white/15 flex items-center justify-center text-4xl">
-                  💰
-                </div>
-
-              </div>
-
-              <div className="mt-5 inline-flex items-center bg-white/15 border border-white/20 rounded-xl px-4 py-2 text-sm font-semibold">
-                View Sales Report →
-              </div>
-
-            </div>
-
-          </button>
-
-          {/* Order Status */}
-
-          <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6">
-
-            <h2 className="text-lg font-bold text-slate-900">
-              Order Status
-            </h2>
-
-            <p className="text-sm text-slate-500 mt-1">
-              Current order activity
-            </p>
-
-            <div className="space-y-3 mt-5">
-
-              <div className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                <span className="text-sm text-amber-700 font-medium">
-                  Pending
-                </span>
-
-                <span className="font-bold text-amber-800">
-                  {loading
-                    ? "—"
-                    : stats.pendingOrders}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3">
-                <span className="text-sm text-cyan-700 font-medium">
-                  Accepted
-                </span>
-
-                <span className="font-bold text-cyan-800">
-                  {loading
-                    ? "—"
-                    : stats.acceptedOrders}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
-                <span className="text-sm text-emerald-700 font-medium">
-                  Completed
-                </span>
-
-                <span className="font-bold text-emerald-800">
-                  {loading
-                    ? "—"
-                    : stats.completedSales}
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* =====================================
-            QUICK ACTIONS
-        ====================================== */}
+        {/* =================================================
+            MAIN BUSINESS SERVICES
+        ================================================= */}
 
         <section className="mt-7">
 
-          <div className="mb-4">
+          <div className="mb-5">
 
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">
-              Quick Actions
+              Business Services
             </p>
 
             <h2 className="text-2xl font-bold text-slate-900 mt-1">
               Manage Your Business
             </h2>
 
+            <p className="text-sm text-slate-500 mt-1">
+              Each section has its own responsibility.
+              Product, order, sales and profile functions
+              are kept separate.
+            </p>
+
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
 
-            {quickActions.map((action) => (
-              <button
-                key={action.title}
-                type="button"
-                onClick={() =>
-                  navigate(action.path)
-                }
-                className={`${action.className} text-white rounded-2xl p-5 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all`}
-              >
+            {/* =================================================
+                PRODUCTS & STOCK
+            ================================================= */}
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/dealer/products"
+                )
+              }
+              className="group bg-blue-600 hover:bg-blue-700 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all"
+            >
+
+              <div className="flex items-start justify-between gap-3">
 
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">
-                  {action.icon}
+                  📦
                 </div>
 
-                <h3 className="text-lg font-bold mt-4">
-                  {action.title}
-                </h3>
+                <span className="text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                  Products
+                </span>
 
-                <p className="text-sm text-white/80 mt-2 leading-5">
-                  {action.description}
+              </div>
+
+              <h3 className="text-xl font-bold mt-5">
+                Products & Stock
+              </h3>
+
+              <p className="text-sm text-white/80 mt-2 leading-5">
+                Add products, update prices,
+                manage quantities and monitor
+                stock levels.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 mt-5">
+
+                <div className="bg-white/10 rounded-xl p-3">
+                  <p className="text-xs text-white/70">
+                    Products
+                  </p>
+
+                  <p className="text-2xl font-bold mt-1">
+                    {loading
+                      ? "—"
+                      : formatNumber(
+                          stats.products
+                        )}
+                  </p>
+                </div>
+
+                <div className="bg-white/10 rounded-xl p-3">
+                  <p className="text-xs text-white/70">
+                    Low Stock
+                  </p>
+
+                  <p className="text-2xl font-bold mt-1">
+                    {loading
+                      ? "—"
+                      : formatNumber(
+                          stats.lowStock
+                        )}
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="mt-5 text-sm font-bold">
+                Open Products & Stock →
+              </div>
+
+            </button>
+
+            {/* =================================================
+                ORDERS
+            ================================================= */}
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/dealer/orders"
+                )
+              }
+              className="group bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all"
+            >
+
+              <div className="flex items-start justify-between gap-3">
+
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">
+                  🛒
+                </div>
+
+                <span className="text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                  Orders
+                </span>
+
+              </div>
+
+              <h3 className="text-xl font-bold mt-5">
+                Farmer Orders
+              </h3>
+
+              <p className="text-sm text-white/80 mt-2 leading-5">
+                Review farmer orders, accept or
+                reject them, process delivery and
+                complete the order lifecycle.
+              </p>
+
+              <div className="space-y-2 mt-5">
+
+                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
+                  <span className="text-sm">
+                    Pending
+                  </span>
+
+                  <strong>
+                    {loading
+                      ? "—"
+                      : formatNumber(
+                          stats.pendingOrders
+                        )}
+                  </strong>
+                </div>
+
+                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
+                  <span className="text-sm">
+                    Accepted
+                  </span>
+
+                  <strong>
+                    {loading
+                      ? "—"
+                      : formatNumber(
+                          stats.acceptedOrders
+                        )}
+                  </strong>
+                </div>
+
+                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
+                  <span className="text-sm">
+                    Completed
+                  </span>
+
+                  <strong>
+                    {loading
+                      ? "—"
+                      : formatNumber(
+                          stats.completedSales
+                        )}
+                  </strong>
+                </div>
+
+              </div>
+
+              <div className="mt-5 text-sm font-bold">
+                Open Orders →
+              </div>
+
+            </button>
+
+            {/* =================================================
+                SALES & REVENUE
+            ================================================= */}
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/dealer/sales"
+                )
+              }
+              className="group bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all"
+            >
+
+              <div className="flex items-start justify-between gap-3">
+
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">
+                  💰
+                </div>
+
+                <span className="text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                  Sales
+                </span>
+
+              </div>
+
+              <h3 className="text-xl font-bold mt-5">
+                Sales & Revenue
+              </h3>
+
+              <p className="text-sm text-white/80 mt-2 leading-5">
+                View completed sales, revenue,
+                transactions and sales reports.
+              </p>
+
+              <div className="mt-5 bg-white/10 rounded-xl p-4">
+
+                <p className="text-xs text-white/70">
+                  Total Revenue
                 </p>
 
-                <div className="mt-4 text-sm font-semibold">
-                  Open →
+                <p className="text-2xl font-bold mt-1">
+                  {loading
+                    ? "—"
+                    : formatCurrency(
+                        stats.totalRevenue
+                      )}
+                </p>
+
+              </div>
+
+              <div className="mt-3 bg-white/10 rounded-xl p-4">
+
+                <p className="text-xs text-white/70">
+                  Completed Sales
+                </p>
+
+                <p className="text-2xl font-bold mt-1">
+                  {loading
+                    ? "—"
+                    : formatNumber(
+                        stats.completedSales
+                      )}
+                </p>
+
+              </div>
+
+              <div className="mt-5 text-sm font-bold">
+                Open Sales & Revenue →
+              </div>
+
+            </button>
+
+            {/* =================================================
+                DEALER PROFILE
+            ================================================= */}
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/dealer/profile"
+                )
+              }
+              className="group bg-slate-700 hover:bg-slate-800 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all"
+            >
+
+              <div className="flex items-start justify-between gap-3">
+
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">
+                  👤
                 </div>
 
-              </button>
-            ))}
+                <span className="text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                  Account
+                </span>
+
+              </div>
+
+              <h3 className="text-xl font-bold mt-5">
+                Dealer Profile
+              </h3>
+
+              <p className="text-sm text-white/80 mt-2 leading-5">
+                View and manage your dealer
+                information, business details
+                and account information.
+              </p>
+
+              <div className="mt-5 bg-white/10 rounded-xl p-4">
+
+                <p className="text-xs text-white/70">
+                  Account Status
+                </p>
+
+                <div className="flex items-center gap-2 mt-2">
+
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
+
+                  <span className="font-semibold">
+                    Active
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div className="mt-5 text-sm font-bold">
+                Open Dealer Profile →
+              </div>
+
+            </button>
 
           </div>
-
         </section>
 
-        {/* =====================================
-            RECENT ORDERS
-        ====================================== */}
+        {/* =================================================
+            ORDERS SECTION
+            ALL ORDER-RELATED INFORMATION STAYS HERE
+        ================================================= */}
 
-        <section className="bg-white border border-blue-100 rounded-2xl shadow-sm mt-7 overflow-hidden">
+        <section className="bg-white border border-cyan-100 rounded-2xl shadow-sm mt-7 overflow-hidden">
 
           <div className="p-5 md:p-6 border-b border-slate-100">
 
@@ -900,16 +966,17 @@ export default function DealerDashboard() {
 
               <div>
 
-                <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">
+                <p className="text-sm font-semibold text-cyan-600 uppercase tracking-wide">
                   Orders
                 </p>
 
                 <h2 className="text-xl md:text-2xl font-bold text-slate-900 mt-1">
-                  Recent Farmer Orders
+                  Farmer Order Activity
                 </h2>
 
                 <p className="text-sm text-slate-500 mt-1">
-                  Latest activity from your customers.
+                  All order activity belongs to the
+                  Orders section.
                 </p>
 
               </div>
@@ -917,16 +984,80 @@ export default function DealerDashboard() {
               <button
                 type="button"
                 onClick={() =>
-                  navigate("/dealer/orders")
+                  navigate(
+                    "/dealer/orders"
+                  )
                 }
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-semibold transition"
+                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl font-semibold transition"
               >
                 View All Orders →
               </button>
 
             </div>
 
+            {/* ORDER STATUS */}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+
+              <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+
+                <div className="flex items-center justify-between">
+
+                  <span className="text-sm text-amber-700 font-medium">
+                    Pending
+                  </span>
+
+                  <span className="font-bold text-amber-800">
+                    {loading
+                      ? "—"
+                      : stats.pendingOrders}
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div className="bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3">
+
+                <div className="flex items-center justify-between">
+
+                  <span className="text-sm text-cyan-700 font-medium">
+                    Accepted
+                  </span>
+
+                  <span className="font-bold text-cyan-800">
+                    {loading
+                      ? "—"
+                      : stats.acceptedOrders}
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+
+                <div className="flex items-center justify-between">
+
+                  <span className="text-sm text-emerald-700 font-medium">
+                    Completed
+                  </span>
+
+                  <span className="font-bold text-emerald-800">
+                    {loading
+                      ? "—"
+                      : stats.completedSales}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
+
+          {/* RECENT ORDERS */}
 
           {loading ? (
             <div className="p-8 text-center text-slate-500">
@@ -935,7 +1066,7 @@ export default function DealerDashboard() {
           ) : recentOrders.length === 0 ? (
             <div className="p-8 text-center">
 
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-3xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center text-3xl mx-auto">
                 🛒
               </div>
 
@@ -944,90 +1075,94 @@ export default function DealerDashboard() {
               </h3>
 
               <p className="text-sm text-slate-500 mt-1">
-                Farmer orders will appear here when they are placed.
+                Farmer orders will appear here
+                when they are placed.
               </p>
 
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
 
-              {recentOrders.map((order) => (
-                <button
-                  key={order.id}
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      "/dealer/orders"
-                    )
-                  }
-                  className="w-full text-left p-5 hover:bg-blue-50/40 transition"
-                >
+              {recentOrders.map(
+                (order) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        "/dealer/orders"
+                      )
+                    }
+                    className="w-full text-left p-5 hover:bg-cyan-50/40 transition"
+                  >
 
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
-                    <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-4">
 
-                      <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-xl shrink-0">
-                        📦
+                        <div className="w-11 h-11 rounded-xl bg-cyan-50 flex items-center justify-center text-xl shrink-0">
+                          📦
+                        </div>
+
+                        <div>
+
+                          <p className="font-bold text-slate-900">
+                            {order.orderId ||
+                              order.id}
+                          </p>
+
+                          <p className="text-sm text-slate-600 mt-1">
+                            {order.customerName ||
+                              order.farmerName ||
+                              order.customer ||
+                              "Farmer"}
+                          </p>
+
+                          <p className="text-xs text-slate-400 mt-1">
+                            {order.productName ||
+                              order.product ||
+                              "Order"}
+                          </p>
+
+                        </div>
+
                       </div>
 
-                      <div>
+                      <div className="flex items-center gap-3">
 
-                        <p className="font-bold text-slate-900">
-                          {order.orderId ||
-                            order.id}
-                        </p>
+                        <span
+                          className={`border px-3 py-1.5 rounded-full text-xs font-semibold ${getOrderStatusStyle(
+                            order.status
+                          )}`}
+                        >
+                          {getOrderStatusLabel(
+                            order.status
+                          )}
+                        </span>
 
-                        <p className="text-sm text-slate-600 mt-1">
-                          {order.customerName ||
-                            order.farmerName ||
-                            order.customer ||
-                            "Farmer"}
-                        </p>
-
-                        <p className="text-xs text-slate-400 mt-1">
-                          {order.productName ||
-                            order.product ||
-                            "Order"}
-                        </p>
+                        <span className="font-bold text-slate-800">
+                          {formatCurrency(
+                            order.totalAmount
+                          )}
+                        </span>
 
                       </div>
 
                     </div>
 
-                    <div className="flex items-center gap-3">
-
-                      <span
-                        className={`border px-3 py-1.5 rounded-full text-xs font-semibold ${getOrderStatusStyle(
-                          order.status
-                        )}`}
-                      >
-                        {getOrderStatusLabel(
-                          order.status
-                        )}
-                      </span>
-
-                      <span className="font-bold text-slate-800">
-                        {formatCurrency(
-                          order.totalAmount
-                        )}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </button>
-              ))}
+                  </button>
+                )
+              )}
 
             </div>
           )}
 
         </section>
 
-        {/* =====================================
-            LOW STOCK ALERT
-        ====================================== */}
+        {/* =================================================
+            PRODUCTS & STOCK SECTION
+            PRODUCT-RELATED INFORMATION STAYS HERE
+        ================================================= */}
 
         {stats.lowStock > 0 && (
           <section className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
@@ -1042,19 +1177,21 @@ export default function DealerDashboard() {
 
                 <div>
 
-                  <h2 className="font-bold text-amber-900">
+                  <p className="text-sm font-semibold text-amber-700 uppercase tracking-wide">
+                    Products & Stock
+                  </p>
+
+                  <h2 className="font-bold text-amber-900 mt-1">
                     Stock Attention Required
                   </h2>
 
                   <p className="text-sm text-amber-800 mt-1">
                     {stats.lowStock} product
                     {stats.lowStock !== 1
-                      ? "s"
-                      : ""}{" "}
-                    {stats.lowStock !== 1
-                      ? "are"
-                      : "is"}{" "}
-                    at or below the low-stock level.
+                      ? "s are"
+                      : " is"}{" "}
+                    at or below the
+                    low-stock level.
                   </p>
 
                 </div>
@@ -1065,12 +1202,12 @@ export default function DealerDashboard() {
                 type="button"
                 onClick={() =>
                   navigate(
-                      "/dealer/products?filter=low-stock"
+                    "/dealer/products?filter=low-stock"
                   )
                 }
                 className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-semibold transition"
               >
-                Check Stock →
+                Open Products & Stock →
               </button>
 
             </div>
@@ -1078,9 +1215,9 @@ export default function DealerDashboard() {
           </section>
         )}
 
-        {/* =====================================
+        {/* =================================================
             FOOTER
-        ====================================== */}
+        ================================================= */}
 
         <footer className="text-center py-8 text-sm text-slate-400">
           AgriSaathi Dealer Portal · Smart Farming Companion

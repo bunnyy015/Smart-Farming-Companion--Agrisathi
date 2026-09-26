@@ -6,14 +6,11 @@ import { get, ref } from "firebase/database";
 import { auth, database } from "../firebase";
 
 import {
-  getLanguageName,
   getLanguage,
   setLanguage as persistLanguage,
 } from "./language";
 
-import {
-  createVoiceLanguagePrompt,
-} from "./voiceLanguageContext";
+import { createVoiceLanguagePrompt } from "./voiceLanguageContext";
 
 import {
   addFarmerMessage,
@@ -22,21 +19,19 @@ import {
   getVoiceMemoryForPrompt,
   clearVoiceMemory,
 } from "./voiceMemory";
-import {
-  detectLocalVoiceCommand,
-} from "./voiceLocalCommands";
+
+import { detectLocalVoiceCommand } from "./voiceLocalCommands";
 
 import { createWeatherPromptContext } from "./weatherContext";
 
 /* =========================================================
-   GEMINI MODELS
+   GEMINI
 ========================================================= */
 
 const MODELS = [
   "gemini-2.5-flash",
   "gemini-1.5-flash",
 ];
-
 
 /* =========================================================
    SPEECH LOCALES
@@ -57,7 +52,6 @@ const speechLocales = {
   or: "or-IN",
 };
 
-
 /* =========================================================
    LANGUAGE NAMES
 ========================================================= */
@@ -76,7 +70,6 @@ const languageNames = {
   ur: "Urdu",
   or: "Odia",
 };
-
 
 /* =========================================================
    GREETINGS
@@ -108,38 +101,6 @@ const greetings = {
   or: "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କର ଅଗ୍ରିସାଥୀ ଭଏସ୍ ଆସିଷ୍ଟାଣ୍ଟ। ଆଜି ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
 };
 
-
-/* =========================================================
-   SPEECH ERROR MESSAGES
-========================================================= */
-
-const retryMessages = {
-  en: "I couldn't understand that. Please try speaking again.",
-
-  te: "నేను దాన్ని సరిగ్గా అర్థం చేసుకోలేకపోయాను. దయచేసి మళ్లీ మాట్లాడండి.",
-
-  hi: "मैं इसे ठीक से समझ नहीं पाया। कृपया फिर से बोलें।",
-
-  ta: "என்னால் அதை சரியாக புரிந்து கொள்ள முடியவில்லை. தயவுசெய்து மீண்டும் பேசுங்கள்.",
-
-  kn: "ನನಗೆ ಅದನ್ನು ಸರಿಯಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಮಾತನಾಡಿ.",
-
-  ml: "എനിക്ക് അത് ശരിയായി മനസ്സിലാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും സംസാരിക്കുക.",
-
-  mr: "मला ते नीट समजले नाही. कृपया पुन्हा बोला.",
-
-  bn: "আমি এটি ঠিকভাবে বুঝতে পারিনি। অনুগ্রহ করে আবার বলুন।",
-
-  gu: "હું તે યોગ્ય રીતે સમજી શક્યો નથી. કૃપા કરીને ફરીથી બોલો.",
-
-  pa: "ਮੈਂ ਇਹ ਠੀਕ ਤਰ੍ਹਾਂ ਸਮਝ ਨਹੀਂ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਬੋਲੋ।",
-
-  ur: "میں اسے صحیح طور پر سمجھ نہیں سکا۔ براہ کرم دوبارہ بولیں۔",
-
-  or: "ମୁଁ ଏହାକୁ ଠିକ୍ ଭାବରେ ବୁଝିପାରିଲି ନାହିଁ। ଦୟାକରି ପୁଣି କୁହନ୍ତୁ।",
-};
-
-
 /* =========================================================
    INTERFACE TEXT
 ========================================================= */
@@ -159,6 +120,8 @@ const interfaceText = {
       "Speech recognition is not supported in this browser.",
     tapToSpeak:
       "Tap the microphone and speak.",
+    permission:
+      "Microphone permission is blocked. Please allow microphone access in your browser and then tap the microphone again.",
   },
 
   te: {
@@ -175,6 +138,8 @@ const interfaceText = {
       "ఈ బ్రౌజర్‌లో స్పీచ్ రికగ్నిషన్‌కు మద్దతు లేదు.",
     tapToSpeak:
       "మైక్రోఫోన్‌ను నొక్కి మాట్లాడండి.",
+    permission:
+      "మైక్రోఫోన్ అనుమతి నిలిపివేయబడింది. బ్రౌజర్‌లో మైక్రోఫోన్ అనుమతిని ఇవ్వండి. తరువాత మైక్రోఫోన్‌ను మళ్లీ నొక్కండి.",
   },
 
   hi: {
@@ -191,9 +156,22 @@ const interfaceText = {
       "इस ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है।",
     tapToSpeak:
       "माइक्रोफ़ोन दबाकर बोलें।",
+    permission:
+      "माइक्रोफ़ोन की अनुमति बंद है। ब्राउज़र में माइक्रोफ़ोन की अनुमति दें और फिर माइक्रोफ़ोन दबाएँ।",
   },
 };
 
+/* =========================================================
+   RETRY MESSAGES
+========================================================= */
+
+const retryMessages = {
+  en: "I couldn't process that request. Please try again.",
+
+  te: "నేను ఆ అభ్యర్థనను ప్రాసెస్ చేయలేకపోయాను. దయచేసి మళ్లీ ప్రయత్నించండి.",
+
+  hi: "मैं उस अनुरोध को पूरा नहीं कर पाया। कृपया फिर से प्रयास करें।",
+};
 
 /* =========================================================
    ACTION ROUTES
@@ -216,7 +194,6 @@ const allowedActions = [
   ...Object.keys(actionRoutes),
 ];
 
-
 /* =========================================================
    NORMALIZE
 ========================================================= */
@@ -227,16 +204,55 @@ function normalize(value) {
     .toLowerCase();
 }
 
-
 /* =========================================================
-   MAIN COMPONENT
+   COMPONENT
 ========================================================= */
 
 export default function VoiceAssistantPage() {
   const navigate = useNavigate();
 
-  const [language, setLanguageState] =
-    useState(() => getLanguage() || "en");
+  const [language, setLanguageState] = useState(
+    () => getLanguage() || "en"
+  );
+
+  const [status, setStatus] = useState("idle");
+  const [error, setError] = useState("");
+  const [active, setActive] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [lastResponse, setLastResponse] = useState("");
+  const [farmer, setFarmer] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [history, setHistory] = useState([]);
+
+  const recognitionRef = useRef(null);
+
+  const activeRef = useRef(false);
+
+  const languageRef = useRef(language);
+
+  const statusRef = useRef(status);
+
+  const speakingRef = useRef(false);
+
+  const responseInProgressRef = useRef(false);
+
+  /*
+   * Prevents browser recognition errors from creating
+   * automatic retry loops.
+   */
+  const microphoneBlockedRef = useRef(false);
+
+  /*
+   * Used to prevent multiple delayed startListening()
+   * calls from being created.
+   */
+  const listenTimerRef = useRef(null);
+
+  const weatherContext = createWeatherPromptContext();
+
+  /* =======================================================
+     LANGUAGE
+  ======================================================= */
 
   function setLanguage(nextLanguage) {
     if (!speechLocales[nextLanguage]) {
@@ -244,177 +260,131 @@ export default function VoiceAssistantPage() {
     }
 
     languageRef.current = nextLanguage;
+
     setLanguageState(nextLanguage);
 
     try {
       persistLanguage(nextLanguage);
-    } catch (languageError) {
-      console.warn("Unable to persist voice language:", languageError);
+    } catch (error) {
+      console.warn(
+        "Unable to save language:",
+        error
+      );
     }
   }
 
-const weatherContext = createWeatherPromptContext();
-
-  const [status, setStatus] = useState("idle");
-
-  const [error, setError] = useState("");
-
-  const [active, setActive] = useState(false);
-
-  const [transcript, setTranscript] =
-    useState("");
-
-  const [lastResponse, setLastResponse] =
-    useState("");
-
-  const [farmer, setFarmer] =
-    useState(null);
-
-  const [authLoading, setAuthLoading] =
-    useState(true);
-
-  const [history, setHistory] =
-    useState([]);
-
-  const recognitionRef =
-    useRef(null);
-
-  const activeRef =
-    useRef(false);
-
-  const languageRef =
-    useRef(language);
-
-  const statusRef =
-    useRef(status);
-
-  const speakingRef =
-    useRef(false);
-
-  const responseInProgressRef =
-    useRef(false);
-
-
   /* =======================================================
-     KEEP REFS UPDATED
+     REFS
   ======================================================= */
 
   useEffect(() => {
-    languageRef.current =
-      language;
+    languageRef.current = language;
   }, [language]);
 
   useEffect(() => {
-    statusRef.current =
-      status;
+    statusRef.current = status;
   }, [status]);
 
   useEffect(() => {
-    activeRef.current =
-      active;
+    activeRef.current = active;
   }, [active]);
 
-
   /* =======================================================
-     LOAD VOICE MEMORY
+     LOAD MEMORY
   ======================================================= */
 
   useEffect(() => {
     try {
       const memory = getVoiceMemory();
+
       if (Array.isArray(memory)) {
-        setHistory(memory.map((item) => ({
-          role: item.role,
-          text: item.message,
-          timestamp: item.createdAt,
-        })));
+        setHistory(
+          memory.map((item) => ({
+            role: item.role,
+            text: item.message,
+            timestamp: item.createdAt,
+          }))
+        );
       }
-    } catch (memoryError) {
+    } catch (error) {
       console.warn(
         "Unable to load voice memory:",
-        memoryError
+        error
       );
     }
   }, []);
 
-
   /* =======================================================
-     AUTH + FARMER PROFILE
+     AUTH
   ======================================================= */
 
   useEffect(() => {
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        async (currentUser) => {
-          if (!currentUser) {
-            setAuthLoading(false);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (currentUser) => {
+        if (!currentUser) {
+          setAuthLoading(false);
 
-            navigate("/login", {
-              replace: true,
-            });
+          navigate("/login", {
+            replace: true,
+          });
 
-            return;
-          }
-
-          try {
-            const userSnapshot =
-              await get(
-                ref(
-                  database,
-                  `users/${currentUser.uid}`
-                )
-              );
-
-            if (
-              userSnapshot.exists()
-            ) {
-              const userData =
-                userSnapshot.val();
-
-              const role =
-                normalize(userData.role);
-
-              if (role !== "farmer") {
-                navigate("/role-selection", {
-                  replace: true,
-                });
-
-                return;
-              }
-            }
-
-            const farmerSnapshot =
-              await get(
-                ref(
-                  database,
-                  `farmers/${currentUser.uid}`
-                )
-              );
-
-            if (
-              farmerSnapshot.exists()
-            ) {
-              setFarmer(
-                farmerSnapshot.val()
-              );
-            }
-          } catch (profileError) {
-            console.warn(
-              "Unable to load farmer profile:",
-              profileError
-            );
-          } finally {
-            setAuthLoading(false);
-          }
+          return;
         }
-      );
 
-    return () => {
-      unsubscribe();
-    };
+        try {
+          const userSnapshot = await get(
+            ref(
+              database,
+              `users/${currentUser.uid}`
+            )
+          );
+
+          if (userSnapshot.exists()) {
+            const userData =
+              userSnapshot.val();
+
+            const role =
+              normalize(userData.role);
+
+            if (role !== "farmer") {
+              navigate(
+                "/role-selection",
+                {
+                  replace: true,
+                }
+              );
+
+              return;
+            }
+          }
+
+          const farmerSnapshot =
+            await get(
+              ref(
+                database,
+                `farmers/${currentUser.uid}`
+              )
+            );
+
+          if (farmerSnapshot.exists()) {
+            setFarmer(
+              farmerSnapshot.val()
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "Unable to load farmer profile:",
+            error
+          );
+        } finally {
+          setAuthLoading(false);
+        }
+      }
+    );
+
+    return () => unsubscribe();
   }, [navigate]);
-
 
   /* =======================================================
      CLEANUP
@@ -424,11 +394,19 @@ const weatherContext = createWeatherPromptContext();
     return () => {
       activeRef.current = false;
 
+      if (listenTimerRef.current) {
+        clearTimeout(
+          listenTimerRef.current
+        );
+
+        listenTimerRef.current = null;
+      }
+
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
         } catch {
-          // Ignore cleanup errors.
+          // ignore
         }
       }
 
@@ -437,14 +415,13 @@ const weatherContext = createWeatherPromptContext();
       try {
         window.speechSynthesis?.cancel();
       } catch {
-        // Ignore cleanup errors.
+        // ignore
       }
     };
   }, []);
 
-
   /* =======================================================
-     SPEECH SYNTHESIS VOICE
+     SPEECH VOICE
   ======================================================= */
 
   function chooseVoice(code) {
@@ -466,12 +443,11 @@ const weatherContext = createWeatherPromptContext();
       speechLocales[code] ||
       speechLocales.en;
 
-    const exact =
-      voices.find(
-        (voice) =>
-          normalize(voice.lang) ===
-          normalize(locale)
-      );
+    const exact = voices.find(
+      (voice) =>
+        normalize(voice.lang) ===
+        normalize(locale)
+    );
 
     if (exact) {
       return exact;
@@ -481,15 +457,13 @@ const weatherContext = createWeatherPromptContext();
       normalize(locale).split("-")[0];
 
     return (
-      voices.find(
-        (voice) =>
-          normalize(
-            voice.lang
-          ).startsWith(prefix)
+      voices.find((voice) =>
+        normalize(voice.lang).startsWith(
+          prefix
+        )
       ) || null
     );
   }
-
 
   /* =======================================================
      SPEAK
@@ -501,10 +475,7 @@ const weatherContext = createWeatherPromptContext();
     onFinished
   ) {
     if (!text) {
-      if (onFinished) {
-        onFinished();
-      }
-
+      onFinished?.();
       return;
     }
 
@@ -512,17 +483,14 @@ const weatherContext = createWeatherPromptContext();
       typeof window === "undefined" ||
       !window.speechSynthesis
     ) {
-      if (onFinished) {
-        onFinished();
-      }
-
+      onFinished?.();
       return;
     }
 
     try {
       window.speechSynthesis.cancel();
     } catch {
-      // Ignore cancellation errors.
+      // ignore
     }
 
     const utterance =
@@ -550,33 +518,48 @@ const weatherContext = createWeatherPromptContext();
 
     setStatus("speaking");
 
-    utterance.onend = () => {
+    let finished = false;
+
+    const finish = () => {
+      if (finished) return;
+
+      finished = true;
+
       speakingRef.current = false;
 
-      if (onFinished) {
-        onFinished();
-      }
+      onFinished?.();
     };
 
-    utterance.onerror = () => {
-      speakingRef.current = false;
+    utterance.onend = finish;
 
-      if (onFinished) {
-        onFinished();
-      }
-    };
+    utterance.onerror = finish;
 
     window.speechSynthesis.speak(
       utterance
     );
   }
 
+  /* =======================================================
+     CLEAR LISTEN TIMER
+  ======================================================= */
+
+  function clearListenTimer() {
+    if (listenTimerRef.current) {
+      clearTimeout(
+        listenTimerRef.current
+      );
+
+      listenTimerRef.current = null;
+    }
+  }
 
   /* =======================================================
      STOP RECOGNITION
   ======================================================= */
 
   function stopRecognition() {
+    clearListenTimer();
+
     const recognition =
       recognitionRef.current;
 
@@ -589,10 +572,47 @@ const weatherContext = createWeatherPromptContext();
     try {
       recognition.abort();
     } catch {
-      // Ignore abort errors.
+      // ignore
     }
   }
 
+  /* =======================================================
+     SCHEDULE NEXT LISTEN
+  ======================================================= */
+
+  function scheduleListening(delay = 400) {
+    clearListenTimer();
+
+    if (!activeRef.current) {
+      return;
+    }
+
+    if (microphoneBlockedRef.current) {
+      return;
+    }
+
+    listenTimerRef.current =
+      setTimeout(() => {
+        listenTimerRef.current =
+          null;
+
+        if (!activeRef.current) {
+          return;
+        }
+
+        if (speakingRef.current) {
+          return;
+        }
+
+        if (
+          responseInProgressRef.current
+        ) {
+          return;
+        }
+
+        startListening();
+      }, delay);
+  }
 
   /* =======================================================
      START LISTENING
@@ -603,16 +623,22 @@ const weatherContext = createWeatherPromptContext();
       return;
     }
 
-    /*
-     * Do not start while the assistant is speaking.
-     */
     if (speakingRef.current) {
       return;
     }
 
-    /*
-     * Do not start another recognition instance.
-     */
+    if (
+      responseInProgressRef.current
+    ) {
+      return;
+    }
+
+    if (
+      microphoneBlockedRef.current
+    ) {
+      return;
+    }
+
     if (recognitionRef.current) {
       return;
     }
@@ -626,7 +652,8 @@ const weatherContext = createWeatherPromptContext();
         interfaceText[
           languageRef.current
         ]?.speechNotSupported ||
-        interfaceText.en.speechNotSupported;
+        interfaceText.en
+          .speechNotSupported;
 
       setError(message);
       setStatus("idle");
@@ -654,6 +681,12 @@ const weatherContext = createWeatherPromptContext();
 
     recognition.onstart = () => {
       if (!activeRef.current) {
+        try {
+          recognition.abort();
+        } catch {
+          // ignore
+        }
+
         return;
       }
 
@@ -676,7 +709,6 @@ const weatherContext = createWeatherPromptContext();
         "";
 
       if (!spokenText) {
-        setStatus("idle");
         return;
       }
 
@@ -687,10 +719,16 @@ const weatherContext = createWeatherPromptContext();
       try {
         recognition.stop();
       } catch {
-        // Ignore stop errors.
+        // ignore
       }
 
-      recognitionRef.current = null;
+      if (
+        recognitionRef.current ===
+        recognition
+      ) {
+        recognitionRef.current =
+          null;
+      }
 
       await respondToFarmer(
         spokenText
@@ -700,10 +738,6 @@ const weatherContext = createWeatherPromptContext();
     recognition.onerror = (
       event
     ) => {
-      if (!activeRef.current) {
-        return;
-      }
-
       console.warn(
         "Speech recognition error:",
         event.error
@@ -718,63 +752,113 @@ const weatherContext = createWeatherPromptContext();
       }
 
       /*
-       * IMPORTANT:
+       * VERY IMPORTANT:
        *
-       * We DO NOT speak the error and
-       * immediately restart recognition.
-       *
-       * That was causing:
-       *
-       * listen -> error -> speak -> listen
-       * -> error -> speak -> ...
+       * Do NOT automatically restart after
+       * permission or microphone errors.
        */
+      if (
+        event.error ===
+          "not-allowed" ||
+        event.error ===
+          "service-not-allowed"
+      ) {
+        microphoneBlockedRef.current =
+          true;
 
-      switch (event.error) {
-        case "no-speech":
-          setError(
-            "I didn't hear anything. Please tap the microphone and speak."
-          );
-          break;
+        activeRef.current = false;
 
-        case "audio-capture":
-          setError(
-            "I couldn't access your microphone. Please check your microphone connection and permission."
-          );
-          break;
+        setActive(false);
 
-        case "not-allowed":
-          setError(
-            "Microphone permission was denied. Please allow microphone access in your browser."
-          );
-          break;
+        setStatus("idle");
 
-        case "network":
-          setError(
-            "Speech recognition needs an internet connection."
-          );
-          break;
+        const message =
+          interfaceText[
+            languageRef.current
+          ]?.permission ||
+          interfaceText.en.permission;
 
-        case "language-not-supported":
-          setError(
-            "Speech recognition is not available for the selected language."
-          );
-          break;
+        setError(message);
 
-        case "aborted":
-          /*
-           * Abort can be intentional when
-           * stopping the conversation.
-           */
-          setError("");
-          break;
+        return;
+      }
 
-        default:
-          setError(
-            "I couldn't hear you properly. Please try again."
-          );
+      if (
+        event.error ===
+        "audio-capture"
+      ) {
+        setStatus("idle");
+
+        setError(
+          "I couldn't access your microphone. Check that your microphone is connected and allowed in the browser."
+        );
+
+        /*
+         * Do not automatically retry.
+         */
+        return;
+      }
+
+      if (
+        event.error ===
+        "network"
+      ) {
+        setStatus("idle");
+
+        setError(
+          "Speech recognition needs an internet connection. Please try again."
+        );
+
+        /*
+         * Do not automatically retry.
+         */
+        return;
+      }
+
+      if (
+        event.error ===
+        "language-not-supported"
+      ) {
+        setStatus("idle");
+
+        setError(
+          "Speech recognition is not available for the selected language."
+        );
+
+        return;
+      }
+
+      if (
+        event.error ===
+        "no-speech"
+      ) {
+        setStatus("idle");
+
+        setError(
+          "I didn't hear anything. Tap the microphone and speak again."
+        );
+
+        /*
+         * No automatic retry.
+         *
+         * Farmer can press the microphone.
+         */
+        return;
+      }
+
+      if (
+        event.error ===
+        "aborted"
+      ) {
+        setStatus("idle");
+        return;
       }
 
       setStatus("idle");
+
+      setError(
+        "I couldn't hear you properly. Tap the microphone and try again."
+      );
     };
 
     recognition.onend = () => {
@@ -787,7 +871,13 @@ const weatherContext = createWeatherPromptContext();
       }
 
       /*
-       * Do not restart automatically.
+       * NEVER automatically restart here.
+       *
+       * Listening is started only by:
+       *
+       * 1. Conversation greeting completion
+       * 2. Assistant response completion
+       * 3. Explicit microphone click
        */
       if (
         activeRef.current &&
@@ -800,10 +890,10 @@ const weatherContext = createWeatherPromptContext();
 
     try {
       recognition.start();
-    } catch (startError) {
+    } catch (error) {
       console.warn(
-        "Unable to start speech recognition:",
-        startError
+        "Unable to start recognition:",
+        error
       );
 
       if (
@@ -822,29 +912,48 @@ const weatherContext = createWeatherPromptContext();
     }
   }
 
-
   /* =======================================================
-     SAVE MEMORY
+     MEMORY
   ======================================================= */
 
   function addMemory(role, text) {
-    const cleanedText = String(text || "").trim();
-    if (!cleanedText) return;
+    const cleaned =
+      String(text || "").trim();
+
+    if (!cleaned) {
+      return;
+    }
 
     try {
       if (role === "farmer") {
-        addFarmerMessage(cleanedText);
-      } else if (role === "assistant") {
-        addAssistantMessage(cleanedText);
+        addFarmerMessage(
+          cleaned
+        );
       }
-    } catch (memoryError) {
-      console.warn("Unable to save voice memory:", memoryError);
+
+      if (role === "assistant") {
+        addAssistantMessage(
+          cleaned
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "Unable to save voice memory:",
+        error
+      );
     }
 
-    setHistory((previous) => [
-      ...previous,
-      { role, text: cleanedText, timestamp: Date.now() },
-    ].slice(-8));
+    setHistory(
+      (previous) =>
+        [
+          ...previous,
+          {
+            role,
+            text: cleaned,
+            timestamp: Date.now(),
+          },
+        ].slice(-8)
+    );
   }
 
   /* =======================================================
@@ -872,9 +981,8 @@ const weatherContext = createWeatherPromptContext();
         currentLanguage
       ] || "English";
 
-    const farmerContext =
-      farmer
-        ? `
+    const farmerContext = farmer
+      ? `
 Farmer profile:
 Name: ${farmer.name || "Unknown"}
 Village: ${farmer.village || "Unknown"}
@@ -883,22 +991,21 @@ State: ${farmer.state || "Unknown"}
 Main crop: ${farmer.mainCrop || "Unknown"}
 Phone: ${farmer.phone || "Unknown"}
 `
-        : "Farmer profile is not available.";
-
-    const weatherData =
-      weatherContext || {};
+      : "Farmer profile is not available.";
 
     const weatherInformation =
       JSON.stringify(
-        weatherData
+        weatherContext || {}
       );
 
-    const conversation = getVoiceMemoryForPrompt();
-    const languageProfilePrompt = createVoiceLanguagePrompt();
+    const conversation =
+      getVoiceMemoryForPrompt();
+
+    const languageProfilePrompt =
+      createVoiceLanguagePrompt();
 
     const prompt = `
-You are AgriSaathi, an agriculture-focused
-voice assistant for Indian farmers.
+You are AgriSaathi, an agriculture-focused voice assistant for Indian farmers.
 
 ${languageProfilePrompt}
 
@@ -911,11 +1018,9 @@ Current language code:
 ${currentLanguage}
 
 IMPORTANT:
-Reply in the same language requested by the
-current language code.
+Reply in the same language requested by the current language code.
 
-Keep the response concise and useful because
-the response will be spoken aloud.
+Keep responses concise because they will be spoken aloud.
 
 You can help with:
 - weather
@@ -930,8 +1035,7 @@ You can help with:
 - farmer profile
 - dashboard
 
-You may request navigation using one of these
-actions only:
+You may request navigation using only these actions:
 
 ${allowedActions.join(", ")}
 
@@ -945,8 +1049,7 @@ Required format:
   "action": "none"
 }
 
-If navigation is useful, set action to one of
-the allowed action names.
+If navigation is useful, set action to one of the allowed action names.
 
 Do not put markdown around the JSON.
 
@@ -962,8 +1065,7 @@ Farmer's new request:
 ${userText}
 `;
 
-    let lastError =
-      null;
+    let lastError = null;
 
     for (const model of MODELS) {
       try {
@@ -1032,10 +1134,6 @@ ${userText}
               generatedText
             );
         } catch {
-          /*
-           * Fallback if Gemini accidentally
-           * returns markdown/code fences.
-           */
           const cleaned =
             generatedText
               .replace(
@@ -1077,7 +1175,7 @@ ${userText}
 
         if (!reply) {
           throw new Error(
-            "Gemini returned no reply text."
+            "Gemini returned no reply."
           );
         }
 
@@ -1086,14 +1184,13 @@ ${userText}
           languageCode,
           action,
         };
-      } catch (modelError) {
+      } catch (error) {
         console.warn(
-          `Gemini model ${model} error:`,
-          modelError
+          `Gemini ${model} error:`,
+          error
         );
 
-        lastError =
-          modelError;
+        lastError = error;
       }
     }
 
@@ -1104,7 +1201,6 @@ ${userText}
       )
     );
   }
-
 
   /* =======================================================
      LOCAL COMMAND
@@ -1141,9 +1237,6 @@ ${userText}
         newLanguage &&
         speechLocales[newLanguage]
       ) {
-        languageRef.current =
-          newLanguage;
-
         setLanguage(
           newLanguage
         );
@@ -1165,70 +1258,58 @@ ${userText}
         newLanguage ||
           languageRef.current,
         () => {
-          if (
-            activeRef.current
-          ) {
-            if (
-              action !== "none" &&
-              actionRoutes[action]
-            ) {
-              navigate(
-                actionRoutes[action]
-              );
-
-              return;
-            }
-
-            setStatus("idle");
-
-            /*
-             * Give the browser a small
-             * gap before another listen.
-             */
-            setTimeout(() => {
-              if (
-                activeRef.current
-              ) {
-                startListening();
-              }
-            }, 250);
+          if (!activeRef.current) {
+            return;
           }
+
+          if (
+            action !== "none" &&
+            actionRoutes[action]
+          ) {
+            navigate(
+              actionRoutes[action]
+            );
+
+            return;
+          }
+
+          setStatus("idle");
+
+          scheduleListening(
+            500
+          );
         }
       );
 
-
-
       return true;
-    } catch (commandError) {
-      /*
-       * Local-command failure should not
-       * break the entire voice assistant.
-       */
+    } catch (error) {
       console.warn(
         "Local voice command error:",
-        commandError
+        error
       );
 
       return false;
     }
   }
 
-
   /* =======================================================
-     RESPOND TO FARMER
+     RESPOND
   ======================================================= */
 
   async function respondToFarmer(
     spokenText
   ) {
-    if (
-      !spokenText ||
-      responseInProgressRef.current
-    ) {
+    if (!spokenText) {
       return;
     }
 
     if (!activeRef.current) {
+      return;
+    }
+
+    if (
+      responseInProgressRef.current
+    ) {
       return;
     }
 
@@ -1248,7 +1329,7 @@ ${userText}
 
     try {
       /*
-       * First check local commands.
+       * LOCAL COMMAND FIRST
        */
       const handled =
         await handleLocalCommand(
@@ -1260,7 +1341,7 @@ ${userText}
       }
 
       /*
-       * Otherwise use Gemini.
+       * GEMINI
        */
       const result =
         await askGemini(
@@ -1280,9 +1361,6 @@ ${userText}
           responseLanguage
         ]
       ) {
-        languageRef.current =
-          responseLanguage;
-
         setLanguage(
           responseLanguage
         );
@@ -1301,9 +1379,7 @@ ${userText}
         reply,
         responseLanguage,
         () => {
-          if (
-            !activeRef.current
-          ) {
+          if (!activeRef.current) {
             return;
           }
 
@@ -1325,19 +1401,15 @@ ${userText}
 
           setStatus("idle");
 
-          setTimeout(() => {
-            if (
-              activeRef.current
-            ) {
-              startListening();
-            }
-          }, 250);
+          scheduleListening(
+            500
+          );
         }
       );
-    } catch (responseError) {
+    } catch (error) {
       console.error(
-        "Voice assistant response error:",
-        responseError
+        "Voice assistant error:",
+        error
       );
 
       const currentLanguage =
@@ -1358,13 +1430,22 @@ ${userText}
 
       /*
        * Speak the error ONCE.
-       *
-       * Do not automatically restart
-       * recognition from the error handler.
+       * After it finishes, automatically
+       * return to listening.
        */
       speak(
         retryMessage,
-        currentLanguage
+        currentLanguage,
+        () => {
+          if (
+            activeRef.current &&
+            !microphoneBlockedRef.current
+          ) {
+            scheduleListening(
+              500
+            );
+          }
+        }
       );
     } finally {
       responseInProgressRef.current =
@@ -1372,33 +1453,38 @@ ${userText}
     }
   }
 
-
   /* =======================================================
      BEGIN CONVERSATION
   ======================================================= */
 
-  function beginConversation() {
+  async function beginConversation() {
     if (authLoading) {
       return;
     }
 
     /*
-     * Stop anything from a previous session.
+     * Reset permission-block state only when
+     * user explicitly presses the microphone.
      */
+    microphoneBlockedRef.current =
+      false;
+
+    clearListenTimer();
+
     stopRecognition();
 
     try {
       window.speechSynthesis?.cancel();
     } catch {
-      // Ignore.
+      // ignore
     }
 
     try {
       clearVoiceMemory();
-    } catch (memoryError) {
+    } catch (error) {
       console.warn(
         "Unable to clear voice memory:",
-        memoryError
+        error
       );
     }
 
@@ -1413,70 +1499,59 @@ ${userText}
     responseInProgressRef.current =
       false;
 
-    speakingRef.current =
-      false;
+    speakingRef.current = false;
 
-    activeRef.current =
-      true;
+    activeRef.current = true;
 
     setActive(true);
 
     const currentLanguage =
-      languageRef.current ||
-      "en";
+      languageRef.current || "en";
 
     const greeting =
       greetings[
         currentLanguage
-      ] ||
-      greetings.en;
+      ] || greetings.en;
 
     speak(
       greeting,
       currentLanguage,
       () => {
-        if (
-          !activeRef.current
-        ) {
+        if (!activeRef.current) {
           return;
         }
 
         setStatus("idle");
 
-        setTimeout(() => {
-          if (
-            activeRef.current
-          ) {
-            startListening();
-          }
-        }, 300);
+        scheduleListening(
+          500
+        );
       }
     );
   }
-
 
   /* =======================================================
      STOP CONVERSATION
   ======================================================= */
 
   function stopConversation() {
-    activeRef.current =
-      false;
+    activeRef.current = false;
 
     setActive(false);
 
     responseInProgressRef.current =
       false;
 
-    speakingRef.current =
-      false;
+    speakingRef.current = false;
+
+    clearListenTimer();
 
     stopRecognition();
 
     try {
       window.speechSynthesis?.cancel();
     } catch {
-      // Ignore.
+      // ignore
     }
 
     setStatus("idle");
@@ -1484,9 +1559,8 @@ ${userText}
     setError("");
   }
 
-
   /* =======================================================
-     CHANGE LANGUAGE
+     LANGUAGE CHANGE
   ======================================================= */
 
   function handleLanguageChange(
@@ -1495,25 +1569,14 @@ ${userText}
     const nextLanguage =
       event.target.value;
 
-    if (
-      !speechLocales[nextLanguage]
-    ) {
+    if (!speechLocales[nextLanguage]) {
       return;
     }
-
-    languageRef.current =
-      nextLanguage;
 
     setLanguage(
       nextLanguage
     );
 
-    /*
-     * If currently listening,
-     * stop the old recognition.
-     * User can tap microphone again
-     * using the new language.
-     */
     if (
       statusRef.current ===
       "listening"
@@ -1523,14 +1586,13 @@ ${userText}
       setStatus("idle");
 
       setError(
-        "Language changed. Tap the microphone to speak again."
+        "Language changed. Tap the microphone to continue."
       );
     }
   }
 
-
   /* =======================================================
-     STATUS TEXT
+     STATUS
   ======================================================= */
 
   function getStatusText() {
@@ -1540,37 +1602,29 @@ ${userText}
       ] ||
       interfaceText.en;
 
-    if (
-      status === "listening"
-    ) {
+    if (status === "listening") {
       return current.listening;
     }
 
-    if (
-      status === "thinking"
-    ) {
+    if (status === "thinking") {
       return current.thinking;
     }
 
-    if (
-      status === "speaking"
-    ) {
+    if (status === "speaking") {
       return current.speaking;
     }
 
     return current.idle;
   }
 
-
   /* =======================================================
-     RENDER
+     AUTH LOADING
   ======================================================= */
 
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl border border-green-100 p-8 text-center max-w-md w-full">
-
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center text-3xl shadow-lg">
             🎙️
           </div>
@@ -1582,12 +1636,10 @@ ${userText}
           <p className="text-sm text-slate-500 mt-2">
             Preparing your AgriSaathi assistant...
           </p>
-
         </div>
       </div>
     );
   }
-
 
   const currentInterface =
     interfaceText[
@@ -1595,15 +1647,16 @@ ${userText}
     ] ||
     interfaceText.en;
 
+  /* =======================================================
+     UI
+  ======================================================= */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 p-4 md:p-6">
 
       <div className="max-w-5xl mx-auto">
 
-        {/* =================================================
-            HEADER
-        ================================================== */}
+        {/* HEADER */}
 
         <header className="relative overflow-hidden bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 text-white rounded-3xl shadow-xl p-6 md:p-8">
 
@@ -1643,9 +1696,6 @@ ${userText}
 
               </div>
 
-
-              {/* LANGUAGE */}
-
               <div className="bg-white/10 border border-white/20 rounded-2xl p-3">
 
                 <label className="block text-xs text-blue-100 font-semibold mb-1">
@@ -1661,14 +1711,10 @@ ${userText}
                   }
                   className="bg-white text-slate-800 rounded-xl px-3 py-2 text-sm font-semibold outline-none"
                 >
-
                   {Object.entries(
                     languageNames
                   ).map(
-                    ([
-                      code,
-                      name,
-                    ]) => (
+                    ([code, name]) => (
                       <option
                         key={code}
                         value={code}
@@ -1677,7 +1723,6 @@ ${userText}
                       </option>
                     )
                   )}
-
                 </select>
 
               </div>
@@ -1688,10 +1733,7 @@ ${userText}
 
         </header>
 
-
-        {/* =================================================
-            MAIN VOICE CARD
-        ================================================== */}
+        {/* MAIN */}
 
         <main className="bg-white border border-blue-100 rounded-3xl shadow-xl mt-6 overflow-hidden">
 
@@ -1703,24 +1745,15 @@ ${userText}
 
               <div
                 className={`
-                  inline-flex
-                  items-center
-                  gap-2
-                  px-4
-                  py-2
-                  rounded-full
-                  text-sm
-                  font-semibold
-                  border
+                  inline-flex items-center gap-2
+                  px-4 py-2 rounded-full
+                  text-sm font-semibold border
                   ${
-                    status ===
-                    "listening"
+                    status === "listening"
                       ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : status ===
-                        "thinking"
+                      : status === "thinking"
                       ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : status ===
-                        "speaking"
+                      : status === "speaking"
                       ? "bg-cyan-50 text-cyan-700 border-cyan-200"
                       : "bg-slate-50 text-slate-600 border-slate-200"
                   }
@@ -1729,18 +1762,13 @@ ${userText}
 
                 <span
                   className={`
-                    w-2.5
-                    h-2.5
-                    rounded-full
+                    w-2.5 h-2.5 rounded-full
                     ${
-                      status ===
-                      "listening"
+                      status === "listening"
                         ? "bg-blue-500"
-                        : status ===
-                          "thinking"
+                        : status === "thinking"
                         ? "bg-amber-500"
-                        : status ===
-                          "speaking"
+                        : status === "speaking"
                         ? "bg-cyan-500"
                         : "bg-slate-400"
                     }
@@ -1753,36 +1781,62 @@ ${userText}
 
             </div>
 
-
             {/* MICROPHONE */}
 
             <div className="flex justify-center mt-10">
 
               <button
                 type="button"
-               onClick={() => {
-  if (!active) {
-    beginConversation();
-    return;
-  }
+                onClick={() => {
+                  /*
+                   * FIRST CLICK:
+                   * Start complete conversation.
+                   */
+                  if (!active) {
+                    beginConversation();
+                    return;
+                  }
 
-  // Already listening → stop only listening.
-  if (status === "listening") {
-    stopRecognition();
-    setStatus("idle");
-    return;
-  }
+                  /*
+                   * If listening:
+                   * stop only listening.
+                   */
+                  if (
+                    status ===
+                    "listening"
+                  ) {
+                    stopRecognition();
 
-  // Conversation is active but currently idle.
-  // Start listening instead of starting the greeting again.
-  if (status === "idle") {
-    startListening();
-    return;
-  }
+                    setStatus(
+                      "idle"
+                    );
 
-  // If speaking/thinking, don't restart the whole conversation.
-  // The current response should finish normally.
-}}
+                    return;
+                  }
+
+                  /*
+                   * If idle:
+                   * explicitly start listening.
+                   */
+                  if (
+                    status ===
+                    "idle"
+                  ) {
+                    microphoneBlockedRef.current =
+                      false;
+
+                    setError("");
+
+                    startListening();
+
+                    return;
+                  }
+
+                  /*
+                   * If thinking/speaking:
+                   * do nothing.
+                   */
+                }}
                 aria-label={
                   active
                     ? currentInterface.stop
@@ -1790,39 +1844,27 @@ ${userText}
                 }
                 className={`
                   relative
-                  w-40
-                  h-40
-                  md:w-48
-                  md:h-48
+                  w-40 h-40
+                  md:w-48 md:h-48
                   rounded-full
-                  flex
-                  items-center
-                  justify-center
+                  flex items-center justify-center
                   shadow-2xl
-                  transition-all
-                  duration-200
+                  transition-all duration-200
                   focus:outline-none
                   focus:ring-4
                   focus:ring-blue-200
 
                   ${
-                    status ===
-                    "listening"
+                    status === "listening"
                       ? "bg-blue-600 scale-105 shadow-blue-200"
-                      : status ===
-                        "thinking"
+                      : status === "thinking"
                       ? "bg-amber-500"
-                      : status ===
-                        "speaking"
+                      : status === "speaking"
                       ? "bg-cyan-500 scale-105 shadow-cyan-200"
                       : "bg-gradient-to-br from-blue-600 to-cyan-500 hover:scale-105"
                   }
                 `}
               >
-
-                {/* STATIC LISTENING RING
-                    No animate-ping.
-                */}
 
                 {status ===
                   "listening" && (
@@ -1830,7 +1872,6 @@ ${userText}
                 )}
 
                 <span className="text-6xl md:text-7xl text-white">
-
                   {status ===
                   "thinking"
                     ? "⏳"
@@ -1838,15 +1879,13 @@ ${userText}
                       "speaking"
                     ? "🔊"
                     : "🎙️"}
-
                 </span>
 
               </button>
 
             </div>
 
-
-            {/* TAP MESSAGE */}
+            {/* MESSAGE */}
 
             <div className="text-center mt-8">
 
@@ -1872,7 +1911,6 @@ ${userText}
               </p>
 
             </div>
-
 
             {/* ERROR */}
 
@@ -1902,7 +1940,6 @@ ${userText}
               </div>
             )}
 
-
             {/* TRANSCRIPT */}
 
             {transcript && (
@@ -1918,7 +1955,6 @@ ${userText}
 
               </div>
             )}
-
 
             {/* RESPONSE */}
 
@@ -1936,8 +1972,7 @@ ${userText}
               </div>
             )}
 
-
-            {/* STOP BUTTON */}
+            {/* STOP */}
 
             {active && (
               <div className="flex justify-center mt-8">
@@ -1957,10 +1992,7 @@ ${userText}
 
           </div>
 
-
-          {/* =================================================
-              FARMER CONTEXT
-          ================================================== */}
+          {/* FARMER CONTEXT */}
 
           {farmer && (
             <div className="border-t border-slate-100 bg-slate-50 p-6 md:p-8">
@@ -1987,11 +2019,9 @@ ${userText}
 
                 </div>
 
-
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
 
                   <div className="bg-white border border-slate-100 rounded-xl p-4">
-
                     <p className="text-xs text-slate-400">
                       Name
                     </p>
@@ -2000,11 +2030,9 @@ ${userText}
                       {farmer.name ||
                         "Not available"}
                     </p>
-
                   </div>
 
                   <div className="bg-white border border-slate-100 rounded-xl p-4">
-
                     <p className="text-xs text-slate-400">
                       Village
                     </p>
@@ -2013,11 +2041,9 @@ ${userText}
                       {farmer.village ||
                         "Not available"}
                     </p>
-
                   </div>
 
                   <div className="bg-white border border-slate-100 rounded-xl p-4">
-
                     <p className="text-xs text-slate-400">
                       District
                     </p>
@@ -2026,11 +2052,9 @@ ${userText}
                       {farmer.district ||
                         "Not available"}
                     </p>
-
                   </div>
 
                   <div className="bg-white border border-slate-100 rounded-xl p-4">
-
                     <p className="text-xs text-slate-400">
                       Main Crop
                     </p>
@@ -2039,7 +2063,6 @@ ${userText}
                       {farmer.mainCrop ||
                         "Not available"}
                     </p>
-
                   </div>
 
                 </div>
@@ -2051,10 +2074,7 @@ ${userText}
 
         </main>
 
-
-        {/* =================================================
-            HELP CARD
-        ================================================== */}
+        {/* HELP */}
 
         <section className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl shadow-lg mt-6 p-6">
 
@@ -2067,8 +2087,9 @@ ${userText}
               </h2>
 
               <p className="text-blue-100 text-sm mt-2">
-                Try questions about weather, crop disease,
-                market prices, government schemes or your orders.
+                Try questions about weather,
+                crop disease, market prices,
+                government schemes or your orders.
               </p>
 
             </div>
@@ -2098,10 +2119,7 @@ ${userText}
 
         </section>
 
-
-        {/* =================================================
-            FOOTER
-        ================================================== */}
+        {/* FOOTER */}
 
         <footer className="text-center py-8 text-sm text-slate-400">
           AgriSaathi · Voice Assistant

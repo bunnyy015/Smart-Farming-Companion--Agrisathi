@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { get, ref } from "firebase/database";
 import {
   ArrowLeft,
   BarChart3,

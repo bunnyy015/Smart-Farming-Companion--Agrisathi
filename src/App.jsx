@@ -12,6 +12,7 @@ import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
 import LanguageSelection from "./modules/auth/LanguageSelection";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
+import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
 
 // ==============================
 // Farmer
@@ -40,17 +41,10 @@ import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
 import OrderManagementPage from "./modules/admin/OrderManagementPage";
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
 import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
-
 import MarketPricesManagementPage from "./modules/admin/MarketPricesManagementPage";
 import DealerManagementPage from "./modules/admin/DealerManagementPage";
 import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
-
-// IMPORTANT:
-// Admin product management page
 import AdminProductsPage from "./modules/admin/AdminProductsPage";
-
-// IMPORTANT:
-// Admin order management page
 import AdminOrderManagementPage from "./modules/admin/AdminOrderManagementPage";
 
 // ==============================
@@ -63,8 +57,7 @@ import DealerStockPage from "./modules/dealer/DealerStockPage";
 import DealerOrdersPage from "./modules/dealer/DealerOrdersPage";
 import DealerSalesPage from "./modules/dealer/DealerSalesPage";
 import DealerNotificationsPage from "./modules/dealer/DealerNotificationsPage";
-
-import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
+import DealerProfilePage from "./modules/dealer/DealerProfilePage";
 
 function App() {
   return (
@@ -98,6 +91,11 @@ function App() {
         <Route
           path="/role-selection"
           element={<RoleSelectionPage />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordPage />}
         />
 
 
@@ -206,38 +204,23 @@ function App() {
         />
 
         <Route
+          path="/admin/dealer-management"
+          element={<DealerManagementPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - MARKET PRICES
+        ===================================================== */}
+
+        <Route
           path="/admin/market-prices"
           element={<MarketPricesManagementPage />}
         />
 
-        <Route
-          path="/admin/dealer-management"
-          element={<DealerManagementPage />}
-        />
-        <Route
-  path="/admin/orders"
-  element={<OrderManagementPage />}
-/>
-
-        {/* Keep your old URL working */}
-        <Route
-          path="/admin/dealer-management"
-          element={<DealerManagementPage />}
-        />
-
 
         {/* =====================================================
-            ADMIN - PRODUCT MANAGEMENT
-        ===================================================== */}
-
-        <Route
-          path="/admin/products"
-          element={<AdminProductsPage />}
-        />
-
-
-        {/* =====================================================
-            ADMIN - ORDER MANAGEMENT
+            ADMIN - ORDERS
         ===================================================== */}
 
         <Route
@@ -247,7 +230,17 @@ function App() {
 
 
         {/* =====================================================
-            ADMIN - REPORTS & STATISTICS
+            ADMIN - PRODUCTS
+        ===================================================== */}
+
+        <Route
+          path="/admin/products"
+          element={<AdminProductsPage />}
+        />
+
+
+        {/* =====================================================
+            ADMIN - REPORTS
         ===================================================== */}
 
         <Route
@@ -255,7 +248,6 @@ function App() {
           element={<ReportsStatisticsPage />}
         />
 
-        {/* Keep your existing URL working */}
         <Route
           path="/admin/reports-statistics"
           element={<ReportsStatisticsPage />}
@@ -263,17 +255,17 @@ function App() {
 
 
         {/* =====================================================
-            DEALER ROUTES
+            DEALER
         ===================================================== */}
-
-        <Route
-          path="/dealer/register"
-          element={<DealerRegistrationPage />}
-        />
 
         <Route
           path="/dealer"
           element={<DealerDashboard />}
+        />
+
+        <Route
+          path="/dealer/register"
+          element={<DealerRegistrationPage />}
         />
 
         <Route
@@ -303,22 +295,22 @@ function App() {
 
 
         {/* =====================================================
+            DEALER PROFILE
+        ===================================================== */}
+
+        <Route
+          path="/dealer/profile"
+          element={<DealerProfilePage />}
+        />
+
+
+        {/* =====================================================
             INVALID ROUTE
         ===================================================== */}
 
         <Route
           path="*"
           element={<SplashPage />}
-        />
-
-
-        {/* =====================================================
-            FORGOT PASSWORD
-        ===================================================== */}
-
-        <Route
-          path="/forgot-password"
-          element={<ForgotPasswordPage />}
         />
 
       </Routes>
