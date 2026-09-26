@@ -28,6 +28,7 @@ import GovtSchemesPage from "./modules/schemes/GovtSchemesPage";
 import FarmerDealerProductsPage from "./modules/farmer/FarmerDealerProductsPage";
 import FarmerProductDetailsPage from "./modules/farmer/FarmerProductDetailsPage";
 import FarmerOrdersPage from "./modules/farmer/FarmerOrdersPage";
+import FarmerOrderHistoryPage from "./modules/farmer/FarmerOrderHistoryPage";
 import FarmerNotificationsPage from "./modules/farmer/FarmerNotificationsPage";
 
 import CommunityPage from "./modules/community/CommunityPage";
@@ -126,6 +127,11 @@ function App() {
         <Route
           path="/farmer/orders"
           element={<FarmerOrdersPage />}
+        />
+
+        <Route
+          path="/farmer/history"
+          element={<FarmerOrderHistoryPage />}
         />
 
         <Route

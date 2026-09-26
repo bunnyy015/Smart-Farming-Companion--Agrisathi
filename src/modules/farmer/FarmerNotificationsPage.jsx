@@ -127,14 +127,15 @@ function createOrderNotification(order) {
     payment_received: {
       category: "payment",
       icon: "💵",
-      title: "Payment confirmed",
+      title: "Payment completed",
       text: `${
         order.dealerName || "The dealer"
       } confirmed payment for ${
         order.productName || "your order"
-      }.`,
+      }. The order is now in Order History.`,
       className: "bg-orange-50 border-orange-200",
       date:
+        order.paymentReceivedAt ||
         order.dealerPaymentReceivedAt ||
         order.updatedAt ||
         order.createdAt,
