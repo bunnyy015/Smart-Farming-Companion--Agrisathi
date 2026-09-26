@@ -1526,6 +1526,12 @@ export default function DealerOrdersPage() {
           [`dealerOrders/${order.id}/status`]:
             "payment_received",
 
+          [`dealerOrders/${order.id}/dealerPaymentReceived`]:
+            true,
+
+          [`dealerOrders/${order.id}/dealerPaymentReceivedAt`]:
+            now,
+
           [`dealerOrders/${order.id}/paymentReceivedAt`]:
             now,
 
@@ -1544,6 +1550,10 @@ export default function DealerOrdersPage() {
                     ...item,
                     status:
                       "payment_received",
+                    dealerPaymentReceived:
+                      true,
+                    dealerPaymentReceivedAt:
+                      now,
                     paymentReceivedAt:
                       now,
                     updatedAt:
@@ -1556,7 +1566,7 @@ export default function DealerOrdersPage() {
       setMessage({
         type: "success",
         text:
-          "Payment marked as received.",
+          "Payment completed. The order is now recorded in the farmer's history.",
       });
     } catch (error) {
       console.error(

@@ -14,6 +14,9 @@ export default function GovtSchemesPage() {
       eligibility: "Small and marginal farmers with valid land records.",
       documents: "Aadhaar, bank account, land details.",
       icon: "💰",
+      applyUrl: "https://pmkisan.gov.in/RegistrationFormupdated.aspx",
+      applyLabel: "Apply on PM-KISAN",
+      applicationNote: "Use the official new farmer registration form.",
     },
     {
       title: "Pradhan Mantri Fasal Bima Yojana",
@@ -22,6 +25,9 @@ export default function GovtSchemesPage() {
       eligibility: "Farmers growing notified crops in notified areas.",
       documents: "Aadhaar, bank account, crop details, land details.",
       icon: "🛡️",
+      applyUrl: "https://pmfby.gov.in/selfRegistration",
+      applyLabel: "Apply for crop insurance",
+      applicationNote: "Check notified crops, area and enrollment dates before applying.",
     },
     {
       title: "Kisan Credit Card",
@@ -30,6 +36,9 @@ export default function GovtSchemesPage() {
       eligibility: "Farmers, tenant farmers, sharecroppers.",
       documents: "Aadhaar, land records, bank details.",
       icon: "🏦",
+      applyUrl: "https://pmkisan.gov.in/Documents/Kcc.pdf",
+      applyLabel: "Get KCC application form",
+      applicationNote: "Submit the completed form to a participating bank.",
     },
     {
       title: "Soil Health Card Scheme",
@@ -38,6 +47,9 @@ export default function GovtSchemesPage() {
       eligibility: "All farmers.",
       documents: "Farmer details and land details.",
       icon: "🌱",
+      applyUrl: "https://soilhealth.dac.gov.in/soilhealthcard",
+      applyLabel: "Get Soil Health Card",
+      applicationNote: "Use the official portal to access Soil Health Card services.",
     },
     {
       title: "PM Krishi Sinchayee Yojana",
@@ -46,6 +58,9 @@ export default function GovtSchemesPage() {
       eligibility: "Farmers needing irrigation improvement.",
       documents: "Land records, Aadhaar, bank details.",
       icon: "💧",
+      applyUrl: "https://pmksy.gov.in/Default.aspx",
+      applyLabel: "Official scheme information",
+      applicationNote: "For assistance or applications, contact your state agriculture or horticulture department.",
     },
     {
       title: "eNAM",
@@ -54,6 +69,9 @@ export default function GovtSchemesPage() {
       eligibility: "Farmers selling produce in registered markets.",
       documents: "Farmer ID, bank account, produce details.",
       icon: "📈",
+      applyUrl: "https://enam.gov.in/registration",
+      applyLabel: "Register on e-NAM",
+      applicationNote: "Farmer registration is completed through the official e-NAM portal.",
     },
   ];
 
@@ -138,22 +156,27 @@ export default function GovtSchemesPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-5">
+              <p className="text-sm text-gray-600 bg-green-50 rounded-lg p-3 mt-4">
+                {scheme.applicationNote}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
                 <button
+                  type="button"
                   onClick={() => speakScheme(scheme)}
                   className="bg-blue-600 text-white py-3 rounded-lg font-semibold"
                 >
                   🔊 Speak
                 </button>
 
-                <button
-                  onClick={() =>
-                    alert("Apply link will be added in final deployment.")
-                  }
-                  className="bg-green-700 text-white py-3 rounded-lg font-semibold"
+                <a
+                  href={scheme.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-700 text-white py-3 px-3 rounded-lg font-semibold text-center hover:bg-green-800 transition"
                 >
-                  Apply Info
-                </button>
+                  {scheme.applyLabel} ↗
+                </a>
               </div>
             </div>
           ))}

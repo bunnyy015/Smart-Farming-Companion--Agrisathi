@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
   get,
+  onValue,
   orderByChild,
   query,
   ref,
@@ -16,8 +17,6 @@ import StatusMessage from "../../components/StatusMessage";
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
 ];
 
 const ACTIVE_STATUSES = [
@@ -25,8 +24,34 @@ const ACTIVE_STATUSES = [
   "accepted",
   "delivered_by_dealer",
   "received_by_farmer",
-  "payment_received",
 ];
+
+function isPaidOrder(order) {
+  const status = String(order.status || order.orderStatus || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_");
+
+  return (
+    ["payment_received", "completed", "complete", "paid", "payment_completed"].includes(status) ||
+    order.dealerPaymentReceived === true ||
+    order.paymentStatus === "paid" ||
+    order.paymentStatus === "completed"
+  );
+}
+
+function isHistoryOrder(order) {
+  const status = String(order.status || order.orderStatus || "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    isPaidOrder(order) ||
+    order.farmerArchived === true ||
+    Boolean(order.acceptedAt || order.dealerAcceptedAt || order.rejectedAt) ||
+    ["accepted", "rejected", "cancelled", "canceled"].includes(status)
+  );
+}
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString("en-IN", {
@@ -143,9 +168,32 @@ export default function FarmerOrdersPage() {
 
   const [confirmation, setConfirmation] = useState(null);
   const [message, setMessage] = useState(null);
+  const knownPaidOrderIds = useRef(new Set());
+  const knownHistoryOrderIds = useRef(new Set());
+
+  const currentOrders = useMemo(
+    () =>
+      orders.filter((order) => !isHistoryOrder(order)),
+    [orders]
+  );
+
+  const paidOrders = useMemo(
+    () => orders.filter(isPaidOrder),
+    [orders]
+  );
+
+  const historyOrders = useMemo(
+    () => orders.filter(isHistoryOrder),
+    [orders]
+  );
 
   useEffect(() => {
+    let unsubscribeOrders = () => {};
+    let active = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribeOrders();
+
       if (!user) {
         navigate("/login", {
           replace: true,
@@ -155,50 +203,111 @@ export default function FarmerOrdersPage() {
       }
 
       await loadOrders(user.uid);
+
+      if (!active) {
+        return;
+      }
+
+      const ordersQuery = query(
+        ref(database, "dealerOrders"),
+        orderByChild("farmerUid"),
+        equalTo(user.uid)
+      );
+
+      unsubscribeOrders = onValue(
+        ordersQuery,
+        (snapshot) => {
+          const orderList = snapshot.exists()
+            ? Object.entries(snapshot.val())
+                .map(([id, value]) => ({ id, ...value }))
+                .sort(
+                  (first, second) =>
+                    new Date(second.updatedAt || second.createdAt || 0) -
+                    new Date(first.updatedAt || first.createdAt || 0)
+                )
+            : [];
+
+          const paidOrderIds = new Set(
+            orderList.filter(isPaidOrder).map((order) => order.id)
+          );
+          const newlyPaidOrder = orderList.find(
+            (order) =>
+              isPaidOrder(order) &&
+              !knownPaidOrderIds.current.has(order.id)
+          );
+          const historyOnlyStatuses = [
+            "accepted",
+            "rejected",
+            "cancelled",
+            "canceled",
+          ];
+          const newlyMovedToHistory = orderList.find(
+            (order) =>
+              historyOnlyStatuses.includes(order.status) &&
+              !knownHistoryOrderIds.current.has(order.id)
+          );
+
+          knownPaidOrderIds.current = paidOrderIds;
+          knownHistoryOrderIds.current = new Set(
+            orderList.filter(isHistoryOrder).map((order) => order.id)
+          );
+          setOrders(orderList);
+
+          if (newlyPaidOrder) {
+            showMessage(
+              "success",
+              `Payment completed for ${newlyPaidOrder.productName || "your order"}. It is now in Order History.`
+            );
+          } else if (newlyMovedToHistory) {
+            const statusMessage = {
+              accepted:
+                "The dealer accepted your order. It is now in Order History.",
+              rejected:
+                "The dealer rejected your order. It is now in Order History.",
+              cancelled:
+                "The cancelled order is now in Order History.",
+              canceled:
+                "The cancelled order is now in Order History.",
+            }[newlyMovedToHistory.status];
+            showMessage("info", statusMessage);
+          }
+        },
+        (error) => {
+          console.error("Farmer order updates error:", error);
+        }
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+      unsubscribeOrders();
+    };
   }, [navigate]);
 
   const filteredOrders = useMemo(() => {
     if (selectedFilter === "all") {
-      return orders;
+      return currentOrders;
     }
 
     if (selectedFilter === "active") {
-      return orders.filter((order) =>
+      return currentOrders.filter((order) =>
         ACTIVE_STATUSES.includes(order.status)
       );
     }
 
-    if (selectedFilter === "completed") {
-      return orders.filter(
-        (order) => order.status === "completed"
-      );
-    }
-
-    return orders.filter((order) =>
-      ["cancelled", "rejected"].includes(order.status)
-    );
-  }, [orders, selectedFilter]);
+    return currentOrders;
+  }, [currentOrders, selectedFilter]);
 
   const counts = useMemo(
     () => ({
-      all: orders.length,
+      all: currentOrders.length,
 
-      active: orders.filter((order) =>
+      active: currentOrders.filter((order) =>
         ACTIVE_STATUSES.includes(order.status)
       ).length,
-
-      completed: orders.filter(
-        (order) => order.status === "completed"
-      ).length,
-
-      cancelled: orders.filter((order) =>
-        ["cancelled", "rejected"].includes(order.status)
-      ).length,
     }),
-    [orders]
+    [currentOrders]
   );
 
   function showMessage(type, text) {
@@ -242,6 +351,8 @@ export default function FarmerOrdersPage() {
 
       if (!snapshot.exists()) {
         setOrders([]);
+        knownPaidOrderIds.current = new Set();
+        knownHistoryOrderIds.current = new Set();
         return;
       }
 
@@ -265,6 +376,35 @@ export default function FarmerOrdersPage() {
         );
 
       setOrders(orderList);
+      knownPaidOrderIds.current = new Set(
+        orderList.filter(isPaidOrder).map((order) => order.id)
+      );
+      knownHistoryOrderIds.current = new Set(
+        orderList.filter(isHistoryOrder).map((order) => order.id)
+      );
+
+      const latestPaidOrder = orderList.find((order) => {
+        if (!isPaidOrder(order)) {
+          return false;
+        }
+
+        const paidAt = new Date(
+          order.paymentReceivedAt ||
+            order.dealerPaymentReceivedAt ||
+            order.completedAt ||
+            order.updatedAt ||
+            0
+        ).getTime();
+
+        return Number.isFinite(paidAt) && Date.now() - paidAt < 24 * 60 * 60 * 1000;
+      });
+
+      if (latestPaidOrder) {
+        showMessage(
+          "success",
+          `Payment completed for ${latestPaidOrder.productName || "your order"}. It is now in Order History.`
+        );
+      }
     } catch (error) {
       console.error("Farmer orders error:", error);
 
@@ -519,18 +659,36 @@ export default function FarmerOrdersPage() {
               </p>
             </div>
 
-            <div className="bg-white/15 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold">
-                {counts.completed}
-              </p>
-              <p className="text-xs text-green-100 mt-1">
-                Completed
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/farmer/history")}
+              className="bg-white/20 rounded-xl p-3 text-center hover:bg-white/30"
+            >
+              <p className="text-xl font-bold">{historyOrders.length}</p>
+              <p className="text-xs text-green-100 mt-1">History</p>
+            </button>
           </div>
         </header>
 
         <div className="px-4">
+          {paidOrders.length > 0 && (
+            <section className="bg-green-50 border border-green-200 rounded-2xl p-4 mt-5">
+              <p className="font-bold text-green-900">
+                ✅ Payment completed
+              </p>
+              <p className="text-sm text-green-800 mt-1">
+                {paidOrders.length} paid {paidOrders.length === 1 ? "order is" : "orders are"} stored in your history. They no longer appear in My Orders.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/farmer/history")}
+                className="mt-3 bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
+              >
+                View Order History
+              </button>
+            </section>
+          )}
+
           {confirmation && confirmationDetails && (
             <section className="bg-white border-2 border-green-200 rounded-2xl shadow-lg p-4 mt-5">
               <div className="flex items-start gap-3">
@@ -568,9 +726,7 @@ export default function FarmerOrdersPage() {
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <button
                       type="button"
-                      disabled={
-                        updatingId === confirmation.order.id
-                      }
+                      disabled={updatingId === confirmation.order.id}
                       onClick={executeConfirmation}
                       className={`${confirmationDetails.actionClass} min-h-12 rounded-xl font-semibold disabled:bg-gray-400`}
                     >

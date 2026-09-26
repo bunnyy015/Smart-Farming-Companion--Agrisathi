@@ -6,9 +6,50 @@ import StatusMessage from "../../components/StatusMessage";
 
 const MANDI_RESOURCE_ID =
   "9ef84268-d588-465a-a308-a864a43d0070";
+const LGD_API_ROOT =
+  "https://lgd-json-api.vercel.app/api";
 
 const RECORD_LIMIT = 1000;
 const SELLING_POINT_RADIUS = 50000;
+
+const INDIAN_STATES_AND_TERRITORIES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
 
 const STATE_NAMES = {
   telangana: "Telangana",
@@ -33,6 +74,34 @@ const STATE_NAMES = {
   assam: "Assam",
   goa: "Goa",
 };
+
+async function fetchLgdRecords(collection, filters = {}) {
+  const records = [];
+  let page = 1;
+  let pageCount = 1;
+
+  do {
+    const parameters = new URLSearchParams({
+      ...filters,
+      limit: "100",
+      page: String(page),
+    });
+    const response = await fetch(
+      `${LGD_API_ROOT}/${collection}?${parameters.toString()}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Administrative location data is unavailable.");
+    }
+
+    const result = await response.json();
+    records.push(...(Array.isArray(result?.data) ? result.data : []));
+    pageCount = Number(result?.pagination?.pages || 1);
+    page += 1;
+  } while (page <= pageCount);
+
+  return records;
+}
 
 const CATEGORY_ICONS = {
   cereals: "🌾",
@@ -61,6 +130,25 @@ function normalizeDistrictName(value) {
   return String(value || "")
     .replace(/\s+district$/i, "")
     .trim();
+}
+
+function normalizeDistrictKey(value) {
+  const district = normalizeDistrictName(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  const aliases = {
+    jagtial: "jagtial",
+    jagitial: "jagtial",
+    jangaon: "jangaon",
+    jangoan: "jangaon",
+    komarambheemasifabad: "kumurambheemasifabad",
+    kumurambheemasifabad: "kumurambheemasifabad",
+    rangareddy: "rangareddy",
+    medchalmalkajgiri: "medchalmalkajgiri",
+  };
+
+  return aliases[district] || district;
 }
 
 function numberValue(value) {
@@ -541,6 +629,51 @@ function getCropImage(commodity) {
   return CROP_IMAGES.generic;
 }
 
+function buildDemoPrices({ state, district, mandals }) {
+  const demoCrops = [
+    { commodity: "Paddy", basePrice: 2350 },
+    { commodity: "Maize", basePrice: 2180 },
+    { commodity: "Cotton", basePrice: 7100 },
+    { commodity: "Tomato", basePrice: 1800 },
+    { commodity: "Turmeric", basePrice: 12600 },
+  ];
+  const today = new Date();
+  const arrivalDate = today.toLocaleDateString("en-IN");
+  const arrivalTimestamp = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
+
+  return mandals.flatMap((mandal, mandalIndex) =>
+    demoCrops.map((crop, cropIndex) => {
+      const adjustment = ((mandalIndex * 37 + cropIndex * 19) % 151) - 75;
+      const modalPrice = crop.basePrice + adjustment;
+      const category = getCropCategory(crop.commodity);
+
+      return {
+        id: `demo-${normalizeDistrictKey(district)}-${mandalIndex}-${cropIndex}`,
+        state,
+        district,
+        mandal,
+        market: `${mandal} Demo Mandi`,
+        commodity: crop.commodity,
+        variety: "Demo / Common",
+        grade: "Illustrative only",
+        arrivalDate,
+        arrivalTimestamp,
+        minimumPrice: modalPrice - 100,
+        maximumPrice: modalPrice + 100,
+        modalPrice,
+        category,
+        image: getCropImage(crop.commodity),
+        icon: CATEGORY_ICONS[category] || "🌱",
+        isDemo: true,
+      };
+    })
+  );
+}
+
 export default function MarketPricesPage() {
   const navigate = useNavigate();
 
@@ -552,12 +685,24 @@ export default function MarketPricesPage() {
   const [prices, setPrices] = useState([]);
   const [sellingPoints, setSellingPoints] =
     useState([]);
+  const [availableStates, setAvailableStates] =
+    useState([]);
+  const [availableDistricts, setAvailableDistricts] =
+    useState([]);
+  const [availableMandals, setAvailableMandals] =
+    useState([]);
 
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState("all");
+  const [selectedState, setSelectedState] =
+    useState("");
   const [selectedDistrict, setSelectedDistrict] =
     useState("");
+  const [selectedMandal, setSelectedMandal] =
+    useState("");
+  const [showDemoPrices, setShowDemoPrices] =
+    useState(false);
   const [selectedMarket, setSelectedMarket] =
     useState("");
   const [sortMode, setSortMode] =
@@ -570,6 +715,10 @@ export default function MarketPricesPage() {
     useState(false);
   const [detectingLocation, setDetectingLocation] =
     useState(false);
+  const [loadingDistricts, setLoadingDistricts] =
+    useState(false);
+  const [loadingMandals, setLoadingMandals] =
+    useState(false);
 
   const [message, setMessage] = useState(null);
 
@@ -577,17 +726,209 @@ export default function MarketPricesPage() {
     initializePage();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    fetchLgdRecords("states")
+      .then((records) => {
+        if (active) {
+          setAvailableStates(records);
+        }
+      })
+      .catch((error) => {
+        console.error("State list loading error:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const districts = useMemo(() => {
+    if (availableDistricts.length > 0) {
+      return availableDistricts.map((district) => district.name);
+    }
+
     return [
       ...new Set(
         prices
+          .filter(
+            (item) =>
+              normalizeText(item.state) ===
+              normalizeText(selectedState)
+          )
           .map((item) => item.district)
           .filter(Boolean)
       ),
     ].sort((first, second) =>
       first.localeCompare(second)
     );
-  }, [prices]);
+  }, [availableDistricts, prices, selectedState]);
+
+  const stateChoices = useMemo(
+    () =>
+      availableStates.length > 0
+        ? availableStates.map((state) => state.name)
+        : INDIAN_STATES_AND_TERRITORIES,
+    [availableStates]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDistricts() {
+      if (!selectedState || availableStates.length === 0) {
+        setAvailableDistricts([]);
+        setLoadingDistricts(false);
+        return;
+      }
+
+      const stateRecord = availableStates.find(
+        (state) =>
+          normalizeText(state.name) === normalizeText(selectedState)
+      );
+
+      if (!stateRecord) {
+        setAvailableDistricts([]);
+        setLoadingDistricts(false);
+        return;
+      }
+
+      setLoadingDistricts(true);
+      setAvailableDistricts([]);
+
+      try {
+        const records = await fetchLgdRecords("districts", {
+          stateCode: stateRecord.code,
+        });
+
+        if (active) {
+          setAvailableDistricts(records);
+        }
+      } catch (error) {
+        console.error("District list loading error:", error);
+      } finally {
+        if (active) {
+          setLoadingDistricts(false);
+        }
+      }
+    }
+
+    loadDistricts();
+
+    return () => {
+      active = false;
+    };
+  }, [availableStates, selectedState]);
+
+  useEffect(() => {
+    if (!selectedDistrict || availableDistricts.length === 0) {
+      return;
+    }
+
+    const matchingDistrict = availableDistricts.find(
+      (district) =>
+        normalizeDistrictKey(district.name) ===
+        normalizeDistrictKey(selectedDistrict)
+    );
+
+    if (matchingDistrict && matchingDistrict.name !== selectedDistrict) {
+      setSelectedDistrict(matchingDistrict.name);
+    }
+  }, [availableDistricts, selectedDistrict]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadMandals() {
+      if (!selectedDistrict || availableDistricts.length === 0) {
+        setAvailableMandals([]);
+        setLoadingMandals(false);
+        return;
+      }
+
+      const districtRecord = availableDistricts.find(
+        (district) =>
+          normalizeDistrictKey(district.name) ===
+          normalizeDistrictKey(selectedDistrict)
+      );
+
+      if (!districtRecord) {
+        setAvailableMandals([]);
+        setLoadingMandals(false);
+        return;
+      }
+
+      setLoadingMandals(true);
+      setAvailableMandals([]);
+
+      try {
+        const records = await fetchLgdRecords("subdistricts", {
+          districtCode: districtRecord.code,
+        });
+
+        if (active) {
+          setAvailableMandals(records);
+        }
+      } catch (error) {
+        console.error("Mandal list loading error:", error);
+      } finally {
+        if (active) {
+          setLoadingMandals(false);
+        }
+      }
+    }
+
+    loadMandals();
+
+    return () => {
+      active = false;
+    };
+  }, [availableDistricts, selectedDistrict]);
+
+  const mandalOptions = useMemo(() => {
+    const currentDistrict = normalizeText(selectedDistrict);
+    const currentState = normalizeText(selectedState);
+
+    if (availableMandals.length > 0) {
+      return availableMandals.map((mandal) => mandal.name);
+    }
+
+    return [
+      ...new Set(
+        [
+          farmer,
+          detectedPlace,
+        ]
+          .filter(
+            (place) =>
+              place?.mandal &&
+              normalizeText(place.state) === currentState &&
+              normalizeDistrictKey(place.district) ===
+                normalizeDistrictKey(currentDistrict)
+          )
+          .map((place) => String(place.mandal).trim())
+          .filter(Boolean)
+      ),
+    ].sort((first, second) => first.localeCompare(second));
+  }, [
+    availableMandals,
+    farmer,
+    detectedPlace,
+    selectedState,
+    selectedDistrict,
+  ]);
+
+  useEffect(() => {
+    setSelectedMandal((currentMandal) =>
+      mandalOptions.some(
+        (mandal) =>
+          normalizeText(mandal) === normalizeText(currentMandal)
+      )
+        ? currentMandal
+        : ""
+    );
+  }, [mandalOptions]);
 
   const markets = useMemo(() => {
     return [
@@ -596,8 +937,8 @@ export default function MarketPricesPage() {
           .filter(
             (item) =>
               !selectedDistrict ||
-              normalizeText(item.district) ===
-                normalizeText(selectedDistrict)
+              normalizeDistrictKey(item.district) ===
+                normalizeDistrictKey(selectedDistrict)
           )
           .map((item) => item.market)
           .filter(Boolean)
@@ -607,10 +948,29 @@ export default function MarketPricesPage() {
     );
   }, [prices, selectedDistrict]);
 
+  const demoPrices = useMemo(
+    () =>
+      selectedState && selectedDistrict
+        ? buildDemoPrices({
+            state: selectedState,
+            district: selectedDistrict,
+            mandals: mandalOptions,
+          })
+        : [],
+    [selectedState, selectedDistrict, mandalOptions]
+  );
+
+  const visiblePrices = showDemoPrices ? demoPrices : prices;
+  const visibleMarkets = showDemoPrices
+    ? [
+        ...new Set(demoPrices.map((item) => item.market)),
+      ].sort((first, second) => first.localeCompare(second))
+    : markets;
+
   const filteredPrices = useMemo(() => {
     const query = normalizeText(searchText);
 
-    const results = prices.filter((item) => {
+    const results = visiblePrices.filter((item) => {
       if (
         selectedCategory !== "all" &&
         item.category !== selectedCategory
@@ -620,8 +980,16 @@ export default function MarketPricesPage() {
 
       if (
         selectedDistrict &&
-        normalizeText(item.district) !==
-          normalizeText(selectedDistrict)
+        normalizeDistrictKey(item.district) !==
+          normalizeDistrictKey(selectedDistrict)
+      ) {
+        return false;
+      }
+
+      if (
+        showDemoPrices &&
+        selectedMandal &&
+        normalizeText(item.mandal) !== normalizeText(selectedMandal)
       ) {
         return false;
       }
@@ -644,6 +1012,7 @@ export default function MarketPricesPage() {
         item.market,
         item.district,
         item.state,
+        item.mandal,
       ]
         .filter(Boolean)
         .join(" ")
@@ -673,11 +1042,13 @@ export default function MarketPricesPage() {
       );
     });
   }, [
-    prices,
+    visiblePrices,
     searchText,
     selectedCategory,
     selectedDistrict,
+    selectedMandal,
     selectedMarket,
+    showDemoPrices,
     sortMode,
   ]);
 
@@ -1040,6 +1411,9 @@ export default function MarketPricesPage() {
     state,
     district,
   }) {
+    const normalizedState = normalizeStateName(state);
+    setSelectedState(normalizedState);
+
     const apiKey =
       import.meta.env.VITE_DATA_GOV_API_KEY;
 
@@ -1056,9 +1430,6 @@ export default function MarketPricesPage() {
     setLoadingPrices(true);
 
     try {
-      const normalizedState =
-        normalizeStateName(state);
-
       const normalizedDistrict =
         normalizeDistrictName(district);
 
@@ -1082,7 +1453,7 @@ export default function MarketPricesPage() {
         if (normalizedDistrict) {
           showMessage(
             "info",
-            `No current records were found for ${normalizedDistrict}. Showing all markets in ${normalizedState}.`
+            `No current mandi records are available for ${normalizedDistrict}.`
           );
         }
       }
@@ -1189,17 +1560,7 @@ export default function MarketPricesPage() {
       );
 
       setPrices(deduplicated);
-
-      setSelectedDistrict(
-        normalizedDistrict &&
-          deduplicated.some(
-            (record) =>
-              normalizeText(record.district) ===
-              normalizeText(normalizedDistrict)
-          )
-          ? normalizedDistrict
-          : ""
-      );
+      setSelectedDistrict(normalizedDistrict);
 
       setSelectedMarket("");
 
@@ -1587,6 +1948,7 @@ out center tags;
                   .join(", ")
               : [
                   farmer?.village,
+                  farmer?.mandal,
                   farmer?.district,
                   farmer?.state,
                 ]
@@ -1678,6 +2040,38 @@ out center tags;
         )}
 
         <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-gray-800">
+                Price data
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Demo mode creates sample crop prices for every mandal in the selected district.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!selectedDistrict || mandalOptions.length === 0}
+              onClick={() => {
+                setShowDemoPrices((current) => !current);
+                setSelectedMarket("");
+              }}
+              className={`px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50 ${
+                showDemoPrices
+                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "bg-green-700 text-white"
+              }`}
+            >
+              {showDemoPrices ? "Show government prices" : "Show demo prices"}
+            </button>
+          </div>
+
+          {showDemoPrices && (
+            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Demo prices are fictional examples for testing only, not live market rates. Select “All mandals” to see examples for every mandal in {selectedDistrict}.
+            </div>
+          )}
+
           <label
             htmlFor="crop-price-search"
             className="font-semibold text-gray-800"
@@ -1715,28 +2109,93 @@ out center tags;
             ))}
           </div>
 
-          <div className="grid gap-3 mt-4">
-            <select
-              value={selectedDistrict}
-              onChange={(event) => {
-                setSelectedDistrict(
-                  event.target.value
-                );
-                setSelectedMarket("");
-              }}
-              className="border border-gray-300 rounded-xl px-4 py-3"
-            >
-              <option value="">All Districts</option>
+          <div className="grid gap-3 mt-4 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium text-gray-700">
+              State
+              <select
+                value={selectedState}
+                onChange={(event) => {
+                  const nextState = event.target.value;
+                  setSelectedState(nextState);
+                  setSelectedDistrict("");
+                  setSelectedMarket("");
+                  setSelectedMandal("");
+                  if (nextState) {
+                    loadAllCropPrices({ state: nextState, district: "" });
+                  } else {
+                    setPrices([]);
+                  }
+                }}
+                className="border border-gray-300 rounded-xl px-4 py-3 bg-white"
+              >
+                <option value="">Select a state</option>
+                {stateChoices.map((state) => (
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              {districts.map((district) => (
-                <option
-                  key={district}
-                  value={district}
-                >
-                  {district}
+            <label className="grid gap-1 text-sm font-medium text-gray-700">
+              District
+              <select
+                value={selectedDistrict}
+                onChange={(event) => {
+                  const nextDistrict = event.target.value;
+                  setSelectedDistrict(nextDistrict);
+                  setSelectedMarket("");
+                  setSelectedMandal("");
+                  loadAllCropPrices({
+                    state: selectedState,
+                    district: nextDistrict,
+                  });
+                }}
+                disabled={
+                  !selectedState ||
+                  loadingDistricts ||
+                  districts.length === 0
+                }
+                className="border border-gray-300 rounded-xl px-4 py-3 bg-white disabled:bg-gray-100"
+              >
+                <option value="">
+                  {loadingDistricts ? "Loading districts..." : "All Districts"}
                 </option>
-              ))}
-            </select>
+                {districts.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1 text-sm font-medium text-gray-700">
+              Mandal / Taluk
+              <select
+                value={selectedMandal}
+                onChange={(event) => setSelectedMandal(event.target.value)}
+                disabled={loadingMandals || (!mandalOptions.length && !selectedDistrict)}
+                className="border border-gray-300 rounded-xl px-4 py-3 bg-white disabled:bg-gray-100"
+              >
+                <option value="">
+                  {loadingMandals
+                    ? "Loading mandals..."
+                    : selectedDistrict
+                      ? "All mandals"
+                      : "Select a district first"}
+                </option>
+                {mandalOptions.map((mandal) => (
+                  <option key={mandal} value={mandal}>
+                    {mandal}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs font-normal text-gray-500">
+                {mandalOptions.length
+                  ? `${mandalOptions.length} mandals listed for this district.`
+                  : "Mandal list appears after selecting a district."}
+              </span>
+            </label>
 
             <select
               value={selectedMarket}
@@ -1749,7 +2208,7 @@ out center tags;
             >
               <option value="">All Markets</option>
 
-              {markets.map((market) => (
+              {visibleMarkets.map((market) => (
                 <option
                   key={market}
                   value={market}
@@ -1952,6 +2411,12 @@ out center tags;
                         <span className="text-sm">
                           {item.icon}
                         </span>
+
+                        {item.isDemo && (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                            DEMO
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-sm text-gray-500 mt-1">
@@ -1959,7 +2424,9 @@ out center tags;
                       </p>
 
                       <p className="text-sm text-gray-500">
-                        {item.district}, {item.state}
+                        {[item.mandal, item.district, item.state]
+                          .filter(Boolean)
+                          .join(", ")}
                       </p>
                     </div>
                   </div>
