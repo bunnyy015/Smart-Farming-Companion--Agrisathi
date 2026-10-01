@@ -184,6 +184,8 @@ const actionRoutes = {
   government_schemes: "/govt-schemes",
   dealer_products: "/farmer/dealer-products",
   farmer_orders: "/farmer/orders",
+  crop_calendar: "/farmer/crop-calendar",
+  order_history: "/farmer/history",
   community: "/community",
   profile: "/profile",
   dashboard: "/dashboard",

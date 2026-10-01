@@ -1,0 +1,18 @@
+{
+  "name": "AgriSaathi Farmer Assistant",
+  "short_name": "AgriSaathi",
+  "description": "Farming guidance, mandi prices, orders and crop-care reminders.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0fdf4",
+  "theme_color": "#15803d",
+  "icons": [
+    {
+      "src": "/agrisathi-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

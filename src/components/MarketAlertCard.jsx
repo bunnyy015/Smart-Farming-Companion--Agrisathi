@@ -121,6 +121,10 @@ export default function MarketAlertCard({
             {marketRecord.district ||
               t("nearbyMarket", {}, language)}
           </p>
+
+          <p className="text-xs text-gray-500 mt-1">
+            Government mandi data · arrival date: {marketRecord.updatedAt || "not available"}
+          </p>
         </div>
 
         <div className="text-right shrink-0">

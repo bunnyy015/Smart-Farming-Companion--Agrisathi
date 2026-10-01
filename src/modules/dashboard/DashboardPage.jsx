@@ -18,6 +18,7 @@ import VoiceAssistantCard from "../../components/VoiceAssistantCard";
 import QuickActions from "../../components/QuickActions";
 import TodayAdviceCard from "../../components/TodayAdviceCard";
 import MarketAlertCard from "../../components/MarketAlertCard";
+import FarmerFeedback from "../../components/FarmerFeedback";
 
 // Order statuses that trigger notifications
 const SUPPORTED_ORDER_STATUSES = [
@@ -475,6 +476,19 @@ export default function DashboardPage() {
 
           <QuickActions onNavigate={navigate} />
 
+          <button
+            type="button"
+            onClick={() => navigate("/farmer/crop-calendar")}
+            className="mt-4 flex w-full items-center gap-4 rounded-2xl border border-green-100 bg-white p-4 text-left shadow-sm hover:shadow-md"
+          >
+            <span className="text-3xl" aria-hidden="true">🗓️</span>
+            <span className="flex-1">
+              <span className="block font-bold text-green-900">Crop-care calendar</span>
+              <span className="mt-1 block text-sm text-gray-600">Plan irrigation, field checks, and other farm tasks.</span>
+            </span>
+            <span className="text-green-700" aria-hidden="true">→</span>
+          </button>
+
           <TodayAdviceCard
             weather={weather}
             onOpenWeather={() => navigate("/weather")}
@@ -486,6 +500,8 @@ export default function DashboardPage() {
             loading={marketLoading}
             onOpenMarket={() => navigate("/market-prices")}
           />
+
+          <FarmerFeedback feature="dashboard_advice" />
 
           {latestOrder && (
             <section className="bg-white border border-blue-100 rounded-2xl shadow-sm p-4 mt-5">

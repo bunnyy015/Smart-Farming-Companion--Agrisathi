@@ -165,6 +165,36 @@ const COMMANDS = [
   },
 
   {
+    action: "crop_calendar",
+    route: "/farmer/crop-calendar",
+    keywords: [
+      "crop calendar",
+      "farm reminders",
+      "my reminders",
+      "irrigation reminder",
+      "పంట క్యాలెండర్",
+      "రిమైండర్లు",
+      "फसल कैलेंडर",
+      "मेरे रिमाइंडर",
+      "பயிர் நாள்காட்டி",
+      "ಬೆಳೆ ಕ್ಯಾಲೆಂಡರ್",
+    ],
+  },
+
+  {
+    action: "order_history",
+    route: "/farmer/history",
+    keywords: [
+      "order history",
+      "past orders",
+      "completed orders",
+      "నా పాత ఆర్డర్లు",
+      "ऑर्डर इतिहास",
+      "पिछले ऑर्डर",
+    ],
+  },
+
+  {
     action: "community",
     route: "/community",
     keywords: [

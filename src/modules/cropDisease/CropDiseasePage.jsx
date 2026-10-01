@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { get, push, ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import { getLanguage } from "../../utils/language";
+import FarmerFeedback from "../../components/FarmerFeedback";
 
 const MODELS = [
   "gemini-2.5-flash",
@@ -216,6 +218,28 @@ export default function CropDiseasePage() {
       }
     };
   }, [preview]);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setDetectionHistory([]);
+        return;
+      }
+
+      try {
+        const snapshot = await get(
+          ref(database, `farmers/${user.uid}/diseaseReports`)
+        );
+        const history = snapshot.exists()
+          ? Object.entries(snapshot.val()).map(([id, report]) => ({ id, ...report }))
+          : [];
+        history.sort((first, second) => Number(second.createdAt || 0) - Number(first.createdAt || 0));
+        setDetectionHistory(history.slice(0, 10));
+      } catch (historyError) {
+        console.error("Diagnosis history loading error:", historyError);
+      }
+    });
+  }, []);
 
   function selectPhoto(event) {
     const file = event.target.files?.[0];
@@ -473,14 +497,21 @@ Required JSON structure:
 
     try {
       const reportReference = push(ref(database, "diseaseReports"));
-      await set(reportReference, {
+      const report = {
         farmerId: currentUser.uid,
         crop: analysis.crop || cropName.trim() || "Unknown",
         disease: analysis.disease || "Unknown",
         confidence: analysis.confidence || "low",
         imageEnhanced: Boolean(enhanced),
         createdAt: Date.now(),
-      });
+      };
+      await Promise.all([
+        set(reportReference, report),
+        set(push(ref(database, `farmers/${currentUser.uid}/diseaseReports`)), report),
+      ]);
+      setDetectionHistory((current) =>
+        [{ id: reportReference.key, ...report }, ...current].slice(0, 10)
+      );
     } catch (saveError) {
       console.error("Disease report saving error:", saveError);
     }
@@ -717,6 +748,30 @@ Required JSON structure:
             </p>
           </section>
         )}
+
+        <section className="mt-5 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-green-900">🗂️ Recent diagnosis history</h2>
+          <p className="mt-1 text-sm text-gray-600">Your latest saved scan summaries. Photos are not saved in this history.</p>
+          {detectionHistory.length === 0 ? (
+            <p className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-gray-600">No saved scans yet. Your next successful diagnosis will appear here.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100">
+              {detectionHistory.map((report) => (
+                <li key={report.id} className="py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{report.crop || "Unknown crop"} · {report.disease || "Unknown condition"}</p>
+                      <p className="text-sm text-gray-600">{report.confidence || "low"} confidence</p>
+                    </div>
+                    <time className="shrink-0 text-xs text-gray-500">{new Date(report.createdAt).toLocaleDateString("en-IN")}</time>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <FarmerFeedback feature="crop_disease" />
 
         {/* Detection History Link */}
         <div className="mt-4 text-center">

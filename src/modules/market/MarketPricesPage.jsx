@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { get, ref } from "firebase/database";
+import { get, push, ref, remove, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import FarmerFeedback from "../../components/FarmerFeedback";
 
 const MANDI_RESOURCE_ID =
   "9ef84268-d588-465a-a308-a864a43d0070";
@@ -683,6 +684,10 @@ export default function MarketPricesPage() {
     useState(null);
 
   const [prices, setPrices] = useState([]);
+  const [priceAlerts, setPriceAlerts] = useState([]);
+  const [alertCrop, setAlertCrop] = useState("");
+  const [alertTarget, setAlertTarget] = useState("");
+  const [savedAt, setSavedAt] = useState(null);
   const [sellingPoints, setSellingPoints] =
     useState([]);
   const [availableStates, setAvailableStates] =
@@ -1191,6 +1196,14 @@ export default function MarketPricesPage() {
 
       setFarmer(farmerProfile);
 
+      if (farmerSnapshot.exists()) {
+        const savedAlerts = farmerSnapshot.val().priceAlerts || {};
+        setPriceAlerts(
+          Object.entries(savedAlerts).map(([id, alert]) => ({ id, ...alert }))
+        );
+      }
+      setAlertCrop(farmerProfile.mainCrop || "");
+
       await detectLocationAndLoadData(
         farmerProfile
       );
@@ -1560,6 +1573,7 @@ export default function MarketPricesPage() {
       );
 
       setPrices(deduplicated);
+      setSavedAt(Date.now());
       setSelectedDistrict(normalizedDistrict);
 
       setSelectedMarket("");
@@ -1585,6 +1599,50 @@ export default function MarketPricesPage() {
     } finally {
       setLoadingPrices(false);
     }
+  }
+
+  async function addPriceAlert(event) {
+    event.preventDefault();
+    const currentUser = auth.currentUser;
+    const targetPrice = Number(alertTarget);
+    const cropName = alertCrop.trim();
+
+    if (!currentUser || !cropName || !Number.isFinite(targetPrice) || targetPrice <= 0) {
+      showMessage("warning", "Enter a crop and a target price greater than zero.");
+      return;
+    }
+
+    try {
+      const alertRef = push(ref(database, `farmers/${currentUser.uid}/priceAlerts`));
+      const alert = { crop: cropName, targetPrice, createdAt: Date.now() };
+      await set(alertRef, alert);
+      setPriceAlerts((current) => [...current, { id: alertRef.key, ...alert }]);
+      setAlertTarget("");
+      showMessage("success", `Price alert saved for ${cropName}.`);
+    } catch (error) {
+      console.error("Price alert save error:", error);
+      showMessage("error", "Price alert could not be saved.");
+    }
+  }
+
+  async function deletePriceAlert(alertId) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    try {
+      await remove(ref(database, `farmers/${currentUser.uid}/priceAlerts/${alertId}`));
+      setPriceAlerts((current) => current.filter((alert) => alert.id !== alertId));
+    } catch (error) {
+      console.error("Price alert delete error:", error);
+      showMessage("error", "Price alert could not be removed.");
+    }
+  }
+
+  function getAlertCurrentPrice(alert) {
+    const matchingPrices = prices.filter((record) =>
+      normalizeText(record.commodity).includes(normalizeText(alert.crop))
+    );
+    if (matchingPrices.length === 0) return null;
+    return Math.max(...matchingPrices.map((record) => Number(record.modalPrice || 0)));
   }
 
   async function loadNearbySellingPoints(
@@ -1935,6 +1993,11 @@ out center tags;
             </button>
           </div>
 
+          <div className="mt-4 rounded-xl border border-white/20 bg-white/10 p-3 text-sm text-green-50">
+            Data source: Government of India data.gov.in / Agmarknet. Price arrival dates are shown on each record; these are not guaranteed real-time quotes.
+            {savedAt && <span className="mt-1 block">Retrieved from the market service: {new Date(savedAt).toLocaleString("en-IN")}.</span>}
+          </div>
+
           <div className="bg-white/15 rounded-xl p-3 mt-4 text-sm">
             📍{" "}
             {detectedPlace
@@ -2038,6 +2101,30 @@ out center tags;
             </button>
           </section>
         )}
+
+        <section className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+          <h2 className="font-bold text-amber-900">🔔 Crop price alerts</h2>
+          <p className="mt-1 text-sm text-gray-600">Save a target modal price. When you refresh prices, the app shows whether a matching crop record has reached it.</p>
+          <form onSubmit={addPriceAlert} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <label className="text-xs font-semibold text-gray-600">Crop
+              <input required value={alertCrop} onChange={(event) => setAlertCrop(event.target.value)} placeholder="e.g. Paddy" className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">Target price (₹/quintal)
+              <input required min="1" step="any" type="number" value={alertTarget} onChange={(event) => setAlertTarget(event.target.value)} placeholder="e.g. 2500" className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm" />
+            </label>
+            <button type="submit" className="self-end rounded-xl bg-amber-700 px-4 py-2.5 font-semibold text-white">Save alert</button>
+          </form>
+          {priceAlerts.length > 0 && <ul className="mt-3 space-y-2">
+            {priceAlerts.map((alert) => {
+              const currentPrice = getAlertCurrentPrice(alert);
+              const reached = currentPrice !== null && currentPrice >= Number(alert.targetPrice);
+              return <li key={alert.id} className="flex items-center gap-3 rounded-xl bg-amber-50 p-3">
+                <span className="flex-1 text-sm"><strong>{alert.crop}</strong> · target {formatCurrency(alert.targetPrice)} / quintal{currentPrice !== null && <span className={`block ${reached ? "font-semibold text-green-800" : "text-gray-600"}`}>{reached ? "Target reached" : "Latest matching modal price"}: {formatCurrency(currentPrice)}</span>}</span>
+                <button type="button" onClick={() => deletePriceAlert(alert.id)} className="min-h-10 rounded-lg px-3 font-semibold text-red-700 hover:bg-red-50">Remove</button>
+              </li>;
+            })}
+          </ul>}
+        </section>
 
         <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2572,6 +2659,8 @@ out center tags;
             </div>
           )}
         </section>
+
+        <FarmerFeedback feature="market_prices" />
       </div>
     </div>
   );

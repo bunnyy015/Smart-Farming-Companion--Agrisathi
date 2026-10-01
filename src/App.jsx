@@ -29,9 +29,11 @@ import FarmerDealerProductsPage from "./modules/farmer/FarmerDealerProductsPage"
 import FarmerProductDetailsPage from "./modules/farmer/FarmerProductDetailsPage";
 import FarmerOrdersPage from "./modules/farmer/FarmerOrdersPage";
 import FarmerOrderHistoryPage from "./modules/farmer/FarmerOrderHistoryPage";
+import CropCareCalendarPage from "./modules/farmer/CropCareCalendarPage";
 import FarmerNotificationsPage from "./modules/farmer/FarmerNotificationsPage";
 
 import CommunityPage from "./modules/community/CommunityPage";
+import NetworkStatusBanner from "./components/NetworkStatusBanner";
 
 // ==============================
 // Admin
@@ -132,6 +134,11 @@ function App() {
         <Route
           path="/farmer/history"
           element={<FarmerOrderHistoryPage />}
+        />
+
+        <Route
+          path="/farmer/crop-calendar"
+          element={<CropCareCalendarPage />}
         />
 
         <Route
@@ -320,6 +327,7 @@ function App() {
         />
 
       </Routes>
+      <NetworkStatusBanner />
     </BrowserRouter>
   );
 }
