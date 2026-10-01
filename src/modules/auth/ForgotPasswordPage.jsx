@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../firebase";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 export default function ForgotPasswordPage() {
+  const language = useLanguage();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -18,12 +21,12 @@ export default function ForgotPasswordPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setErrorMessage("Please enter your email address.");
+      setErrorMessage(t("resetEmailRequired", {}, language));
       return;
     }
 
     if (!cleanEmail.includes("@")) {
-      setErrorMessage("Please enter a valid email address.");
+      setErrorMessage(t("resetEmailInvalid", {}, language));
       return;
     }
 
@@ -37,7 +40,7 @@ export default function ForgotPasswordPage() {
        * This is safer from an account-enumeration perspective.
        */
       setMessage(
-        "If an account exists with this email, a password reset link has been sent. Please check your inbox and spam folder."
+        t("resetEmailSent", {}, language)
       );
 
       setEmail("");
@@ -49,7 +52,7 @@ export default function ForgotPasswordPage() {
        * whether a particular email is registered.
        */
       setMessage(
-        "If an account exists with this email, a password reset link has been sent. Please check your inbox and spam folder."
+        t("resetEmailSent", {}, language)
       );
     } finally {
       setLoading(false);
@@ -67,12 +70,11 @@ export default function ForgotPasswordPage() {
           </div>
 
           <h1 className="text-3xl font-bold text-green-900 mt-4">
-            Forgot Password?
+            {t("forgotPasswordTitle", {}, language)}
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Enter your registered email address and we will send you a
-            password reset link.
+            {t("forgotPasswordIntro", {}, language)}
           </p>
         </div>
 
@@ -106,7 +108,7 @@ export default function ForgotPasswordPage() {
                 htmlFor="email"
                 className="block text-sm font-semibold text-gray-700 mb-2"
               >
-                Registered Email
+                {t("registeredEmail", {}, language)}
               </label>
 
               <input
@@ -116,7 +118,7 @@ export default function ForgotPasswordPage() {
                 onChange={(event) =>
                   setEmail(event.target.value)
                 }
-                placeholder="Enter your email"
+                placeholder={t("enterEmail", {}, language)}
                 autoComplete="email"
                 disabled={loading}
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
@@ -129,8 +131,8 @@ export default function ForgotPasswordPage() {
               className="w-full bg-green-700 hover:bg-green-800 text-white py-3 rounded-xl font-semibold transition disabled:bg-gray-400"
             >
               {loading
-                ? "Sending Reset Link..."
-                : "Send Reset Link"}
+                ? t("sendingResetLink", {}, language)
+                : t("sendResetLink", {}, language)}
             </button>
           </form>
 
@@ -140,7 +142,7 @@ export default function ForgotPasswordPage() {
               to="/login"
               className="text-green-700 hover:text-green-900 font-semibold"
             >
-              ← Back to Login
+              {t("backToLogin", {}, language)}
             </Link>
           </div>
         </div>
@@ -148,12 +150,11 @@ export default function ForgotPasswordPage() {
         {/* Information */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mt-5 text-sm text-blue-800">
           <p className="font-semibold mb-1">
-            📧 Check your email
+            {t("checkYourEmail", {}, language)}
           </p>
 
           <p>
-            The password reset link may take a few minutes to arrive.
-            Also check your spam or junk folder.
+            {t("resetEmailDelay", {}, language)}
           </p>
         </div>
       </div>

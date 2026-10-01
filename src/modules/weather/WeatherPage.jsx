@@ -4,26 +4,28 @@ import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 const WEATHER_CODES = {
-  0: { label: "Clear Sky", icon: "☀️" },
-  1: { label: "Mostly Clear", icon: "🌤️" },
-  2: { label: "Partly Cloudy", icon: "⛅" },
-  3: { label: "Cloudy", icon: "☁️" },
-  45: { label: "Fog", icon: "🌫️" },
-  48: { label: "Fog", icon: "🌫️" },
-  51: { label: "Light Drizzle", icon: "🌦️" },
-  53: { label: "Drizzle", icon: "🌦️" },
-  55: { label: "Heavy Drizzle", icon: "🌧️" },
-  61: { label: "Light Rain", icon: "🌦️" },
-  63: { label: "Rain", icon: "🌧️" },
-  65: { label: "Heavy Rain", icon: "🌧️" },
-  80: { label: "Rain Showers", icon: "🌦️" },
-  81: { label: "Rain Showers", icon: "🌧️" },
-  82: { label: "Heavy Showers", icon: "⛈️" },
-  95: { label: "Thunderstorm", icon: "⛈️" },
-  96: { label: "Thunderstorm", icon: "⛈️" },
-  99: { label: "Severe Thunderstorm", icon: "⛈️" },
+  0: { labelKey: "conditionClearSky", icon: "☀️" },
+  1: { labelKey: "conditionMostlyClear", icon: "🌤️" },
+  2: { labelKey: "conditionPartlyCloudy", icon: "⛅" },
+  3: { labelKey: "conditionCloudy", icon: "☁️" },
+  45: { labelKey: "conditionFog", icon: "🌫️" },
+  48: { labelKey: "conditionFog", icon: "🌫️" },
+  51: { labelKey: "conditionLightDrizzle", icon: "🌦️" },
+  53: { labelKey: "conditionDrizzle", icon: "🌦️" },
+  55: { labelKey: "conditionHeavyDrizzle", icon: "🌧️" },
+  61: { labelKey: "conditionLightRain", icon: "🌦️" },
+  63: { labelKey: "conditionRain", icon: "🌧️" },
+  65: { labelKey: "conditionHeavyRain", icon: "🌧️" },
+  80: { labelKey: "conditionRainShowers", icon: "🌦️" },
+  81: { labelKey: "conditionRainShowers", icon: "🌧️" },
+  82: { labelKey: "conditionHeavyShowers", icon: "⛈️" },
+  95: { labelKey: "conditionThunderstorm", icon: "⛈️" },
+  96: { labelKey: "conditionThunderstorm", icon: "⛈️" },
+  99: { labelKey: "conditionSevereThunderstorm", icon: "⛈️" },
 };
 
 const SEASON_CROPS = {
@@ -90,6 +92,7 @@ const SOIL_CROPS = {
 
 export default function WeatherPage() {
   const navigate = useNavigate();
+  const language = useLanguage();
 
   const [profile, setProfile] = useState(null);
   const [location, setLocation] = useState(null);
@@ -186,7 +189,7 @@ export default function WeatherPage() {
 
       showMessage(
         "error",
-        "Weather information could not be loaded."
+        t("weatherLoadFailed", {}, language)
       );
 
       setLoading(false);
@@ -263,7 +266,7 @@ export default function WeatherPage() {
     if (!navigator.geolocation) {
       showMessage(
         "error",
-        "Location detection is not supported on this device."
+        t("locationUnsupported", {}, language)
       );
 
       setLoading(false);
@@ -290,7 +293,7 @@ export default function WeatherPage() {
 
           showMessage(
             "error",
-            "Weather could not be loaded for your location."
+            t("localWeatherFailed", {}, language)
           );
         } finally {
           setDetectingLocation(false);
@@ -306,7 +309,7 @@ export default function WeatherPage() {
 
         showMessage(
           "warning",
-          "Allow location access to receive local weather and farming advice."
+          t("locationAccessNeeded", {}, language)
         );
 
         setDetectingLocation(false);
@@ -491,7 +494,7 @@ saveWeatherContext({
           "city",
         ]) ||
         profile?.village ||
-        "Current Location",
+        t("currentLocation", {}, language),
 
       mandal:
         findAdministrative([
@@ -643,22 +646,22 @@ saveWeatherContext({
       return {
         spray: {
           status: "unknown",
-          title: "Spray advice unavailable",
-          text: "Weather forecast is required before planning pesticide spraying.",
+          title: t("sprayAdviceUnavailable", {}, language),
+          text: t("forecastRequiredSpray", {}, language),
           icon: "🧴",
         },
 
         irrigation: {
           status: "unknown",
-          title: "Irrigation advice unavailable",
-          text: "Weather forecast is required before irrigation planning.",
+          title: t("irrigationAdviceUnavailable", {}, language),
+          text: t("forecastRequiredIrrigation", {}, language),
           icon: "💧",
         },
 
         fieldWork: {
           status: "unknown",
-          title: "Field work advice unavailable",
-          text: "Refresh weather data and try again.",
+          title: t("fieldWorkAdviceUnavailable", {}, language),
+          text: t("refreshWeatherTryAgain", {}, language),
           icon: "🚜",
         },
 
@@ -750,28 +753,26 @@ saveWeatherContext({
     ) {
       spray = {
         status: "avoid",
-        title: "Avoid spraying now",
+        title: t("avoidSpraying", {}, language),
         text: highRainSoon
-          ? "Rain may wash away the spray. Wait for a dry period."
+          ? t("rainWashSpray", {}, language)
           : strongWindSoon
-          ? "Wind is too strong and may cause spray drift."
-          : "Temperature is unsuitable for safe and effective spraying.",
+          ? t("windSprayDrift", {}, language)
+          : t("unsuitableSprayTemperature", {}, language),
         icon: "⛔",
       };
     } else if (sprayWindow) {
       spray = {
         status: "good",
-        title: "Possible spray window",
-        text: `Weather appears suitable around ${formatHour(
-          sprayWindow.time
-        )}. Recheck the pesticide label before spraying.`,
+        title: t("possibleSprayWindow", {}, language),
+        text: t("sprayWindowAdvice", { time: formatHour(sprayWindow.time) }, language),
         icon: "✅",
       };
     } else {
       spray = {
         status: "caution",
-        title: "Wait before spraying",
-        text: "No reliable dry and low-wind period was found in the next 24 hours.",
+        title: t("waitBeforeSpraying", {}, language),
+        text: t("noSprayWindow", {}, language),
         icon: "⚠️",
       };
     }
@@ -816,8 +817,8 @@ saveWeatherContext({
     ) {
       irrigation = {
         status: "wait",
-        title: "Delay irrigation",
-        text: "Rain is likely soon. Check the field after rainfall before watering.",
+        title: t("delayIrrigation", {}, language),
+        text: t("rainLikelyCheckField", {}, language),
         icon: "🌧️",
       };
     } else if (
@@ -828,24 +829,24 @@ saveWeatherContext({
     ) {
       irrigation = {
         status: "irrigate",
-        title: "Check crop moisture",
+        title: t("checkCropMoisture", {}, language),
         text: fastDrainingSoil
-          ? "Hot and dry conditions may reduce moisture quickly. Irrigate early morning if the root zone is dry."
-          : "Water demand may be high. Check soil moisture and irrigate early morning if needed.",
+          ? t("hotDryIrrigateSandy", {}, language)
+          : t("highWaterDemand", {}, language),
         icon: "💧",
       };
     } else if (slowDrainingSoil) {
       irrigation = {
         status: "check",
-        title: "Avoid excess watering",
-        text: "Your soil may hold water longer. Check moisture below the surface before irrigation.",
+        title: t("avoidExcessWatering", {}, language),
+        text: t("soilMayHoldWater", {}, language),
         icon: "🌱",
       };
     } else {
       irrigation = {
         status: "check",
-        title: "Check soil before watering",
-        text: "Weather does not indicate urgent irrigation. Check root-zone moisture first.",
+        title: t("checkSoilBeforeWatering", {}, language),
+        text: t("noUrgentIrrigation", {}, language),
         icon: "🌱",
       };
     }
@@ -863,14 +864,14 @@ saveWeatherContext({
       rainProbabilityNextTwelveHours >= 70
         ? {
             status: "avoid",
-            title: "Postpone major field work",
-            text: "Strong wind or rain may affect harvesting, fertilizer application and equipment work.",
+            title: t("postponeFieldWork", {}, language),
+            text: t("windRainFieldWork", {}, language),
             icon: "⛔",
           }
         : {
             status: "good",
-            title: "Field work is possible",
-            text: "Conditions appear suitable, but continue checking local sky conditions.",
+            title: t("fieldWorkPossible", {}, language),
+            text: t("suitableContinueChecking", {}, language),
             icon: "🚜",
           };
 
@@ -881,7 +882,7 @@ saveWeatherContext({
       38
     ) {
       warnings.push(
-        "Very high temperature: avoid midday spraying and protect workers and livestock."
+        t("veryHighTemperatureWarning", {}, language)
       );
     }
 
@@ -890,7 +891,7 @@ saveWeatherContext({
       25
     ) {
       warnings.push(
-        "Strong wind: secure light materials and avoid spraying."
+        t("strongWindWarning", {}, language)
       );
     }
 
@@ -900,7 +901,7 @@ saveWeatherContext({
         0
     ) {
       warnings.push(
-        "Rain is occurring at the detected location."
+        t("rainAtLocationWarning", {}, language)
       );
     }
 
@@ -909,7 +910,7 @@ saveWeatherContext({
       70
     ) {
       warnings.push(
-        "High rain chance today: protect harvested produce and stored inputs."
+        t("highRainTodayWarning", {}, language)
       );
     }
 
@@ -1032,12 +1033,8 @@ saveWeatherContext({
   }
 
   function getWeatherDetails(code) {
-    return (
-      WEATHER_CODES[code] || {
-        label: "Weather",
-        icon: "🌤️",
-      }
-    );
+    const details = WEATHER_CODES[code] || { labelKey: "conditionWeather", icon: "🌤️" };
+    return { ...details, label: t(details.labelKey, {}, language) };
   }
 
   function formatHour(value) {
@@ -1046,7 +1043,7 @@ saveWeatherContext({
     }
 
     return new Date(value).toLocaleTimeString(
-      "en-IN",
+      language === "te" ? "te-IN" : language === "hi" ? "hi-IN" : "en-IN",
       {
         hour: "numeric",
         minute: "2-digit",
@@ -1061,7 +1058,7 @@ saveWeatherContext({
 
     return new Date(
       `${value}T00:00:00`
-    ).toLocaleDateString("en-IN", {
+    ).toLocaleDateString(language === "te" ? "te-IN" : language === "hi" ? "hi-IN" : "en-IN", {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -1096,8 +1093,8 @@ saveWeatherContext({
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
             {detectingLocation
-              ? "Detecting your location"
-              : "Loading weather"}
+              ? t("detectingLocation", {}, language)
+              : t("weatherLoading", {}, language)}
           </h1>
         </div>
       </div>
@@ -1125,17 +1122,17 @@ saveWeatherContext({
             }
             className="text-blue-100 font-semibold"
           >
-            ← Dashboard
+            {t("dashboardLink", {}, language)}
           </button>
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-3">
             <div>
               <h1 className="text-3xl font-bold">
-                🌦️ Farm Weather
+                {t("farmWeather", {}, language)}
               </h1>
 
               <p className="text-blue-100 mt-1">
-                Local forecast and farming advice.
+                {t("localForecastAdvice", {}, language)}
               </p>
             </div>
 
@@ -1146,8 +1143,8 @@ saveWeatherContext({
               className="bg-white text-blue-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60"
             >
               {detectingLocation
-                ? "Detecting..."
-                : "📍 Refresh Location"}
+                ? t("detecting", {}, language)
+                : t("refreshLocation", {}, language)}
             </button>
           </div>
 
@@ -1162,7 +1159,7 @@ saveWeatherContext({
                 ]
                   .filter(Boolean)
                   .join(", ")
-              : "Location not detected"}
+              : t("locationNotDetected", {}, language)}
           </div>
         </header>
 
@@ -1173,12 +1170,11 @@ saveWeatherContext({
             </div>
 
             <h2 className="text-xl font-bold text-green-900 mt-4">
-              Location permission needed
+              {t("locationPermissionNeeded", {}, language)}
             </h2>
 
             <p className="text-gray-600 mt-2">
-              Enable location to receive local
-              weather and farm advice.
+              {t("enableLocationWeather", {}, language)}
             </p>
 
             <button
@@ -1186,7 +1182,7 @@ saveWeatherContext({
               onClick={detectCurrentLocation}
               className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold mt-5"
             >
-              Detect My Location
+              {t("detectMyLocation", {}, language)}
             </button>
           </section>
         ) : (
@@ -1199,7 +1195,7 @@ saveWeatherContext({
 
                 <div className="flex-1">
                   <p className="text-sm text-gray-500">
-                    Current temperature
+                    {t("currentTemperature", {}, language)}
                   </p>
 
                   <h2 className="text-5xl font-bold text-blue-900 mt-1">
@@ -1217,7 +1213,7 @@ saveWeatherContext({
                   </p>
 
                   <p className="text-sm text-gray-500 mt-1">
-                    Feels like{" "}
+                    {t("feelsLike", {}, language)}{" "}
                     {Math.round(
                       Number(
                         currentWeather.apparent_temperature ||
@@ -1232,7 +1228,7 @@ saveWeatherContext({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
                 <div className="bg-blue-50 rounded-xl p-3">
                   <p className="text-xs text-gray-500">
-                    💧 Humidity
+                    💧 {t("humidity", {}, language)}
                   </p>
 
                   <p className="font-bold text-blue-900 mt-1">
@@ -1244,7 +1240,7 @@ saveWeatherContext({
 
                 <div className="bg-cyan-50 rounded-xl p-3">
                   <p className="text-xs text-gray-500">
-                    🌧️ Rain
+                    {t("rainLabel", {}, language)}
                   </p>
 
                   <p className="font-bold text-cyan-900 mt-1">
@@ -1257,7 +1253,7 @@ saveWeatherContext({
 
                 <div className="bg-green-50 rounded-xl p-3">
                   <p className="text-xs text-gray-500">
-                    💨 Wind
+                    {t("windLabel", {}, language)}
                   </p>
 
                   <p className="font-bold text-green-900 mt-1">
@@ -1273,7 +1269,7 @@ saveWeatherContext({
 
                 <div className="bg-yellow-50 rounded-xl p-3">
                   <p className="text-xs text-gray-500">
-                    💨 Wind Gust
+                    {t("windGustLabel", {}, language)}
                   </p>
 
                   <p className="font-bold text-yellow-900 mt-1">
@@ -1293,7 +1289,7 @@ saveWeatherContext({
               0 && (
               <section className="bg-red-50 border border-red-200 rounded-2xl p-5 mt-5">
                 <h2 className="text-lg font-bold text-red-800">
-                  ⚠️ Weather Warnings
+                  {t("weatherWarnings", {}, language)}
                 </h2>
 
                 <div className="space-y-2 mt-3">
@@ -1313,7 +1309,7 @@ saveWeatherContext({
 
             <section className="mt-5">
               <h2 className="text-xl font-bold text-green-900 mb-3">
-                🌾 Today’s Farm Advice
+                {t("todaysFarmAdvice", {}, language)}
               </h2>
 
               <div className="grid md:grid-cols-3 gap-4">
@@ -1344,14 +1340,13 @@ saveWeatherContext({
               </div>
 
               <p className="text-xs text-gray-500 mt-3">
-                Follow the pesticide label and local
-                agriculture officer’s instructions.
+                {t("pesticideLabelInstructions", {}, language)}
               </p>
             </section>
 
             <section className="mt-6">
               <h2 className="text-xl font-bold text-green-900 mb-3">
-                🕒 Next 12 Hours
+                {t("next12Hours", {}, language)}
               </h2>
 
               <div className="flex gap-3 overflow-x-auto pb-2">
@@ -1415,7 +1410,7 @@ saveWeatherContext({
 
             <section className="mt-6">
               <h2 className="text-xl font-bold text-green-900 mb-3">
-                📅 7-Day Forecast
+                {t("forecast7Day", {}, language)}
               </h2>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1467,12 +1462,12 @@ saveWeatherContext({
                       </div>
 
                       <p className="text-sm text-gray-600 mt-2">
-                        🌧️ Rain chance:{" "}
+                        {t("rainChance", {}, language)}{" "}
                         {day.rainProbability || 0}%
                       </p>
 
                       <p className="text-sm text-gray-600">
-                        💧 Rain:{" "}
+                        {t("rainValueLabel", {}, language)}{" "}
                         {Number(
                           day.rain || 0
                         ).toFixed(1)}{" "}
@@ -1480,7 +1475,7 @@ saveWeatherContext({
                       </p>
 
                       <p className="text-sm text-gray-600">
-                        💨 Wind:{" "}
+                        {t("windValueLabel", {}, language)}{" "}
                         {Math.round(
                           Number(
                             day.maximumWindSpeed ||
@@ -1499,17 +1494,16 @@ saveWeatherContext({
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-bold text-green-900">
-                    🌱 Crop Suggestions
+                    {t("cropSuggestions", {}, language)}
                   </h2>
 
                   <p className="text-sm text-gray-600 mt-1">
-                    Based on season, saved soil type
-                    and available market-price data.
+                    {t("cropSuggestionsBasis", {}, language)}
                   </p>
                 </div>
 
                 <span className="bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-sm font-semibold self-start capitalize">
-                  {cropSuggestions.season} season
+                  {t(`season${cropSuggestions.season[0].toUpperCase()}${cropSuggestions.season.slice(1)}`, {}, language)} {t("seasonLabel", {}, language)}
                 </span>
               </div>
 
@@ -1526,13 +1520,13 @@ saveWeatherContext({
 
                       <p className="text-sm text-gray-600 mt-2">
                         {crop.soilMatched
-                          ? "Matches saved soil type"
-                          : "Suitable for the current season"}
+                          ? t("matchesSavedSoil", {}, language)
+                          : t("suitableCurrentSeason", {}, language)}
                       </p>
 
                       {crop.marketPrice > 0 && (
                         <p className="text-sm font-semibold text-green-800 mt-2">
-                          Market: ₹
+                          {t("marketPriceLabel", {}, language)} ₹
                           {crop.marketPrice.toLocaleString(
                             "en-IN"
                           )}{" "}
@@ -1546,16 +1540,12 @@ saveWeatherContext({
 
               {!cropSuggestions.hasMarketData && (
                 <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 mt-4 text-sm">
-                  Market-price data is not available
-                  yet. Suggestions currently use
-                  season and soil type.
+                  {t("marketPriceUnavailable", {}, language)}
                 </div>
               )}
 
               <p className="text-xs text-gray-500 mt-4">
-                Crop selection also depends on water,
-                seed availability, local pests, costs
-                and official agricultural advice.
+                {t("cropSelectionFactors", {}, language)}
               </p>
             </section>
 
@@ -1572,7 +1562,7 @@ saveWeatherContext({
                 </div>
 
                 <p className="font-semibold mt-2">
-                  Market Prices
+                  {t("marketPrices", {}, language)}
                 </p>
               </button>
 
@@ -1588,7 +1578,7 @@ saveWeatherContext({
                 </div>
 
                 <p className="font-semibold mt-2">
-                  Crop Help
+                  {t("cropHelp", {}, language)}
                 </p>
               </button>
 
@@ -1604,7 +1594,7 @@ saveWeatherContext({
                 </div>
 
                 <p className="font-semibold mt-2">
-                  Farm Profile
+                  {t("farmProfile", {}, language)}
                 </p>
               </button>
 

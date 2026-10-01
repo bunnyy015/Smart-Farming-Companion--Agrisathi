@@ -1,4 +1,6 @@
 import QuantitySelector from "./QuantitySelector";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 function getCategoryIcon(category) {
   const icons = {
@@ -12,6 +14,20 @@ function getCategoryIcon(category) {
   return icons[category] || "🌱";
 }
 
+function translateCategory(category, language) {
+  const categoryKeys = {
+    Seeds: "categorySeeds",
+    Fertilizer: "categoryFertilizer",
+    Pesticide: "categoryPesticide",
+    Tools: "categoryTools",
+    "Animal Feed": "categoryFeed",
+  };
+
+  return categoryKeys[category]
+    ? t(categoryKeys[category], {}, language)
+    : category || t("farmProduct", {}, language);
+}
+
 export default function MarketplaceProductCard({
   product,
   quantity,
@@ -20,6 +36,7 @@ export default function MarketplaceProductCard({
   onRequestOrder,
   onViewDetails,
 }) {
+  const language = useLanguage();
   const availableQuantity = Number(
     product.quantity || 0
   );
@@ -43,7 +60,7 @@ export default function MarketplaceProductCard({
             src={product.imageUrl}
             alt={
               product.productName ||
-              "Agricultural product"
+              t("farmProduct", {}, language)
             }
             className="w-full h-52 object-contain bg-white"
             loading="lazy"
@@ -78,7 +95,7 @@ export default function MarketplaceProductCard({
             </div>
 
             <p className="text-sm text-gray-500 mt-2">
-              No product image
+              {t("noProductImage", {}, language)}
             </p>
           </div>
         </div>
@@ -86,8 +103,7 @@ export default function MarketplaceProductCard({
         {/* Category badge */}
         <div className="absolute top-3 left-3">
           <span className="bg-white/95 backdrop-blur-sm text-green-800 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-            {product.category ||
-              "Farm Product"}
+            {translateCategory(product.category, language)}
           </span>
         </div>
 
@@ -101,8 +117,8 @@ export default function MarketplaceProductCard({
             }`}
           >
             {isLowStock
-              ? "Low stock"
-              : "In stock"}
+              ? t("lowStock", {}, language)
+              : t("inStock", {}, language)}
           </span>
         </div>
       </div>
@@ -120,8 +136,7 @@ export default function MarketplaceProductCard({
                 </h2>
 
                 <p className="text-sm text-gray-500 mt-1">
-                  {product.category ||
-                    "Farm Product"}
+                  {translateCategory(product.category, language)}
 
                   {product.brand
                     ? ` • ${product.brand}`
@@ -138,7 +153,7 @@ export default function MarketplaceProductCard({
         <div className="grid grid-cols-2 gap-3 mt-5">
           <div className="rounded-xl bg-green-50 p-3">
             <p className="text-xs text-gray-500">
-              Price
+              {t("priceLabel", {}, language)}
             </p>
 
             <p className="font-bold text-green-900 mt-1">
@@ -149,13 +164,13 @@ export default function MarketplaceProductCard({
             </p>
 
             <p className="text-xs text-gray-500">
-              per {product.unit || "unit"}
+              {t("perUnit", { unit: product.unit || "unit" }, language)}
             </p>
           </div>
 
           <div className="rounded-xl bg-blue-50 p-3">
             <p className="text-xs text-gray-500">
-              Available
+              {t("availableLabel", {}, language)}
             </p>
 
             <p className="font-bold text-blue-900 mt-1">
@@ -163,7 +178,7 @@ export default function MarketplaceProductCard({
             </p>
 
             <p className="text-xs text-gray-500">
-              {product.unit || "units"}
+              {product.unit || t("unitsLabel", {}, language)}
             </p>
           </div>
         </div>
@@ -189,7 +204,7 @@ export default function MarketplaceProductCard({
             📍{" "}
             {product.dealerDistrict ||
               product.dealerState ||
-              "Location not available"}
+              t("locationNotAvailable", {}, language)}
           </p>
 
           <div className="flex flex-wrap gap-3 mt-3">
@@ -198,12 +213,12 @@ export default function MarketplaceProductCard({
                 href={`tel:${product.dealerPhone}`}
                 className="inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition"
               >
-                📞 Call Dealer
+                {t("callDealer", {}, language)}
               </a>
             )}
 
             <span className="inline-flex items-center rounded-xl bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
-              ✓ Approved Dealer
+              {t("approvedDealer", {}, language)}
             </span>
           </div>
         </div>
@@ -220,7 +235,7 @@ export default function MarketplaceProductCard({
               onClick={onViewDetails}
               className="w-full border border-green-700 text-green-700 py-3 rounded-xl font-semibold hover:bg-green-50 transition"
             >
-              👁️ View Product Details
+              {t("viewProductDetails", {}, language)}
             </button>
           )}
 
@@ -243,8 +258,8 @@ export default function MarketplaceProductCard({
               className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
             >
               {sending
-                ? "Sending..."
-                : "Request Order"}
+                ? t("sendingOrder", {}, language)
+                : t("requestOrder", {}, language)}
             </button>
           </div>
         </div>

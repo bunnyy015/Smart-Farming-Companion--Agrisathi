@@ -15,10 +15,12 @@ const INITIAL_FORM = {
   password: "",
   confirmPassword: "",
   phone: "",
+  address: "",
   village: "",
   mandal: "",
   district: "",
   state: "",
+  pincode: "",
   mainCrop: "",
   otherCrops: "",
   landSize: "",
@@ -166,12 +168,20 @@ export default function RegisterPage() {
       return "Enter the village or town.";
     }
 
+    if (!form.address.trim()) {
+      return "Enter the house, street, or delivery address.";
+    }
+
     if (!form.district.trim()) {
       return "Enter the district.";
     }
 
     if (!form.state.trim()) {
       return "Select the state.";
+    }
+
+    if (!/^\d{6}$/.test(form.pincode.trim())) {
+      return "Enter a valid 6-digit PIN code.";
     }
 
     if (!form.mainCrop.trim()) {
@@ -230,9 +240,11 @@ export default function RegisterPage() {
         phoneNumber: phone,
 
         village: form.village.trim(),
+        address: form.address.trim(),
         mandal: form.mandal.trim(),
         district: form.district.trim(),
         state: form.state.trim(),
+        pincode: form.pincode.trim(),
 
         mainCrop: form.mainCrop.trim(),
         otherCrops: form.otherCrops.trim(),
@@ -502,8 +514,26 @@ export default function RegisterPage() {
               <h2 className="text-lg font-bold text-green-900">
                 📍 Location Details
               </h2>
+              <p className="mt-2 text-sm text-green-800 bg-green-50 border border-green-100 rounded-xl p-3">
+                The address in your farmer profile will be used as the delivery address for your orders. Each order saves a copy, so later profile changes will not change an existing order.
+              </p>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4">
+
+                <div className="md:col-span-2">
+                  <label htmlFor="farmer-address" className="text-sm font-semibold text-gray-700">
+                    House, Street, or Delivery Address
+                  </label>
+                  <input
+                    id="farmer-address"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="House number, street, or landmark"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
+                </div>
 
                 <div>
                   <label
@@ -591,6 +621,23 @@ export default function RegisterPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label htmlFor="farmer-pincode" className="text-sm font-semibold text-gray-700">
+                    PIN Code
+                  </label>
+                  <input
+                    id="farmer-pincode"
+                    name="pincode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={form.pincode}
+                    onChange={handleChange}
+                    disabled={loading}
+                    placeholder="6-digit PIN code"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
+                  />
                 </div>
 
               </div>

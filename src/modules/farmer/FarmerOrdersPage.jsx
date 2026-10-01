@@ -17,6 +17,7 @@ import StatusMessage from "../../components/StatusMessage";
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
+  { value: "history", label: "Order History" },
 ];
 
 const ACTIVE_STATUSES = [
@@ -93,7 +94,7 @@ function getStatusDetails(status) {
       label: "Dealer Accepted",
       className: "bg-blue-100 text-blue-800",
       progress: 40,
-      message: "The dealer is preparing your order.",
+      message: "The dealer accepted your order. Confirm after the products have physically arrived.",
     },
 
     delivered_by_dealer: {
@@ -106,10 +107,10 @@ function getStatusDetails(status) {
 
     received_by_farmer: {
       icon: "📦",
-      label: "Product Received",
+      label: "Order Received",
       className: "bg-indigo-100 text-indigo-800",
       progress: 85,
-      message: "Waiting for the dealer to confirm payment.",
+      message: "You confirmed receipt. Waiting for the dealer to mark delivery.",
     },
 
     payment_received: {
@@ -160,11 +161,12 @@ export default function FarmerOrdersPage() {
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectedFilter, setSelectedFilter] = useState("active");
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+  const [expandedOrderId, setExpandedOrderId] = useState("");
 
   const [confirmation, setConfirmation] = useState(null);
   const [message, setMessage] = useState(null);
@@ -296,18 +298,22 @@ export default function FarmerOrdersPage() {
       );
     }
 
+    if (selectedFilter === "history") {
+      return historyOrders;
+    }
+
     return currentOrders;
-  }, [currentOrders, selectedFilter]);
+  }, [currentOrders, historyOrders, selectedFilter]);
 
   const counts = useMemo(
     () => ({
       all: currentOrders.length,
-
       active: currentOrders.filter((order) =>
         ACTIVE_STATUSES.includes(order.status)
       ).length,
+      history: historyOrders.length,
     }),
-    [currentOrders]
+    [currentOrders, historyOrders]
   );
 
   function showMessage(type, text) {
@@ -496,10 +502,10 @@ export default function FarmerOrdersPage() {
   }
 
   async function confirmProductReceived(order) {
-    if (order.status !== "delivered_by_dealer") {
+    if (!["accepted", "delivered_by_dealer"].includes(order.status) || order.farmerReceived) {
       showMessage(
         "warning",
-        "The dealer must mark the order as delivered first."
+        "Only accepted orders can be confirmed as received."
       );
 
       setConfirmation(null);
@@ -516,9 +522,7 @@ export default function FarmerOrdersPage() {
         {
           farmerReceived: true,
           farmerReceivedAt: now,
-          status: order.dealerPaymentReceived
-            ? "payment_received"
-            : "received_by_farmer",
+          status: "received_by_farmer",
           updatedAt: now,
         }
       );
@@ -576,9 +580,9 @@ export default function FarmerOrdersPage() {
 
     return {
       icon: "📦",
-      title: "Did you receive the product?",
-      text: "Confirm only after checking the delivered product.",
-      actionText: "Yes, Product Received",
+      title: "Have you received this order?",
+      text: "Confirm only after the dealer has physically delivered the products.",
+      actionText: "Order Received",
       actionClass: "bg-green-700 text-white",
     };
   }
@@ -638,15 +642,15 @@ export default function FarmerOrdersPage() {
             </h1>
 
             <p className="text-green-100 text-sm mt-2">
-              Track dealer response, delivery and payment.
+              View current orders or browse your order history.
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2 mt-5">
             <div className="bg-white/15 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold">{counts.all}</p>
+              <p className="text-xl font-bold">{orders.length}</p>
               <p className="text-xs text-green-100 mt-1">
-                Total
+                All Orders
               </p>
             </div>
 
@@ -665,7 +669,9 @@ export default function FarmerOrdersPage() {
               className="bg-white/20 rounded-xl p-3 text-center hover:bg-white/30"
             >
               <p className="text-xl font-bold">{historyOrders.length}</p>
-              <p className="text-xs text-green-100 mt-1">History</p>
+              <p className="text-xs text-green-100 mt-1">
+                History
+              </p>
             </button>
           </div>
         </header>
@@ -754,9 +760,11 @@ export default function FarmerOrdersPage() {
               <button
                 type="button"
                 key={filter.value}
-                onClick={() =>
-                  setSelectedFilter(filter.value)
-                }
+                onClick={() => {
+                  setSelectedFilter(filter.value);
+                  setExpandedOrderId("");
+                }}
+                aria-pressed={selectedFilter === filter.value}
                 className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
                   selectedFilter === filter.value
                     ? "bg-green-700 text-white"
@@ -777,18 +785,17 @@ export default function FarmerOrdersPage() {
               </h2>
 
               <p className="text-gray-600 text-sm mt-2">
-                Product requests will appear here.
+                {selectedFilter === "history"
+                  ? "Completed, cancelled, and rejected orders will appear here."
+                  : "Your current orders will appear here."}
               </p>
-
-              <button
+              {selectedFilter === "active" && <button
                 type="button"
-                onClick={() =>
-                  navigate("/farmer/dealer-products")
-                }
+                onClick={() => navigate("/farmer/dealer-products")}
                 className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold mt-5"
               >
-                View Dealer Products
-              </button>
+                Browse Products
+              </button>}
             </section>
           ) : (
             <section className="space-y-4">
@@ -810,6 +817,9 @@ export default function FarmerOrdersPage() {
 
                           <p className="text-sm text-gray-500 mt-1 truncate">
                             🏪 {order.dealerName || "Dealer"}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Ordered {formatDate(order.createdAt)}
                           </p>
                         </div>
 
@@ -843,7 +853,21 @@ export default function FarmerOrdersPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedOrderId((current) => current === order.id ? "" : order.id)}
+                        className="mt-3 text-sm font-semibold text-green-700 underline underline-offset-2"
+                      >
+                          {expandedOrderId === order.id ? "Hide Details" : "View Order Details"}
+                      </button>
+
+                      {expandedOrderId === order.id && <div className="mt-3">
+                      <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
+                        <p className="flex justify-between"><span>Product/Subtotal</span><strong>{formatMoney(order.subtotalAmount ?? (Number(order.price || 0) * Number(order.quantity || 0)))}</strong></p>
+                        {order.deliveryCharge !== undefined && <p className="flex justify-between"><span>Delivery Charges</span><strong>{formatMoney(order.deliveryCharge)}</strong></p>}
+                        <p className="flex justify-between border-t pt-1"><span>Total Amount</span><strong>{formatMoney(order.totalAmount)}</strong></p>
+                      </div>
+                      <div className="mt-2">
                         <div className="flex justify-between text-xs text-gray-500 mb-2">
                           <span>Order progress</span>
                           <span>{status.progress}%</span>
@@ -913,9 +937,7 @@ export default function FarmerOrdersPage() {
                           </button>
                         )}
 
-                        {order.status ===
-                          "delivered_by_dealer" &&
-                          !order.farmerReceived && (
+                        {["accepted", "delivered_by_dealer"].includes(order.status) && !order.farmerReceived && (
                             <button
                               type="button"
                               disabled={updating}
@@ -924,7 +946,7 @@ export default function FarmerOrdersPage() {
                               }
                               className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold disabled:bg-gray-400"
                             >
-                              📦 I Received the Product
+                              📦 Order Received
                             </button>
                           )}
 
@@ -946,6 +968,7 @@ export default function FarmerOrdersPage() {
                           </div>
                         )}
                       </div>
+                      </div>}
                     </div>
                   </article>
                 );

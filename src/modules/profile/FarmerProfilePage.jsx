@@ -4,7 +4,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { get, ref, update } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
-import LanguageSelector from "../../components/LanguageSelector";
 import {
   getLanguage,
   getLanguageName,
@@ -401,39 +400,6 @@ export default function FarmerProfilePage() {
                 Add complete farm details for better weather, crop and product recommendations.
               </p>
             )}
-          </div>
-        </section>
-
-        {/* Language Selector */}
-        <section className="bg-white rounded-2xl border border-purple-100 shadow-sm p-5 mt-5">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-2xl">
-              🌐
-            </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-purple-900">
-                {t("appLanguage", {}, language)}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {t("changeLanguageAnytime", {}, language)}
-              </p>
-              <div className="mt-4">
-                <LanguageSelector
-                  onLanguageChanged={(nextLanguage) => {
-                    setCurrentLanguage(nextLanguage);
-                    setFarmer((current) =>
-                      current
-                        ? {
-                            ...current,
-                            preferredLanguage: getLanguageName(nextLanguage),
-                          }
-                        : current
-                    );
-                    showMessage("success", t("languageUpdated", {}, nextLanguage));
-                  }}
-                />
-              </div>
-            </div>
           </div>
         </section>
 

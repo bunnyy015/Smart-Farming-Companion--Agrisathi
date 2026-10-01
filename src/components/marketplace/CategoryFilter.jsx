@@ -1,32 +1,35 @@
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
+
 const categories = [
   {
     value: "all",
-    label: "All",
+    labelKey: "categoryAll",
     icon: "🛍️",
   },
   {
     value: "Seeds",
-    label: "Seeds",
+    labelKey: "categorySeeds",
     icon: "🌾",
   },
   {
     value: "Fertilizer",
-    label: "Fertilizer",
+    labelKey: "categoryFertilizer",
     icon: "🧪",
   },
   {
     value: "Pesticide",
-    label: "Pesticide",
+    labelKey: "categoryPesticide",
     icon: "🛡️",
   },
   {
     value: "Tools",
-    label: "Tools",
+    labelKey: "categoryTools",
     icon: "🛠️",
   },
   {
     value: "Animal Feed",
-    label: "Feed",
+    labelKey: "categoryFeed",
     icon: "🐄",
   },
 ];
@@ -35,6 +38,8 @@ export default function CategoryFilter({
   selectedCategory,
   onSelect,
 }) {
+  const language = useLanguage();
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2">
       {categories.map((category) => {
@@ -56,7 +61,7 @@ export default function CategoryFilter({
               {category.icon}
             </span>
 
-            {category.label}
+            {t(category.labelKey, {}, language)}
           </button>
         );
       })}

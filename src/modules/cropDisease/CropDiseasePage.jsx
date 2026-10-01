@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, push, ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
-import { getLanguage } from "../../utils/language";
+import { getLanguage, t } from "../../utils/language";
+import useLanguage from "../../utils/useLanguage";
 
 const MODELS = [
   "gemini-2.5-flash",
-  "gemini-1.5-flash",
 ];
 
 const languageNames = {
@@ -195,6 +195,7 @@ function ProductCard({ product, onOpen }) {
 }
 
 export default function CropDiseasePage() {
+  const language = useLanguage();
   const navigate = useNavigate();
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState("");
@@ -488,7 +489,7 @@ Required JSON structure:
 
   async function analyze() {
     if (!photo) {
-      setError("Upload a photo of the affected leaf or plant first.");
+      setError(t("imageRequired", {}, language));
       return;
     }
 
@@ -505,7 +506,7 @@ Required JSON structure:
 
       if (!analysis.isPlant) {
         setError(
-          "A crop or plant was not clearly detected. Please take another photo showing the affected leaf or plant."
+          t("photoNotClearPlant", {}, language)
         );
         return;
       }
@@ -528,8 +529,8 @@ Required JSON structure:
       console.error("Crop disease detection error:", analysisError);
       setError(
         analysisError?.name === "AbortError"
-          ? "Image improvement took too long. Please try again."
-          : analysisError?.message || "Disease detection failed. Please try another photo."
+          ? t("imageImproveTimeout", {}, language)
+          : analysisError?.message || t("diseaseDetectionFailed", {}, language)
       );
     } finally {
       setLoading(false);
@@ -547,32 +548,32 @@ Required JSON structure:
             onClick={() => navigate("/dashboard")}
             className="text-sm font-semibold text-green-100 hover:text-white transition"
           >
-            ← Back
+            {t("back", {}, language)}
           </button>
           <h1 className="text-2xl font-bold mt-3">
-            🌿 Crop Disease Detection
+            {t("cropDiseasePageTitle", {}, language)}
           </h1>
           <p className="text-sm text-green-100 mt-1">
-            Take or upload a crop photo for AI-based guidance.
+            {t("cropDiseasePageIntro", {}, language)}
           </p>
         </header>
 
         {/* Upload Section */}
         <section className="bg-white rounded-2xl shadow p-5 mt-5">
           <label className="block font-semibold text-gray-700">
-            Crop name (optional)
+            {t("cropNameOptional", {}, language)}
           </label>
           <input
             type="text"
             value={cropName}
             disabled={loading}
             onChange={(event) => setCropName(event.target.value)}
-            placeholder="Example: Cotton, rice"
+            placeholder={t("cropNameExample", {}, language)}
             className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
           />
 
           <label className="block font-semibold text-gray-700 mt-5">
-            Crop or leaf photo
+            {t("cropOrLeafPhoto", {}, language)}
           </label>
           <input
             type="file"
@@ -584,13 +585,13 @@ Required JSON structure:
           />
 
           <p className="text-sm text-gray-500 mt-2">
-            The app will automatically improve brightness, contrast and clarity when possible.
+            {t("imageAutoEnhancement", {}, language)}
           </p>
 
           {preview && (
             <img
               src={preview}
-              alt="Selected crop"
+              alt={t("detectedCrop", {}, language)}
               className="w-full max-h-80 object-contain bg-gray-50 rounded-xl mt-4"
             />
           )}
@@ -614,8 +615,8 @@ Required JSON structure:
             className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-400 text-white rounded-xl py-3.5 mt-5 font-bold transition"
           >
             {loading
-              ? processingStage || "Processing photo..."
-              : "🔍 Detect Disease"}
+              ? processingStage || t("processingPhoto", {}, language)
+              : t("detectDiseaseButton", {}, language)}
           </button>
         </section>
 
@@ -624,7 +625,7 @@ Required JSON structure:
           <section className="bg-white rounded-2xl shadow p-5 mt-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-500">Detected crop</p>
+                <p className="text-sm text-gray-500">{t("detectedCrop", {}, language)}</p>
                 <h2 className="text-2xl font-bold text-green-800 mt-1">
                   {result.crop || "Unknown"}
                 </h2>
@@ -641,20 +642,20 @@ Required JSON structure:
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mt-5">
-              <p className="text-sm text-yellow-800">Possible condition</p>
+              <p className="text-sm text-yellow-800">{t("possibleCondition", {}, language)}</p>
               <p className="text-xl font-bold text-yellow-900 mt-1">
                 {result.disease || "Unknown"}
               </p>
             </div>
 
-            <ResultList title="Visible symptoms" items={result.symptoms} />
-            <ResultList title="Likely causes" items={result.causes} />
-            <ResultList title="Immediate actions" items={result.immediateActions} />
+            <ResultList title={t("visibleSymptoms", {}, language)} items={result.symptoms} />
+            <ResultList title={t("likelyCauses", {}, language)} items={result.causes} />
+            <ResultList title={t("immediateActions", {}, language)} items={result.immediateActions} />
 
             {/* Pesticide Recommendation */}
             {result.pesticide?.name && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-5">
-                <p className="text-sm text-red-700">Recommended pesticide</p>
+                <p className="text-sm text-red-700">{t("recommendedPesticide", {}, language)}</p>
                 <h3 className="text-lg font-bold text-red-900 mt-1">
                   {result.pesticide.name}
                 </h3>
@@ -666,7 +667,7 @@ Required JSON structure:
 
             {matchingPesticides.length > 0 && (
               <div className="mt-4 space-y-3">
-                <h3 className="font-bold text-green-800">Available pesticide products</h3>
+                <h3 className="font-bold text-green-800">{t("availablePesticides", {}, language)}</h3>
                 {matchingPesticides.map((product) => (
                   <ProductCard
                     key={`${product.dealerUid}-${product.id}`}
@@ -680,7 +681,7 @@ Required JSON structure:
             {/* Fertilizer Recommendation */}
             {result.fertilizer?.name && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mt-5">
-                <p className="text-sm text-emerald-700">Recommended fertilizer</p>
+                <p className="text-sm text-emerald-700">{t("recommendedFertilizer", {}, language)}</p>
                 <h3 className="text-lg font-bold text-emerald-900 mt-1">
                   {result.fertilizer.name}
                 </h3>
@@ -692,7 +693,7 @@ Required JSON structure:
 
             {matchingFertilizers.length > 0 && (
               <div className="mt-4 space-y-3">
-                <h3 className="font-bold text-green-800">Available fertilizer products</h3>
+                <h3 className="font-bold text-green-800">{t("availableFertilizers", {}, language)}</h3>
                 {matchingFertilizers.map((product) => (
                   <ProductCard
                     key={`${product.dealerUid}-${product.id}`}
@@ -703,8 +704,8 @@ Required JSON structure:
               </div>
             )}
 
-            <ResultList title="Treatment guidance" items={result.treatment} />
-            <ResultList title="Prevention" items={result.prevention} />
+            <ResultList title={t("treatmentGuidance", {}, language)} items={result.treatment} />
+            <ResultList title={t("prevention", {}, language)} items={result.prevention} />
 
             {result.expertAdvice && (
               <div className="bg-blue-50 text-blue-900 rounded-xl p-4 mt-5">

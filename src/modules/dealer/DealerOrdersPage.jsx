@@ -1409,10 +1409,7 @@ export default function DealerOrdersPage() {
         order
       );
 
-    if (
-      status !==
-      "accepted"
-    ) {
+    if (status !== "received_by_farmer" || !order.farmerReceived) {
       return;
     }
 
@@ -1849,6 +1846,7 @@ export default function DealerOrdersPage() {
         all: orders.length,
         pending: 0,
         accepted: 0,
+        received_by_farmer: 0,
         rejected: 0,
         delivered_by_dealer: 0,
         payment_received: 0,
@@ -2001,10 +1999,11 @@ export default function DealerOrdersPage() {
       );
     }
 
-    if (
-      status ===
-      "accepted"
-    ) {
+    if (status === "accepted") {
+      return <span className="text-sm font-semibold text-amber-700">Waiting for farmer to confirm order received</span>;
+    }
+
+    if (status === "received_by_farmer") {
       return (
         <button
           type="button"
@@ -2083,6 +2082,9 @@ export default function DealerOrdersPage() {
 
       accepted:
         "bg-blue-50 text-blue-700 border-blue-200",
+
+      received_by_farmer:
+        "bg-indigo-50 text-indigo-700 border-indigo-200",
 
       rejected:
         "bg-red-50 text-red-700 border-red-200",
@@ -2288,6 +2290,13 @@ export default function DealerOrdersPage() {
           />
 
           <SummaryCard
+            label="Farmer Received"
+            value={counts.received_by_farmer}
+            active={statusFilter === "received_by_farmer"}
+            onClick={() => setStatusFilter("received_by_farmer")}
+          />
+
+          <SummaryCard
             label="Delivered"
             value={
               counts.delivered_by_dealer
@@ -2417,6 +2426,10 @@ export default function DealerOrdersPage() {
                   Accepted
                 </option>
 
+                <option value="received_by_farmer">
+                  Farmer Received
+                </option>
+
                 <option value="delivered_by_dealer">
                   Delivered
                 </option>
@@ -2522,6 +2535,7 @@ export default function DealerOrdersPage() {
                 const busy =
                   processingOrderId ===
                   order.id;
+                const address = order.deliveryAddressDetails || {};
 
                 return (
                   <article
@@ -2596,14 +2610,17 @@ export default function DealerOrdersPage() {
                         />
 
                         <InfoCard
-                          label="Price"
-                          value={formatCurrency(
-                            price
-                          )}
+                          label="Product / Subtotal"
+                          value={formatCurrency(order.subtotalAmount ?? price * quantity)}
                         />
 
                         <InfoCard
-                          label="Total"
+                          label="Delivery Charges"
+                          value={order.deliveryCharge !== undefined ? formatCurrency(order.deliveryCharge) : "Not set"}
+                        />
+
+                        <InfoCard
+                          label="Total Amount"
                           value={formatCurrency(
                             totalAmount
                           )}
@@ -2620,6 +2637,25 @@ export default function DealerOrdersPage() {
                           }
                         />
 
+                      </div>
+
+                      <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">
+                          Delivery Address
+                        </h3>
+                        <div className="mt-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-1 text-sm text-gray-700">
+                          <p><span className="font-semibold">Farmer:</span> {address.name || farmerName}</p>
+                          {address.address && <p><span className="font-semibold">Address:</span> {address.address}</p>}
+                          <p><span className="font-semibold">Village:</span> {address.village || order.farmerVillage || "Not provided"}</p>
+                          <p><span className="font-semibold">Mandal:</span> {address.mandal || order.farmerMandal || "Not provided"}</p>
+                          <p><span className="font-semibold">District:</span> {address.district || order.farmerDistrict || "Not provided"}</p>
+                          <p><span className="font-semibold">State:</span> {address.state || order.farmerState || "Not provided"}</p>
+                          <p><span className="font-semibold">PIN:</span> {address.pincode || "Not provided"}</p>
+                          <p><span className="font-semibold">Phone:</span> {address.phone || order.farmerPhone || "Not provided"}</p>
+                        </div>
+                        {!address.name && !address.address && !address.village && order.deliveryAddress && (
+                          <p className="mt-2 text-sm text-gray-700"><span className="font-semibold">Saved address:</span> {order.deliveryAddress}</p>
+                        )}
                       </div>
 
                       {/* PRODUCT STOCK */}

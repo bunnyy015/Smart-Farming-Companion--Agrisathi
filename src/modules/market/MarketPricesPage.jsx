@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 const MANDI_RESOURCE_ID =
   "9ef84268-d588-465a-a308-a864a43d0070";
@@ -675,6 +677,7 @@ function buildDemoPrices({ state, district, mandals }) {
 }
 
 export default function MarketPricesPage() {
+  const language = useLanguage();
   const navigate = useNavigate();
 
   const [farmer, setFarmer] = useState(null);
@@ -1202,7 +1205,7 @@ export default function MarketPricesPage() {
 
       showMessage(
         "error",
-        "Market information could not be loaded."
+        t("marketInfoUnavailable", {}, language)
       );
 
       setLoading(false);
@@ -1227,7 +1230,7 @@ export default function MarketPricesPage() {
 
       showMessage(
         "warning",
-        "Location is unavailable. Showing prices from your saved profile."
+        t("locationFallback", {}, language)
       );
 
       setLoading(false);
@@ -1293,7 +1296,7 @@ export default function MarketPricesPage() {
 
           showMessage(
             "warning",
-            "Exact location could not be identified. Showing prices from your saved profile."
+            t("exactLocationFallback", {}, language)
           );
         } finally {
           setDetectingLocation(false);
@@ -1315,7 +1318,7 @@ export default function MarketPricesPage() {
 
         showMessage(
           "warning",
-          "Allow location access to find nearby markets. Saved profile location is being used."
+          t("locationPermissionNearby", {}, language)
         );
 
         setDetectingLocation(false);
@@ -1567,7 +1570,7 @@ export default function MarketPricesPage() {
       if (deduplicated.length === 0) {
         showMessage(
           "warning",
-          "No current government mandi prices were found for this location."
+          t("noCurrentMandiPrices", {}, language)
         );
       }
     } catch (error) {
@@ -1580,7 +1583,7 @@ export default function MarketPricesPage() {
 
       showMessage(
         "error",
-        "Government mandi prices could not be loaded."
+        t("govtPricesUnavailable", {}, language)
       );
     } finally {
       setLoadingPrices(false);
@@ -1593,7 +1596,7 @@ export default function MarketPricesPage() {
     if (!currentLocation) {
       showMessage(
         "warning",
-        "Location is required to search nearby selling points."
+        t("locationRequiredSelling", {}, language)
       );
       return;
     }
@@ -1664,7 +1667,7 @@ out center tags;
           const name =
             tags.name ||
             tags["name:en"] ||
-            "Nearby Selling Point";
+            t("nearbySellingPlaces", {}, language);
 
           const distance = calculateDistance(
             latitude,
@@ -1741,7 +1744,7 @@ out center tags;
       if (prepared.length === 0) {
         showMessage(
           "info",
-          "No mapped selling points were found nearby. Use the map search option."
+          t("noMappedSellingPoints", {}, language)
         );
       }
     } catch (error) {
@@ -1754,7 +1757,7 @@ out center tags;
 
       showMessage(
         "warning",
-        "Nearby selling points are temporarily unavailable. You can still search through maps."
+        t("nearbySellingUnavailable", {}, language)
       );
     } finally {
       setLoadingSellingPoints(false);
@@ -1792,7 +1795,7 @@ out center tags;
   function getSellingAdvice(summary) {
     if (!summary?.highest) {
       return {
-        label: "Price unavailable",
+        label: t("cropPriceSummaryUnavailable", {}, language),
         className:
           "bg-gray-100 text-gray-700",
       };
@@ -1809,7 +1812,7 @@ out center tags;
 
     if (differencePercentage >= 8) {
       return {
-        label: "Good market price",
+        label: t("goodMarketPrice", {}, language),
         className:
           "bg-green-100 text-green-700",
       };
@@ -1817,14 +1820,14 @@ out center tags;
 
     if (differencePercentage >= 3) {
       return {
-        label: "Compare markets",
+        label: t("compareMarkets", {}, language),
         className:
           "bg-yellow-100 text-yellow-800",
       };
     }
 
     return {
-      label: "Check before selling",
+      label: t("checkBeforeSelling", {}, language),
       className:
         "bg-blue-100 text-blue-700",
     };
@@ -1833,42 +1836,42 @@ out center tags;
   const categories = [
     {
       value: "all",
-      label: "All Crops",
+      labelKey: "categoryAllCrops",
       icon: "🛍️",
     },
     {
       value: "cereals",
-      label: "Grains",
+      labelKey: "categoryGrains",
       icon: "🌾",
     },
     {
       value: "pulses",
-      label: "Pulses",
+      labelKey: "categoryPulses",
       icon: "🫘",
     },
     {
       value: "vegetables",
-      label: "Vegetables",
+      labelKey: "categoryVegetables",
       icon: "🥬",
     },
     {
       value: "fruits",
-      label: "Fruits",
+      labelKey: "categoryFruits",
       icon: "🍎",
     },
     {
       value: "spices",
-      label: "Spices",
+      labelKey: "categorySpices",
       icon: "🌶️",
     },
     {
       value: "oilseeds",
-      label: "Oilseeds",
+      labelKey: "categoryOilseeds",
       icon: "🌻",
     },
     {
       value: "fibre",
-      label: "Fibre",
+      labelKey: "categoryFibre",
       icon: "🧶",
     },
   ];
@@ -1881,8 +1884,8 @@ out center tags;
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
             {detectingLocation
-              ? "Detecting your market area"
-              : "Loading market prices"}
+              ? t("detectingMarketArea", {}, language)
+              : t("marketLoading", {}, language)}
           </h1>
         </div>
       </div>
@@ -1905,17 +1908,17 @@ out center tags;
             }
             className="text-green-100 font-semibold"
           >
-            ← Dashboard
+            {t("dashboardLink", {}, language)}
           </button>
 
           <div className="flex flex-col gap-4 mt-3">
             <div>
               <h1 className="text-3xl font-bold">
-                📈 Local Crop Prices
+                {t("localCropPricesTitle", {}, language)}
               </h1>
 
               <p className="text-green-100 mt-1">
-                Government mandi prices with crop images for easy farmer understanding.
+                {t("marketPageIntro", {}, language)}
               </p>
             </div>
 
@@ -1930,8 +1933,8 @@ out center tags;
               className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60 self-start"
             >
               {detectingLocation
-                ? "Detecting..."
-                : "📍 Refresh Location"}
+                ? t("detecting", {}, language)
+                : t("refreshLocation", {}, language)}
             </button>
           </div>
 
@@ -1954,14 +1957,14 @@ out center tags;
                 ]
                   .filter(Boolean)
                   .join(", ") ||
-                "Saved farmer location"}
+                t("savedFarmerLocation", {}, language)}
           </div>
         </header>
 
         <section className="grid grid-cols-2 gap-4 mt-5">
           <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
             <p className="text-sm text-gray-500">
-              Crops
+              {t("cropCount", {}, language)}
             </p>
 
             <p className="text-2xl font-bold text-green-800 mt-2">
@@ -1971,7 +1974,7 @@ out center tags;
 
           <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
             <p className="text-sm text-gray-500">
-              Markets
+              {t("marketCount", {}, language)}
             </p>
 
             <p className="text-2xl font-bold text-blue-800 mt-2">
@@ -1981,7 +1984,7 @@ out center tags;
 
           <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
             <p className="text-sm text-gray-500">
-              Price Records
+              {t("priceRecords", {}, language)}
             </p>
 
             <p className="text-2xl font-bold text-purple-800 mt-2">
@@ -1991,7 +1994,7 @@ out center tags;
 
           <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
             <p className="text-sm text-gray-500">
-              Average Price
+              {t("averagePrice", {}, language)}
             </p>
 
             <p className="text-lg font-bold text-orange-800 mt-2">
@@ -2001,7 +2004,7 @@ out center tags;
             </p>
 
             <p className="text-xs text-gray-500">
-              per quintal
+              {t("perQuintal", {}, language)}
             </p>
           </article>
         </section>
@@ -2017,7 +2020,7 @@ out center tags;
 
               <div className="flex-1">
                 <p className="text-sm text-yellow-800">
-                  Your main crop
+                  {t("yourMainCrop", {}, language)}
                 </p>
 
                 <h2 className="text-xl font-bold text-yellow-900 mt-1">
@@ -2034,7 +2037,7 @@ out center tags;
               }}
               className="bg-yellow-700 text-white px-4 py-2.5 rounded-xl font-semibold mt-4 w-full"
             >
-              Show Prices
+              {t("showPrices", {}, language)}
             </button>
           </section>
         )}
@@ -2076,7 +2079,7 @@ out center tags;
             htmlFor="crop-price-search"
             className="font-semibold text-gray-800"
           >
-            🔍 Search any crop
+            {t("searchAnyCrop", {}, language)}
           </label>
 
           <input
@@ -2086,7 +2089,7 @@ out center tags;
             onChange={(event) =>
               setSearchText(event.target.value)
             }
-            placeholder="Cotton, paddy, tomato, maize..."
+            placeholder={t("cropSearchPlaceholder", {}, language)}
             className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2 outline-none focus:ring-2 focus:ring-green-600"
           />
 
@@ -2104,11 +2107,12 @@ out center tags;
                     : "bg-green-50 text-green-800 border border-green-200"
                 }`}
               >
-                {category.icon} {category.label}
+                {category.icon} {t(category.labelKey, {}, language)}
               </button>
             ))}
           </div>
 
+<<<<<<< Updated upstream
           <div className="grid gap-3 mt-4 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-medium text-gray-700">
               State
@@ -2136,6 +2140,20 @@ out center tags;
                 ))}
               </select>
             </label>
+=======
+          <div className="grid gap-3 mt-4">
+            <select
+              value={selectedDistrict}
+              onChange={(event) => {
+                setSelectedDistrict(
+                  event.target.value
+                );
+                setSelectedMarket("");
+              }}
+              className="border border-gray-300 rounded-xl px-4 py-3"
+            >
+              <option value="">{t("allDistricts", {}, language)}</option>
+>>>>>>> Stashed changes
 
             <label className="grid gap-1 text-sm font-medium text-gray-700">
               District
@@ -2206,7 +2224,7 @@ out center tags;
               }
               className="border border-gray-300 rounded-xl px-4 py-3"
             >
-              <option value="">All Markets</option>
+              <option value="">{t("allMarkets", {}, language)}</option>
 
               {visibleMarkets.map((market) => (
                 <option
@@ -2226,16 +2244,16 @@ out center tags;
               className="border border-gray-300 rounded-xl px-4 py-3"
             >
               <option value="latest">
-                Latest Records
+                {t("latestRecords", {}, language)}
               </option>
               <option value="highest">
-                Highest Price
+                {t("highestPrice", {}, language)}
               </option>
               <option value="lowest">
-                Lowest Price
+                {t("lowestPrice", {}, language)}
               </option>
               <option value="crop">
-                Crop Name
+                {t("cropNameSort", {}, language)}
               </option>
             </select>
           </div>
@@ -2244,12 +2262,12 @@ out center tags;
         <section className="mt-5">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
-              Crop Price Summary
+              {t("cropPriceSummary", {}, language)}
             </h2>
 
             {loadingPrices && (
               <p className="text-sm text-gray-500">
-                Loading prices...
+                {t("loadingPrices", {}, language)}
               </p>
             )}
           </div>
@@ -2257,7 +2275,7 @@ out center tags;
           {groupedCropSummary.length === 0 ? (
             <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
               <p className="text-gray-600">
-                No crop prices found for the selected filters.
+                {t("noCropPricesForFilters", {}, language)}
               </p>
             </div>
           ) : (
@@ -2296,8 +2314,8 @@ out center tags;
                         </div>
 
                         <p className="text-sm text-gray-500 mt-1">
-                          {summary.records.length} records •{" "}
-                          {summary.marketsCount} markets
+                          {summary.records.length} {t("recordCount", {}, language)} •{" "}
+                          {summary.marketsCount} {t("marketCountLower", {}, language)}
                         </p>
                       </div>
                     </div>
@@ -2305,7 +2323,7 @@ out center tags;
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className="bg-green-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Highest
+                          {t("highest", {}, language)}
                         </p>
                         <p className="font-bold text-green-800 mt-1">
                           {formatCurrency(
@@ -2319,7 +2337,7 @@ out center tags;
 
                       <div className="bg-red-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Lowest
+                          {t("lowest", {}, language)}
                         </p>
                         <p className="font-bold text-red-700 mt-1">
                           {formatCurrency(
@@ -2333,7 +2351,7 @@ out center tags;
 
                       <div className="bg-blue-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Average
+                          {t("averageLabel", {}, language)}
                         </p>
                         <p className="font-bold text-blue-700 mt-1">
                           {formatCurrency(
@@ -2344,7 +2362,7 @@ out center tags;
 
                       <div className="bg-yellow-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
-                          Best Place
+                          {t("bestPlace", {}, language)}
                         </p>
                         <p className="font-bold text-yellow-700 mt-1 text-sm">
                           {summary.highest.market}
@@ -2360,7 +2378,7 @@ out center tags;
                       }}
                       className="w-full mt-4 bg-green-700 text-white py-2.5 rounded-xl font-semibold"
                     >
-                      View {summary.commodity} Details
+                      {t("viewCommodityDetails", { crop: summary.commodity }, language)}
                     </button>
                   </article>
                 );
@@ -2372,12 +2390,12 @@ out center tags;
         <section className="mt-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
-              Mandi Price Details
+              {t("mandiPriceDetails", {}, language)}
             </h2>
 
             {loadingPrices && (
               <p className="text-sm text-gray-500">
-                Refreshing...
+                {t("refreshing", {}, language)}
               </p>
             )}
           </div>
@@ -2385,7 +2403,7 @@ out center tags;
           {filteredPrices.length === 0 ? (
             <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
               <p className="text-gray-600">
-                No market records available.
+                {t("noMarketRecords", {}, language)}
               </p>
             </div>
           ) : (
@@ -2434,7 +2452,7 @@ out center tags;
                   <div className="grid grid-cols-3 gap-3 mt-4">
                     <div className="bg-gray-50 rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
-                        Min
+                        {t("minPrice", {}, language)}
                       </p>
                       <p className="font-bold text-gray-800 mt-1">
                         {formatCurrency(
@@ -2445,7 +2463,7 @@ out center tags;
 
                     <div className="bg-green-50 rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
-                        Modal
+                        {t("modalPrice", {}, language)}
                       </p>
                       <p className="font-bold text-green-800 mt-1">
                         {formatCurrency(
@@ -2456,7 +2474,7 @@ out center tags;
 
                     <div className="bg-gray-50 rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
-                        Max
+                        {t("maxPrice", {}, language)}
                       </p>
                       <p className="font-bold text-gray-800 mt-1">
                         {formatCurrency(
@@ -2468,7 +2486,7 @@ out center tags;
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">
-                      Date: {item.arrivalDate || "Not available"}
+                      {t("dateLabel", {}, language)} {item.arrivalDate || t("notAvailable", {}, language)}
                     </p>
 
                     <button
@@ -2484,7 +2502,7 @@ out center tags;
                       }}
                       className="text-sm bg-blue-600 text-white px-3 py-2 rounded-xl font-semibold"
                     >
-                      Open Market
+                      {t("openMarket", {}, language)}
                     </button>
                   </div>
                 </article>
@@ -2496,7 +2514,7 @@ out center tags;
         <section className="mt-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
-              Nearby Selling Places
+              {t("nearbySellingPlaces", {}, language)}
             </h2>
 
             <button
@@ -2504,20 +2522,20 @@ out center tags;
               onClick={openGeneralMapSearch}
               className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
             >
-              Search in Maps
+              {t("searchInMaps", {}, language)}
             </button>
           </div>
 
           {loadingSellingPoints ? (
             <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
               <p className="text-gray-600">
-                Searching nearby selling places...
+                {t("searchingNearbyPlaces", {}, language)}
               </p>
             </div>
           ) : sellingPoints.length === 0 ? (
             <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
               <p className="text-gray-600">
-                Nearby mapped selling places were not found.
+                {t("noMappedPlaces", {}, language)}
               </p>
             </div>
           ) : (
@@ -2538,11 +2556,11 @@ out center tags;
                       </p>
 
                       <p className="text-sm text-gray-500 mt-1">
-                        {point.address || "Address not available"}
+                        {point.address || t("addressNotAvailable", {}, language)}
                       </p>
 
                       <p className="text-sm text-gray-500 mt-1">
-                        Distance: {point.distance.toFixed(1)} km
+                        {t("distanceLabel", {}, language)} {point.distance.toFixed(1)} km
                       </p>
                     </div>
                   </div>
@@ -2555,7 +2573,7 @@ out center tags;
                       }
                       className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold"
                     >
-                      Directions
+                      {t("directions", {}, language)}
                     </button>
 
                     {point.phone && (
@@ -2563,7 +2581,7 @@ out center tags;
                         href={`tel:${point.phone}`}
                         className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
                       >
-                        Call
+                        {t("call", {}, language)}
                       </a>
                     )}
                   </div>

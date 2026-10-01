@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  getLanguage,
+  setLanguage,
+  subscribeLanguageChange,
+  t,
+} from "../../utils/language";
 
 const roles = [
   {
     id: "farmer",
     icon: "👨‍🌾",
-    title: "Farmer",
-    description:
-      "Access crop information, disease detection, weather, market prices and local agricultural products.",
+    titleKey: "roleFarmer",
+    descriptionKey: "roleFarmerDescription",
     color:
       "from-green-500 to-emerald-600",
     lightColor:
@@ -16,9 +21,8 @@ const roles = [
   {
     id: "dealer",
     icon: "🏪",
-    title: "Dealer",
-    description:
-      "Manage products, stock, farmer orders and sales.",
+    titleKey: "roleDealer",
+    descriptionKey: "roleDealerDescription",
     color:
       "from-blue-500 to-cyan-600",
     lightColor:
@@ -27,9 +31,8 @@ const roles = [
   {
     id: "admin",
     icon: "🛡️",
-    title: "Admin",
-    description:
-      "Manage farmers, dealers, products, reports, approvals and system activities.",
+    titleKey: "roleAdmin",
+    descriptionKey: "roleAdminDescription",
     color:
       "from-purple-500 to-indigo-600",
     lightColor:
@@ -42,14 +45,23 @@ export default function RoleSelectionPage() {
 
   const [selectedRole, setSelectedRole] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [language, setCurrentLanguage] = useState(getLanguage());
 
   useEffect(() => {
+    const unsubscribe = subscribeLanguageChange(setCurrentLanguage);
     const timer = window.setTimeout(() => {
       setIsVisible(true);
     }, 100);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
+
+  function handleLanguageChange(event) {
+    setCurrentLanguage(setLanguage(event.target.value));
+  }
 
   function selectRole(role) {
     setSelectedRole(role);
@@ -104,14 +116,28 @@ export default function RoleSelectionPage() {
           </h1>
 
           <p className="text-gray-600 mt-2 text-sm sm:text-base">
-            Your smart companion for agriculture
+            {t("roleSelectionSubtitle", {}, language)}
           </p>
+
+          <label className="inline-flex items-center gap-3 mt-5 rounded-2xl border border-green-200 bg-white px-4 py-3 shadow-sm">
+            <span className="font-semibold text-gray-700">🌐 {t("selectLanguage", {}, language)}</span>
+            <select
+              value={language}
+              onChange={handleLanguageChange}
+              className="rounded-lg border border-green-200 bg-white px-3 py-2 text-green-900"
+              aria-label={t("selectLanguage", {}, language)}
+            >
+              <option value="en">English</option>
+              <option value="te">తెలుగు</option>
+              <option value="hi">हिन्दी</option>
+            </select>
+          </label>
 
           <div className="mt-5 inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-green-100 rounded-full px-4 py-2 shadow-sm">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
 
             <span className="text-sm font-medium text-gray-600">
-              Select your role to continue
+              {t("selectRoleToContinue", {}, language)}
             </span>
           </div>
         </header>
@@ -121,6 +147,7 @@ export default function RoleSelectionPage() {
           {roles.map((role, index) => {
             const isSelected =
               selectedRole === role.id;
+            const roleTitle = t(role.titleKey, {}, language);
 
             return (
               <button
@@ -130,7 +157,7 @@ export default function RoleSelectionPage() {
                   selectRole(role.id)
                 }
                 disabled={Boolean(selectedRole)}
-                aria-label={`Continue as ${role.title}`}
+                aria-label={t("continueAsRole", { role: roleTitle }, language)}
                 className={`
                   group relative text-left
                   bg-white
@@ -220,11 +247,11 @@ export default function RoleSelectionPage() {
                   {/* Content */}
                   <div className="mt-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      {role.title}
+                      {roleTitle}
                     </h2>
 
                     <p className="text-gray-600 text-sm leading-6 mt-3 min-h-[72px]">
-                      {role.description}
+                      {t(role.descriptionKey, {}, language)}
                     </p>
                   </div>
 
@@ -252,8 +279,8 @@ export default function RoleSelectionPage() {
                     `}
                   >
                     {isSelected
-                      ? "Opening login..."
-                      : `Continue as ${role.title}`}
+                      ? t("openingLogin", {}, language)
+                      : t("continueAsRole", { role: roleTitle }, language)}
                   </div>
                 </div>
 
@@ -284,7 +311,7 @@ export default function RoleSelectionPage() {
               <span className="text-green-600">
                 ✓
               </span>
-              Simple to use
+              {t("simpleToUse", {}, language)}
             </span>
 
             <span className="hidden sm:block text-gray-300">
@@ -295,7 +322,7 @@ export default function RoleSelectionPage() {
               <span className="text-green-600">
                 ✓
               </span>
-              Farmer friendly
+              {t("farmerFriendly", {}, language)}
             </span>
 
             <span className="hidden sm:block text-gray-300">
@@ -306,7 +333,7 @@ export default function RoleSelectionPage() {
               <span className="text-green-600">
                 ✓
               </span>
-              Secure access
+              {t("secureAccess", {}, language)}
             </span>
           </div>
         </footer>

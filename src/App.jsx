@@ -1,5 +1,6 @@
 import {
   BrowserRouter,
+  Navigate,
   Route,
   Routes,
 } from "react-router-dom";
@@ -10,7 +11,6 @@ import {
 import SplashPage from "./modules/splash/SplashPage";
 import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
-import LanguageSelection from "./modules/auth/LanguageSelection";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
 import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
 
@@ -86,7 +86,7 @@ function App() {
 
         <Route
           path="/language"
-          element={<LanguageSelection />}
+          element={<Navigate to="/role-selection" replace />}
         />
 
         <Route

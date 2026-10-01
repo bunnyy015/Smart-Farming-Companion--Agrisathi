@@ -4,6 +4,8 @@ import { get, push, ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import QuantitySelector from "../../components/marketplace/QuantitySelector";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 function getCategoryIcon(category) {
   const icons = {
@@ -18,6 +20,7 @@ function getCategoryIcon(category) {
 }
 
 export default function FarmerProductDetailsPage() {
+  const language = useLanguage();
   const navigate = useNavigate();
   const { dealerUid, productId } = useParams();
 
@@ -177,6 +180,24 @@ export default function FarmerProductDetailsPage() {
       );
 
       const now = new Date().toISOString();
+      const deliveryAddressDetails = {
+        name: farmer.fullName || farmer.farmerName || farmer.name || "Farmer",
+        phone: farmer.phone || farmer.mobile || farmer.phoneNumber || "",
+        address: farmer.address || farmer.deliveryAddress || "",
+        village: farmer.village || "",
+        mandal: farmer.mandal || "",
+        district: farmer.district || "",
+        state: farmer.state || "",
+        pincode: farmer.pincode || farmer.pinCode || farmer.postalCode || "",
+      };
+      const deliveryAddress = [
+        deliveryAddressDetails.address,
+        deliveryAddressDetails.village,
+        deliveryAddressDetails.mandal,
+        deliveryAddressDetails.district,
+        deliveryAddressDetails.state,
+        deliveryAddressDetails.pincode,
+      ].filter(Boolean).join(", ") || "Address not added";
 
       await set(orderReference, {
         farmerUid: currentUser.uid,
@@ -196,11 +217,8 @@ export default function FarmerProductDetailsPage() {
         farmerDistrict: farmer.district || "",
         farmerState: farmer.state || "",
 
-        deliveryAddress:
-          farmer.address ||
-          farmer.village ||
-          farmer.deliveryAddress ||
-          "Address not added",
+        deliveryAddress,
+        deliveryAddressDetails,
 
         dealerUid,
         dealerName:
@@ -244,7 +262,7 @@ export default function FarmerProductDetailsPage() {
 
       showMessage(
         "success",
-        "Order request sent. Check My Orders for updates."
+        t("orderRequestSent", {}, language)
       );
     } catch (error) {
       console.error("Order request error:", error);
@@ -254,8 +272,8 @@ export default function FarmerProductDetailsPage() {
         String(error?.message || "")
           .toLowerCase()
           .includes("permission denied")
-          ? "Order access is blocked by Firebase rules."
-          : "Order request could not be sent."
+          ? t("orderAccessBlocked", {}, language)
+          : t("orderRequestFailed", {}, language)
       );
     } finally {
       setSending(false);
@@ -269,7 +287,7 @@ export default function FarmerProductDetailsPage() {
           <div className="text-5xl">🌱</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
-            Loading product
+            {t("productLoading", {}, language)}
           </h1>
         </div>
       </div>
@@ -289,7 +307,7 @@ export default function FarmerProductDetailsPage() {
             <div className="text-5xl">📦</div>
 
             <h1 className="text-xl font-bold text-green-900 mt-4">
-              Product unavailable
+              {t("productUnavailable", {}, language)}
             </h1>
 
             <button
@@ -299,7 +317,7 @@ export default function FarmerProductDetailsPage() {
               }
               className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold mt-5"
             >
-              View Other Products
+              {t("viewOtherProducts", {}, language)}
             </button>
           </div>
         </div>
@@ -345,7 +363,7 @@ export default function FarmerProductDetailsPage() {
             }
             className="text-green-700 font-semibold"
           >
-            ← Marketplace
+            {t("localMarketplace", {}, language)}
           </button>
         </header>
 
@@ -362,7 +380,7 @@ export default function FarmerProductDetailsPage() {
                 </h1>
 
                 <p className="text-green-100 mt-1">
-                  {product.category || "Farm Product"}
+                  {product.category || t("farmProduct", {}, language)}
                   {product.brand
                     ? ` • ${product.brand}`
                     : ""}
@@ -375,7 +393,7 @@ export default function FarmerProductDetailsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-green-50 rounded-xl p-4">
                 <p className="text-sm text-gray-500">
-                  Price
+                  {t("priceLabel", {}, language)}
                 </p>
 
                 <p className="text-xl font-bold text-green-900 mt-1">
@@ -383,13 +401,13 @@ export default function FarmerProductDetailsPage() {
                 </p>
 
                 <p className="text-sm text-gray-500">
-                  per {product.unit || "unit"}
+                  {t("perUnit", { unit: product.unit || "unit" }, language)}
                 </p>
               </div>
 
               <div className="bg-blue-50 rounded-xl p-4">
                 <p className="text-sm text-gray-500">
-                  Available
+                  {t("availableLabel", {}, language)}
                 </p>
 
                 <p className="text-xl font-bold text-blue-900 mt-1">
@@ -397,7 +415,7 @@ export default function FarmerProductDetailsPage() {
                 </p>
 
                 <p className="text-sm text-gray-500">
-                  {product.unit || "units"}
+                  {product.unit || t("unitsLabel", {}, language)}
                 </p>
               </div>
             </div>
@@ -405,7 +423,7 @@ export default function FarmerProductDetailsPage() {
             {product.description && (
               <div className="mt-5">
                 <h2 className="font-bold text-green-900">
-                  Product Information
+                  {t("productInformation", {}, language)}
                 </h2>
 
                 <p className="text-gray-600 mt-2">
@@ -416,7 +434,7 @@ export default function FarmerProductDetailsPage() {
 
             <div className="border-t border-gray-100 mt-5 pt-5">
               <h2 className="font-bold text-green-900">
-                🏪 Dealer
+                {t("dealerLabel", {}, language)}
               </h2>
 
               <p className="font-semibold text-gray-800 mt-2">
@@ -428,7 +446,7 @@ export default function FarmerProductDetailsPage() {
               </p>
 
               <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold mt-3">
-                ✓ Approved Dealer
+                {t("approvedDealer", {}, language)}
               </span>
 
               {dealerPhone && (
@@ -436,14 +454,14 @@ export default function FarmerProductDetailsPage() {
                   href={`tel:${dealerPhone}`}
                   className="inline-block ml-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold"
                 >
-                  📞 Call Dealer
+                  {t("callDealer", {}, language)}
                 </a>
               )}
             </div>
 
             <div className="border-t border-gray-100 mt-5 pt-5">
               <h2 className="font-bold text-green-900">
-                Select Quantity
+                {t("selectQuantity", {}, language)}
               </h2>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
@@ -456,7 +474,7 @@ export default function FarmerProductDetailsPage() {
                 />
 
                 <p className="font-bold text-green-900">
-                  Total: ₹
+                  {t("totalLabel", {}, language)} ₹
                   {(
                     Number(product.price || 0) *
                     quantity
@@ -471,12 +489,12 @@ export default function FarmerProductDetailsPage() {
                 className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold mt-5 disabled:bg-gray-400"
               >
                 {sending
-                  ? "Sending Request..."
-                  : "Request Order"}
+                  ? t("sendingOrderRequest", {}, language)
+                  : t("requestOrder", {}, language)}
               </button>
 
               <p className="text-center text-sm text-gray-500 mt-3">
-                Payment: Cash on Delivery
+                {t("paymentCashOnDelivery", {}, language)}
               </p>
             </div>
           </section>

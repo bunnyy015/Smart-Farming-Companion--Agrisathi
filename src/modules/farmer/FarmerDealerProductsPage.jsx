@@ -14,9 +14,12 @@ import StatusMessage from "../../components/StatusMessage";
 import CategoryFilter from "../../components/marketplace/CategoryFilter";
 import MarketplaceProductCard from "../../components/marketplace/MarketplaceProductCard";
 import MarketplaceEmptyState from "../../components/marketplace/MarketplaceEmptyState";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 export default function FarmerDealerProductsPage() {
   const navigate = useNavigate();
+  const language = useLanguage();
   const [searchParams] = useSearchParams();
 
   const voiceSearch =
@@ -444,6 +447,24 @@ export default function FarmerDealerProductsPage() {
       );
 
       const now = new Date().toISOString();
+      const deliveryAddressDetails = {
+        name: farmer.fullName || farmer.farmerName || farmer.name || "Farmer",
+        phone: farmer.phone || farmer.mobile || farmer.phoneNumber || "",
+        address: farmer.address || farmer.deliveryAddress || "",
+        village: farmer.village || "",
+        mandal: farmer.mandal || "",
+        district: farmer.district || "",
+        state: farmer.state || "",
+        pincode: farmer.pincode || farmer.pinCode || farmer.postalCode || "",
+      };
+      const deliveryAddress = [
+        deliveryAddressDetails.address,
+        deliveryAddressDetails.village,
+        deliveryAddressDetails.mandal,
+        deliveryAddressDetails.district,
+        deliveryAddressDetails.state,
+        deliveryAddressDetails.pincode,
+      ].filter(Boolean).join(", ") || "Address not added";
 
       await set(orderReference, {
         farmerUid: currentUser.uid,
@@ -466,18 +487,8 @@ export default function FarmerDealerProductsPage() {
         farmerState:
           farmer.state || "",
 
-        deliveryAddress:
-          farmer.deliveryAddress ||
-          farmer.address ||
-          [
-            farmer.village,
-            farmer.mandal,
-            farmer.district,
-            farmer.state,
-          ]
-            .filter(Boolean)
-            .join(", ") ||
-          "Address not added",
+        deliveryAddress,
+        deliveryAddressDetails,
 
         dealerUid: product.dealerUid,
         dealerName: product.dealerName,
@@ -514,7 +525,7 @@ export default function FarmerDealerProductsPage() {
 
       showMessage(
         "success",
-        "Order request sent. Check My Orders for the dealer response."
+        t("orderRequestSent", {}, language)
       );
     } catch (error) {
       console.error(
@@ -527,8 +538,8 @@ export default function FarmerDealerProductsPage() {
         String(error?.message || "")
           .toLowerCase()
           .includes("permission denied")
-          ? "Order access is blocked by Firebase rules."
-          : "Order request could not be sent."
+          ? t("orderAccessBlocked", {}, language)
+          : t("orderRequestFailed", {}, language)
       );
     } finally {
       setSubmittingKey("");
@@ -544,11 +555,11 @@ export default function FarmerDealerProductsPage() {
           </div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
-            Finding nearby products
+            {t("nearbyProductsLoading", {}, language)}
           </h1>
 
           <p className="text-sm text-gray-500 mt-2">
-            Please wait...
+            {t("pleaseWait", {}, language)}
           </p>
         </div>
       </div>
@@ -573,15 +584,15 @@ export default function FarmerDealerProductsPage() {
                 }
                 className="text-green-100 font-semibold"
               >
-                ← Dashboard
+                {t("dashboardLink", {}, language)}
               </button>
 
               <h1 className="text-3xl font-bold mt-3">
-                🏪 Local Marketplace
+                {t("localMarketplace", {}, language)}
               </h1>
 
               <p className="text-green-100 mt-1">
-                Seeds, fertilizers and farm products.
+                {t("marketplaceIntro", {}, language)}
               </p>
             </div>
 
@@ -592,16 +603,16 @@ export default function FarmerDealerProductsPage() {
               }
               className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold shadow-sm"
             >
-              🛒 My Orders
+              {t("myOrdersButton", {}, language)}
             </button>
           </div>
 
           <div className="bg-white/15 rounded-xl px-4 py-3 mt-4 text-sm">
-            📍 Near{" "}
+            {t("nearLabel", {}, language)}{" "}
             <strong>
               {farmer?.district ||
                 farmer?.state ||
-                "your registered area"}
+                t("registeredArea", {}, language)}
             </strong>
           </div>
         </header>
@@ -611,7 +622,7 @@ export default function FarmerDealerProductsPage() {
             htmlFor="marketplace-search"
             className="font-semibold text-gray-800"
           >
-            🔍 Search product
+            {t("searchProduct", {}, language)}
           </label>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
@@ -624,7 +635,7 @@ export default function FarmerDealerProductsPage() {
                   event.target.value
                 )
               }
-              placeholder="Urea, cotton seed, pesticide..."
+              placeholder={t("marketplaceSearchPlaceholder", {}, language)}
               className="flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-600"
             />
 
@@ -635,7 +646,7 @@ export default function FarmerDealerProductsPage() {
               }
               className="border border-green-700 text-green-700 px-4 py-3 rounded-xl font-semibold"
             >
-              🎤 Speak
+              {t("speak", {}, language)}
             </button>
 
             <button
@@ -643,13 +654,13 @@ export default function FarmerDealerProductsPage() {
               onClick={loadMarketplace}
               className="bg-green-700 text-white px-4 py-3 rounded-xl font-semibold"
             >
-              Refresh
+              {t("refresh", {}, language)}
             </button>
           </div>
 
           {voiceSearch && (
             <p className="text-sm text-green-700 mt-3">
-              Voice search:{" "}
+              {t("voiceSearchLabel", {}, language)}{" "}
               <strong>{voiceSearch}</strong>
             </p>
           )}
@@ -667,11 +678,11 @@ export default function FarmerDealerProductsPage() {
         <section className="mt-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-green-900">
-              Nearby Products
+              {t("nearbyProducts", {}, language)}
             </h2>
 
             <span className="text-sm text-gray-500">
-              {products.length} found
+              {products.length} {t("productsFound", {}, language)}
             </span>
           </div>
 

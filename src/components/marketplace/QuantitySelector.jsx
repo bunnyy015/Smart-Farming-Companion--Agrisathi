@@ -1,3 +1,6 @@
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
+
 export default function QuantitySelector({
   value,
   minimum = 1,
@@ -5,6 +8,7 @@ export default function QuantitySelector({
   disabled = false,
   onChange,
 }) {
+  const language = useLanguage();
   const quantity = Number(value || minimum);
 
   function decrease() {
@@ -29,7 +33,7 @@ export default function QuantitySelector({
         type="button"
         disabled={disabled || quantity <= minimum}
         onClick={decrease}
-        aria-label="Decrease quantity"
+        aria-label={t("decreaseQuantity", {}, language)}
         className="w-11 h-11 text-xl font-bold text-green-700 hover:bg-green-50 disabled:text-gray-300 disabled:cursor-not-allowed"
       >
         −
@@ -43,7 +47,7 @@ export default function QuantitySelector({
         type="button"
         disabled={disabled || quantity >= maximum}
         onClick={increase}
-        aria-label="Increase quantity"
+        aria-label={t("increaseQuantity", {}, language)}
         className="w-11 h-11 text-xl font-bold text-green-700 hover:bg-green-50 disabled:text-gray-300 disabled:cursor-not-allowed"
       >
         +

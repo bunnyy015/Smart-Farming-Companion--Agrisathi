@@ -1,73 +1,76 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useLanguage from "../../utils/useLanguage";
+import { getSpeechLocale, t } from "../../utils/language";
 
 export default function GovtSchemesPage() {
   const navigate = useNavigate();
+  const language = useLanguage();
 
   const [search, setSearch] = useState("");
 
   const schemes = [
     {
-      title: "PM Kisan Samman Nidhi",
-      category: "Financial Support",
-      benefit: "₹6000 yearly support for eligible farmers.",
-      eligibility: "Small and marginal farmers with valid land records.",
-      documents: "Aadhaar, bank account, land details.",
+      titleKey: "schemeTitlePmkisan",
+      categoryKey: "schemeCategoryFinancial",
+      benefitKey: "schemeBenefitPmkisan",
+      eligibilityKey: "schemeEligibilityPmkisan",
+      documentsKey: "schemeDocumentsPmkisan",
       icon: "💰",
       applyUrl: "https://pmkisan.gov.in/RegistrationFormupdated.aspx",
       applyLabel: "Apply on PM-KISAN",
       applicationNote: "Use the official new farmer registration form.",
     },
     {
-      title: "Pradhan Mantri Fasal Bima Yojana",
-      category: "Crop Insurance",
-      benefit: "Crop loss protection due to natural calamities.",
-      eligibility: "Farmers growing notified crops in notified areas.",
-      documents: "Aadhaar, bank account, crop details, land details.",
+      titleKey: "schemeTitleInsurance",
+      categoryKey: "schemeCategoryInsurance",
+      benefitKey: "schemeBenefitInsurance",
+      eligibilityKey: "schemeEligibilityInsurance",
+      documentsKey: "schemeDocumentsInsurance",
       icon: "🛡️",
       applyUrl: "https://pmfby.gov.in/selfRegistration",
       applyLabel: "Apply for crop insurance",
       applicationNote: "Check notified crops, area and enrollment dates before applying.",
     },
     {
-      title: "Kisan Credit Card",
-      category: "Loan Support",
-      benefit: "Short-term crop loan at lower interest.",
-      eligibility: "Farmers, tenant farmers, sharecroppers.",
-      documents: "Aadhaar, land records, bank details.",
+      titleKey: "schemeTitleCredit",
+      categoryKey: "schemeCategoryLoan",
+      benefitKey: "schemeBenefitCredit",
+      eligibilityKey: "schemeEligibilityCredit",
+      documentsKey: "schemeDocumentsCredit",
       icon: "🏦",
       applyUrl: "https://pmkisan.gov.in/Documents/Kcc.pdf",
       applyLabel: "Get KCC application form",
       applicationNote: "Submit the completed form to a participating bank.",
     },
     {
-      title: "Soil Health Card Scheme",
-      category: "Soil Testing",
-      benefit: "Soil nutrient report and fertilizer advice.",
-      eligibility: "All farmers.",
-      documents: "Farmer details and land details.",
+      titleKey: "schemeTitleSoil",
+      categoryKey: "schemeCategorySoil",
+      benefitKey: "schemeBenefitSoil",
+      eligibilityKey: "schemeEligibilityAllFarmers",
+      documentsKey: "schemeDocumentsSoil",
       icon: "🌱",
       applyUrl: "https://soilhealth.dac.gov.in/soilhealthcard",
       applyLabel: "Get Soil Health Card",
       applicationNote: "Use the official portal to access Soil Health Card services.",
     },
     {
-      title: "PM Krishi Sinchayee Yojana",
-      category: "Irrigation",
-      benefit: "Support for better irrigation and water usage.",
-      eligibility: "Farmers needing irrigation improvement.",
-      documents: "Land records, Aadhaar, bank details.",
+      titleKey: "schemeTitleIrrigation",
+      categoryKey: "schemeCategoryIrrigation",
+      benefitKey: "schemeBenefitIrrigation",
+      eligibilityKey: "schemeEligibilityIrrigation",
+      documentsKey: "schemeDocumentsCredit",
       icon: "💧",
       applyUrl: "https://pmksy.gov.in/Default.aspx",
       applyLabel: "Official scheme information",
       applicationNote: "For assistance or applications, contact your state agriculture or horticulture department.",
     },
     {
-      title: "eNAM",
-      category: "Market Support",
-      benefit: "Online agricultural market platform.",
-      eligibility: "Farmers selling produce in registered markets.",
-      documents: "Farmer ID, bank account, produce details.",
+      titleKey: "schemeTitleEnam",
+      categoryKey: "schemeCategoryMarket",
+      benefitKey: "schemeBenefitEnam",
+      eligibilityKey: "schemeEligibilityEnam",
+      documentsKey: "schemeDocumentsEnam",
       icon: "📈",
       applyUrl: "https://enam.gov.in/registration",
       applyLabel: "Register on e-NAM",
@@ -77,20 +80,20 @@ export default function GovtSchemesPage() {
 
   const filteredSchemes = schemes.filter((scheme) => {
     const text = `
-      ${scheme.title}
-      ${scheme.category}
-      ${scheme.benefit}
-      ${scheme.eligibility}
+      ${t(scheme.titleKey, {}, language)}
+      ${t(scheme.categoryKey, {}, language)}
+      ${t(scheme.benefitKey, {}, language)}
+      ${t(scheme.eligibilityKey, {}, language)}
     `.toLowerCase();
 
     return text.includes(search.toLowerCase());
   });
 
   function speakScheme(scheme) {
-    const message = `${scheme.title}. Benefit: ${scheme.benefit}. Eligibility: ${scheme.eligibility}. Required documents: ${scheme.documents}`;
+    const message = `${t(scheme.titleKey, {}, language)}. ${t("schemeBenefitLabel", {}, language)} ${t(scheme.benefitKey, {}, language)}. ${t("schemeEligibilityLabel", {}, language)} ${t(scheme.eligibilityKey, {}, language)}. ${t("schemeDocumentsLabel", {}, language)} ${t(scheme.documentsKey, {}, language)}`;
 
     const speech = new SpeechSynthesisUtterance(message);
-    speech.lang = "en-IN";
+    speech.lang = getSpeechLocale(language);
     speech.rate = 0.9;
 
     window.speechSynthesis.cancel();
@@ -105,15 +108,15 @@ export default function GovtSchemesPage() {
             onClick={() => navigate("/dashboard")}
             className="text-sm mb-3"
           >
-            ← Back to Dashboard
+            {t("dashboardLink", {}, language)}
           </button>
 
           <h1 className="text-4xl font-bold">
-            🏛️ Government Schemes
+            {t("governmentSchemesTitle", {}, language)}
           </h1>
 
           <p className="text-green-100 mt-2">
-            Find useful government schemes for farmers.
+            {t("governmentSchemesIntro", {}, language)}
           </p>
         </div>
 
@@ -121,7 +124,7 @@ export default function GovtSchemesPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search scheme, insurance, loan, irrigation..."
+            placeholder={t("searchSchemesPlaceholder", {}, language)}
             className="w-full border border-gray-300 rounded-lg p-3"
           />
         </div>
@@ -129,30 +132,30 @@ export default function GovtSchemesPage() {
         <div className="grid md:grid-cols-2 gap-5">
           {filteredSchemes.map((scheme) => (
             <div
-              key={scheme.title}
+              key={scheme.titleKey}
               className="bg-white rounded-2xl shadow-lg p-6"
             >
               <div className="text-5xl mb-3">{scheme.icon}</div>
 
               <h2 className="text-2xl font-bold text-green-700">
-                {scheme.title}
+                {t(scheme.titleKey, {}, language)}
               </h2>
 
               <p className="text-sm text-gray-500 mt-1">
-                {scheme.category}
+                {t(scheme.categoryKey, {}, language)}
               </p>
 
               <div className="mt-4 space-y-2 text-gray-700">
                 <p>
-                  <b>Benefit:</b> {scheme.benefit}
+                  <b>{t("schemeBenefitLabel", {}, language)}</b> {t(scheme.benefitKey, {}, language)}
                 </p>
 
                 <p>
-                  <b>Eligibility:</b> {scheme.eligibility}
+                  <b>{t("schemeEligibilityLabel", {}, language)}</b> {t(scheme.eligibilityKey, {}, language)}
                 </p>
 
                 <p>
-                  <b>Documents:</b> {scheme.documents}
+                  <b>{t("schemeDocumentsLabel", {}, language)}</b> {t(scheme.documentsKey, {}, language)}
                 </p>
               </div>
 
@@ -166,7 +169,7 @@ export default function GovtSchemesPage() {
                   onClick={() => speakScheme(scheme)}
                   className="bg-blue-600 text-white py-3 rounded-lg font-semibold"
                 >
-                  🔊 Speak
+                  {t("speakScheme", {}, language)}
                 </button>
 
                 <a
@@ -185,11 +188,11 @@ export default function GovtSchemesPage() {
         {filteredSchemes.length === 0 && (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-green-700">
-              No schemes found
+              {t("noSchemesFound", {}, language)}
             </h2>
 
             <p className="text-gray-600 mt-2">
-              Try searching with loan, insurance, irrigation, market or soil.
+              {t("searchSchemesHint", {}, language)}
             </p>
           </div>
         )}
