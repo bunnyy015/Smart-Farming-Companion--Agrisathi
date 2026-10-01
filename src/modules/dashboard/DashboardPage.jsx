@@ -156,7 +156,31 @@ export default function DashboardPage() {
           .map((order) => `order-${order.id}-${order.status}`)
       );
 
-      setLatestOrder(orders[0] || null);
+      setLatestOrder(
+        orders.find((order) => {
+          const status = String(order.status || order.orderStatus || "")
+            .trim()
+            .toLowerCase()
+            .replaceAll(" ", "_");
+
+          const paid =
+            ["payment_received", "completed", "complete", "paid", "payment_completed"].includes(status) ||
+            order.dealerPaymentReceived === true ||
+            order.paymentStatus === "paid" ||
+            order.paymentStatus === "completed";
+
+          const statusIsInHistory =
+            ["accepted", "rejected", "cancelled", "canceled"].includes(status) ||
+            Boolean(
+              order.acceptedAt ||
+                order.dealerAcceptedAt ||
+                order.rejectedAt ||
+                order.cancelledAt
+            );
+
+          return !order.farmerArchived && !paid && !statusIsInHistory;
+        }) || null
+      );
 
     } catch (error) {
       console.error("Order summary error:", error);
