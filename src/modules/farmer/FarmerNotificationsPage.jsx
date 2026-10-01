@@ -265,6 +265,25 @@ export default function FarmerNotificationsPage() {
     );
   }
 
+  function getDeletedIds(uid) {
+    try {
+      const saved = localStorage.getItem(
+        `farmerNotificationDeletes_${uid}`
+      );
+
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveDeletedIds(uid, ids) {
+    localStorage.setItem(
+      `farmerNotificationDeletes_${uid}`,
+      JSON.stringify(ids)
+    );
+  }
+
   async function loadNotifications(uid, isRefresh = false) {
     if (isRefresh) {
       setRefreshing(true);
@@ -313,8 +332,13 @@ export default function FarmerNotificationsPage() {
       }
 
       const readIds = getReadIds(uid);
+      const deletedIds = getDeletedIds(uid);
 
       const finalNotifications = orderNotifications
+        .filter(
+          (notification) =>
+            !deletedIds.includes(notification.id)
+        )
         .map((notification) => ({
           ...notification,
           read: readIds.includes(notification.id),
@@ -409,6 +433,31 @@ export default function FarmerNotificationsPage() {
       "success",
       "All notifications were marked as read."
     );
+  }
+
+  function deleteNotification(notification) {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !notification.read) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete this notification?\n\n${notification.title}`
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    const deletedIds = getDeletedIds(currentUser.uid);
+    saveDeletedIds(currentUser.uid, [
+      ...new Set([...deletedIds, notification.id]),
+    ]);
+    setNotifications((current) =>
+      current.filter((item) => item.id !== notification.id)
+    );
+    showMessage("success", "Notification deleted.");
   }
 
   function openNotification(notification) {
@@ -545,50 +594,68 @@ export default function FarmerNotificationsPage() {
             <section className="space-y-3">
               {filteredNotifications.map(
                 (notification) => (
-                  <button
-                    type="button"
+                  <article
                     key={notification.id}
-                    onClick={() =>
-                      openNotification(notification)
-                    }
                     className={`w-full text-left border rounded-2xl p-4 shadow-sm active:scale-[0.98] transition ${notification.className} ${
                       notification.read
                         ? "opacity-70"
                         : "ring-2 ring-green-300"
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 shrink-0 bg-white/70 rounded-full flex items-center justify-center text-2xl">
-                        {notification.icon}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3">
-                          <h2 className="font-bold text-gray-900">
-                            {notification.title}
-                          </h2>
-
-                          {!notification.read && (
-                            <span className="w-3 h-3 shrink-0 bg-green-600 rounded-full mt-1" />
-                          )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openNotification(notification)
+                      }
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 shrink-0 bg-white/70 rounded-full flex items-center justify-center text-2xl">
+                          {notification.icon}
                         </div>
 
-                        <p className="text-sm text-gray-700 mt-1">
-                          {notification.text}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <h2 className="font-bold text-gray-900">
+                              {notification.title}
+                            </h2>
 
-                        <div className="flex items-center justify-between mt-3">
-                          <p className="text-xs text-gray-500">
-                            {formatDate(notification.date)}
+                            {!notification.read && (
+                              <span className="w-3 h-3 shrink-0 bg-green-600 rounded-full mt-1" />
+                            )}
+                          </div>
+
+                          <p className="text-sm text-gray-700 mt-1">
+                            {notification.text}
                           </p>
 
-                          <span className="text-xs font-semibold text-green-700">
-                            View order →
-                          </span>
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-gray-500">
+                              {formatDate(notification.date)}
+                            </p>
+
+                            <span className="text-xs font-semibold text-green-700">
+                              View order →
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+
+                    {notification.read && (
+                      <div className="flex justify-end mt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteNotification(notification)
+                          }
+                          className="min-h-10 px-3 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Delete notification
+                        </button>
+                      </div>
+                    )}
+                  </article>
                 )
               )}
             </section>
