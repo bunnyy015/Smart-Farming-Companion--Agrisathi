@@ -724,111 +724,51 @@ export default function DealerSalesPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="divide-y divide-green-100 overflow-hidden rounded-xl border border-green-100 bg-white shadow-sm">
               {filteredSales.map((sale) => (
-                <article
+                <button
                   key={sale.id}
-                  role="button"
-                  tabIndex={0}
+                  type="button"
                   onClick={() => openSaleDetails(sale)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" ||
-                      event.key === " "
-                    ) {
-                      openSaleDetails(sale);
-                    }
-                  }}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-green-300 transition"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left transition hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-700 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,auto)_auto_auto] sm:gap-5 sm:px-5"
+                  aria-label={`View completed sale: ${sale.productName || "Farm Product"} for ${sale.farmerName || "Farmer"}`}
                 >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-green-900">
-                        {sale.productName ||
-                          "Farm Product"}
-                      </h2>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-bold text-green-900">
+                      {sale.productName || "Farm Product"}
+                    </h3>
+                    <p className="mt-1 truncate text-sm text-gray-600">
+                      {sale.farmerName || "Farmer"}
+                      <span className="px-1.5 text-gray-400" aria-hidden="true">·</span>
+                      {Number(sale.quantity || 0)} {sale.unit || "units"}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 sm:hidden">
+                      {formatDate(sale.completedAt)}
+                    </p>
+                  </div>
 
-                      <p className="text-sm text-gray-500 mt-1">
-                        👨‍🌾{" "}
-                        {sale.farmerName ||
-                          "Farmer"}
-                      </p>
+                  <p className="hidden text-sm text-gray-500 sm:block">
+                    {formatDate(sale.completedAt)}
+                  </p>
 
-                      <p className="text-sm text-gray-600 mt-2">
-                        📦{" "}
-                        {Number(
-                          sale.quantity || 0
-                        )}{" "}
-                        {sale.unit || "units"}
-                      </p>
+                  <p className="text-right font-bold text-green-800">
+                    {formatCurrency(sale.totalAmount)}
+                  </p>
 
-                      <p className="text-lg font-bold text-green-800 mt-2">
-                        {formatCurrency(
-                          sale.totalAmount
-                        )}
-                      </p>
-
-                      <p className="text-xs text-gray-500 mt-2">
-                        {formatDate(
-                          sale.completedAt
-                        )}
-                      </p>
-                    </div>
-
-                    <span className="bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-sm font-semibold self-start">
-                      ✅ Completed
+                  <div className="col-span-2 flex items-center justify-between sm:col-span-1 sm:justify-end sm:gap-3">
+                    {sale.legacyRecord && (
+                      <span className="text-xs text-amber-700">
+                        Recovered
+                      </span>
+                    )}
+                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">
+                      Completed
+                    </span>
+                    <span className="text-lg text-green-700" aria-hidden="true">
+                      ›
                     </span>
                   </div>
-
-                  <div className="grid sm:grid-cols-3 gap-3 mt-4 text-sm">
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-gray-500">
-                        Price
-                      </p>
-
-                      <p className="font-semibold mt-1">
-                        {formatCurrency(
-                          sale.price
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-gray-500">
-                        Payment
-                      </p>
-
-                      <p className="font-semibold mt-1">
-                        {sale.paymentMode ||
-                          "Cash on Delivery"}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-gray-500">
-                        Order Reference
-                      </p>
-
-                      <p className="font-semibold mt-1 break-all">
-                        {sale.orderId ||
-                          "Not available"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end mt-4">
-                    <span className="text-green-700 font-semibold text-sm">
-                      View sale details →
-                    </span>
-                  </div>
-
-                  {sale.legacyRecord && (
-                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 mt-4 text-sm">
-                      This sale was recovered from
-                      an older completed order.
-                    </div>
-                  )}
-                </article>
+                </button>
               ))}
             </div>
           )}

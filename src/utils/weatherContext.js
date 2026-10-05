@@ -42,12 +42,16 @@ export function saveWeatherContext({
 
   const weatherContext = {
     savedAt: Date.now(),
-
     location: {
       village: location?.village || "",
       mandal: location?.mandal || "",
       district: location?.district || "",
       state: location?.state || "",
+      latitude: Number(location?.latitude),
+      longitude: Number(location?.longitude),
+      accuracy: Number(location?.accuracy),
+      timestamp: Number(location?.timestamp),
+      source: location?.source || "",
     },
 
     current: {
@@ -141,11 +145,22 @@ export function getWeatherContext() {
     );
 
     const maximumAge =
-      3 * 60 * 60 * 1000;
+      15 * 60 * 1000;
+    const locationAge =
+      Date.now() - Number(weatherContext.location?.timestamp);
+
+    const hasVerifiedDeviceLocation =
+      weatherContext.location?.source === "device" &&
+      Number.isFinite(Number(weatherContext.location?.latitude)) &&
+      Number.isFinite(Number(weatherContext.location?.longitude)) &&
+      Number.isFinite(Number(weatherContext.location?.timestamp)) &&
+      locationAge >= -60_000 &&
+      locationAge <= maximumAge;
 
     if (
       !savedAt ||
-      Date.now() - savedAt > maximumAge
+      Date.now() - savedAt > maximumAge ||
+      !hasVerifiedDeviceLocation
     ) {
       localStorage.removeItem(
         WEATHER_CONTEXT_KEY
@@ -184,9 +199,8 @@ Ask the farmer to open the Weather page and refresh their location when live wea
     weather.location?.state,
   ].filter(Boolean);
 
-  const locationText =
-    locationParts.join(", ") ||
-    "Detected farmer location";
+  const locationText = locationParts.join(", ") ||
+    `${weather.location.latitude.toFixed(4)}, ${weather.location.longitude.toFixed(4)}`;
 
   return `
 Weather location: ${locationText}

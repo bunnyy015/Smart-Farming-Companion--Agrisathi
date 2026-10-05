@@ -9,6 +9,18 @@ import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
 
+const agricultureCategories = [
+  "Seeds",
+  "Fertilizer",
+  "Pesticide",
+  "Tools",
+  "Irrigation",
+  "Organic Inputs",
+  "Animal Feed",
+  "Crop Protection",
+  "Plant Growth Regulators",
+];
+
 export default function DealerStockPage() {
   const navigate = useNavigate();
 
@@ -16,6 +28,7 @@ export default function DealerStockPage() {
   const [searchText, setSearchText] = useState("");
   const [selectedFilter, setSelectedFilter] =
     useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [adjustments, setAdjustments] = useState({});
   const [updatingId, setUpdatingId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -54,6 +67,13 @@ export default function DealerStockPage() {
         return false;
       }
 
+      if (
+        selectedCategory !== "all" &&
+        String(product.category || "").trim().toLowerCase() !== selectedCategory
+      ) {
+        return false;
+      }
+
       if (!search) {
         return true;
       }
@@ -70,7 +90,14 @@ export default function DealerStockPage() {
 
       return searchableText.includes(search);
     });
-  }, [products, searchText, selectedFilter]);
+  }, [products, searchText, selectedFilter, selectedCategory]);
+
+  const productCategories = Array.from(
+    new Set([
+      ...agricultureCategories,
+      ...products.map((product) => String(product.category || "").trim()).filter(Boolean),
+    ])
+  ).sort((a, b) => a.localeCompare(b));
 
   const statistics = useMemo(() => {
     const totalProducts = products.length;
@@ -456,7 +483,7 @@ export default function DealerStockPage() {
               <button
                 type="button"
                 onClick={() =>
-                  navigate("/dealer/products")
+                  navigate("/dealer/products?add=1")
                 }
                 className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold"
               >
@@ -579,6 +606,23 @@ export default function DealerStockPage() {
           ))}
         </section>
 
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mb-5">
+          <label htmlFor="stock-category-filter" className="block font-semibold text-gray-800 mb-2">
+            Filter by agricultural category
+          </label>
+          <select
+            id="stock-category-filter"
+            value={selectedCategory}
+            onChange={(event) => setSelectedCategory(event.target.value)}
+            className="w-full sm:max-w-sm border border-gray-300 rounded-xl px-4 py-3 bg-white"
+          >
+            <option value="all">All categories</option>
+            {productCategories.map((category) => (
+              <option key={category} value={category.toLowerCase()}>{category}</option>
+            ))}
+          </select>
+        </section>
+
         {filteredProducts.length === 0 ? (
           <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
             <div className="text-5xl">📦</div>
@@ -591,10 +635,10 @@ export default function DealerStockPage() {
               Add products or change the current filter.
             </p>
 
-            <button
+          <button
               type="button"
               onClick={() =>
-                navigate("/dealer/products")
+                navigate("/dealer/products?add=1")
               }
               className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold mt-5"
             >

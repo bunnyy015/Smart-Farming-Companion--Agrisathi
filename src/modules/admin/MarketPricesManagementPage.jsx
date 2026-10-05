@@ -20,6 +20,10 @@ import {
 
 import { database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import {
+  fetchGovernmentMarketPrices,
+  getGovernmentMarketPriceErrorMessage,
+} from "../../services/marketPriceService";
 
 /*
 |--------------------------------------------------------------------------
@@ -27,11 +31,6 @@ import StatusMessage from "../../components/StatusMessage";
 |--------------------------------------------------------------------------
 | This is the SAME resource used by the Farmer Market Prices page.
 */
-const MANDI_RESOURCE_ID =
-  "9ef84268-d588-465a-a308-a864a43d0070";
-
-const API_PAGE_LIMIT = 1000;
-
 /*
 |--------------------------------------------------------------------------
 | Telangana - all 33 districts
@@ -305,100 +304,6 @@ function getUnit(record) {
 
 /*
 |--------------------------------------------------------------------------
-| API URL
-|--------------------------------------------------------------------------
-*/
-
-function buildMandiUrl({
-  state = "Telangana",
-  limit = API_PAGE_LIMIT,
-  offset = 0,
-}) {
-  const apiKey =
-    import.meta.env.VITE_DATA_GOV_API_KEY;
-
-  const params = new URLSearchParams({
-    "api-key": apiKey || "",
-    format: "json",
-    limit: String(limit),
-    offset: String(offset),
-  });
-
-  params.set(
-    "filters[state]",
-    state
-  );
-
-  return `https://api.data.gov.in/resource/${MANDI_RESOURCE_ID}?${params.toString()}`;
-}
-
-/*
-|--------------------------------------------------------------------------
-| Fetch ALL Telangana mandi records
-|--------------------------------------------------------------------------
-|
-| We paginate instead of requesting only the first 50 records.
-| This is important because the Admin page needs state-wide information.
-|--------------------------------------------------------------------------
-*/
-
-async function fetchAllTelanganaMandiRecords() {
-  const apiKey =
-    import.meta.env.VITE_DATA_GOV_API_KEY;
-
-  if (!apiKey) {
-    throw new Error(
-      "Missing VITE_DATA_GOV_API_KEY."
-    );
-  }
-
-  const allRecords = [];
-  let offset = 0;
-
-  /*
-   * Safety limit prevents an accidental endless API loop.
-   */
-  const MAX_PAGES = 20;
-
-  for (
-    let page = 0;
-    page < MAX_PAGES;
-    page += 1
-  ) {
-    const response = await fetch(
-      buildMandiUrl({
-        state: "Telangana",
-        limit: API_PAGE_LIMIT,
-        offset,
-      })
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Mandi API request failed with status ${response.status}.`
-      );
-    }
-
-    const data = await response.json();
-
-    const records = Array.isArray(data?.records)
-      ? data.records
-      : [];
-
-    allRecords.push(...records);
-
-    if (records.length < API_PAGE_LIMIT) {
-      break;
-    }
-
-    offset += API_PAGE_LIMIT;
-  }
-
-  return allRecords;
-}
-
-/*
-|--------------------------------------------------------------------------
 | Farmer data
 |--------------------------------------------------------------------------
 */
@@ -466,6 +371,8 @@ export default function MarketPriceManagementPage() {
     useState(null);
 
   const [message, setMessage] = useState(null);
+  const [marketPriceMeta, setMarketPriceMeta] = useState(null);
+  const [marketPriceError, setMarketPriceError] = useState("");
 
   useEffect(() => {
     loadPageData();
@@ -478,19 +385,30 @@ export default function MarketPriceManagementPage() {
     });
   }
 
-  async function loadPageData(isRefresh = false) {
+  async function loadPageData(isRefresh = false, forceRefresh = false) {
     try {
+      setMessage(null);
       if (isRefresh) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
 
-      const [marketData, farmerData] =
+      setMarketPriceError("");
+      setMarketPriceMeta(null);
+      const [marketResult, farmerData] =
         await Promise.all([
-          fetchAllTelanganaMandiRecords(),
+          fetchGovernmentMarketPrices({
+            state: "Telangana",
+            forceRefresh,
+          }),
           fetchFarmerInformation(),
         ]);
+      const marketData = marketResult.records;
+      setMarketPriceMeta({
+        retrievedAt: marketResult.retrievedAt,
+        source: marketResult.source,
+      });
 
       /*
        * Keep only records that actually contain a crop
@@ -519,7 +437,12 @@ export default function MarketPriceManagementPage() {
       setRecords(validRecords);
       setFarmers(farmerData);
 
-      if (validRecords.length === 0) {
+      if (marketResult.source === "cache" && validRecords.length > 0) {
+        showMessage(
+          "warning",
+          `Live data is unavailable. Showing recently cached government mandi prices from ${new Date(marketResult.retrievedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}.`
+        );
+      } else if (validRecords.length === 0) {
         showMessage(
           "info",
           "No current Telangana mandi price records were returned by the government market-price API."
@@ -531,21 +454,14 @@ export default function MarketPriceManagementPage() {
         );
       }
     } catch (error) {
-      console.error(
-        "Market price management error:",
-        error
-      );
+      if (import.meta.env.DEV) {
+        console.error("Market price management error:", error);
+      }
 
       setRecords([]);
-
-      showMessage(
-        "error",
-        error?.message?.includes(
-          "VITE_DATA_GOV_API_KEY"
-        )
-          ? "Government mandi-price API key is missing. Check VITE_DATA_GOV_API_KEY in your environment configuration."
-          : "Unable to load current government mandi prices. Please check the internet connection and API availability."
-      );
+      const friendlyError = getGovernmentMarketPriceErrorMessage(error);
+      setMarketPriceError(friendlyError);
+      showMessage("error", friendlyError);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1040,9 +956,7 @@ export default function MarketPriceManagementPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  loadPageData(true)
-                }
+                onClick={() => loadPageData(true, true)}
                 disabled={refreshing}
                 className="inline-flex items-center gap-2 bg-white text-indigo-900 px-4 py-2.5 rounded-xl font-semibold hover:bg-indigo-50 transition disabled:opacity-50"
               >
@@ -1056,8 +970,8 @@ export default function MarketPriceManagementPage() {
                 />
 
                 {refreshing
-                  ? "Refreshing..."
-                  : "Refresh"}
+                  ? marketPriceError ? "Retrying..." : "Refreshing..."
+                  : marketPriceError || marketPriceMeta?.source === "cache" ? "Retry" : "Refresh"}
               </button>
             </div>
           </div>
@@ -1079,6 +993,41 @@ export default function MarketPriceManagementPage() {
             </span>
           </div>
         </header>
+
+        {(marketPriceError || marketPriceMeta) && (
+          <div
+            className={`mb-6 rounded-xl border p-4 ${
+              marketPriceError || marketPriceMeta?.source === "cache"
+                ? "border-amber-300 bg-amber-50 text-amber-950"
+                : "border-green-200 bg-green-50 text-green-950"
+            }`}
+            role={marketPriceError ? "alert" : "status"}
+          >
+            {marketPriceError ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p>{marketPriceError}</p>
+                <button
+                  type="button"
+                  onClick={() => loadPageData(true, true)}
+                  disabled={refreshing}
+                  className="rounded-lg bg-amber-800 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                >
+                  {refreshing ? "Retrying..." : "Retry"}
+                </button>
+              </div>
+            ) : (
+              <p>
+                {marketPriceMeta.source === "cache"
+                  ? "Showing recently cached government mandi prices (not live). "
+                  : "Government data retrieved "}
+                Last updated: {new Date(marketPriceMeta.retrievedAt).toLocaleString("en-IN", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* =====================================================
             SUMMARY

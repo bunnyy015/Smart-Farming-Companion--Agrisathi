@@ -23,6 +23,7 @@ export default function MarketAlertCard({
   marketRecord,
   loading,
   onOpenMarket,
+  showAction = true,
 }) {
   const [language, setCurrentLanguage] = useState(
     getLanguage()
@@ -76,18 +77,15 @@ export default function MarketAlertCard({
               )}
             </p>
 
-            <button
-              type="button"
-              onClick={onOpenMarket}
-              className="text-sm font-bold text-green-700 mt-3"
-            >
-              {t(
-                "viewMarketPrices",
-                {},
-                language
-              )}{" "}
-              →
-            </button>
+            {showAction && onOpenMarket && (
+              <button
+                type="button"
+                onClick={onOpenMarket}
+                className="text-sm font-bold text-green-700 mt-3"
+              >
+                {t("viewMarketPrices", {}, language)} →
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -165,17 +163,15 @@ export default function MarketAlertCard({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onOpenMarket}
-        className="w-full bg-green-50 text-green-800 py-3 rounded-xl font-semibold mt-4"
-      >
-        {t(
-          "compareAllMarkets",
-          {},
-          language
-        )}
-      </button>
+      {showAction && onOpenMarket && (
+        <button
+          type="button"
+          onClick={onOpenMarket}
+          className="w-full bg-green-50 text-green-800 py-3 rounded-xl font-semibold mt-4"
+        >
+          {t("compareAllMarkets", {}, language)}
+        </button>
+      )}
     </section>
   );
 }

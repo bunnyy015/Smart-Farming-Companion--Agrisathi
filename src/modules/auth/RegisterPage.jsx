@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   deleteUser,
   sendEmailVerification,
+  setPersistence,
 } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
@@ -214,6 +216,8 @@ export default function RegisterPage() {
     try {
       setLoading(true);
 
+      await setPersistence(auth, browserSessionPersistence);
+
       const credential =
         await createUserWithEmailAndPassword(
           auth,
@@ -282,7 +286,7 @@ export default function RegisterPage() {
         );
       }
 
-      localStorage.setItem("role", "farmer");
+      sessionStorage.setItem("role", "farmer");
 
       navigate("/language", {
         replace: true,

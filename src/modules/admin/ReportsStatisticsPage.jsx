@@ -31,7 +31,8 @@ import {
   X,
 } from "lucide-react";
 
-import { database } from "../../firebase";
+import { auth, database } from "../../firebase";
+import { signOut } from "firebase/auth";
 import StatusMessage from "../../components/StatusMessage";
 
 /*
@@ -1010,12 +1011,15 @@ export default function ReportsStatisticsPage() {
     await loadReports();
   }
 
-  function handleLogout() {
-    localStorage.removeItem("role");
-
-    navigate("/role-selection", {
-      replace: true,
-    });
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      sessionStorage.removeItem("role");
+      navigate("/role-selection", { replace: true });
+    } catch (error) {
+      console.error("Admin logout error:", error);
+      showMessage("error", "Unable to log out right now. Please try again.");
+    }
   }
 
   /*

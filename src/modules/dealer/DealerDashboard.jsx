@@ -41,57 +41,6 @@ function formatNumber(value) {
   return number.toLocaleString("en-IN");
 }
 
-function getOrderStatusLabel(status) {
-  const labels = {
-    pending: "Pending",
-    accepted: "Accepted",
-    rejected: "Rejected",
-    cancelled: "Cancelled",
-    received_by_farmer: "Received by Farmer",
-    payment_received: "Payment Received",
-    completed: "Completed",
-    delivered_by_dealer: "Delivered",
-  };
-
-  return (
-    labels[String(status || "").toLowerCase()] ||
-    "Processing"
-  );
-}
-
-function getOrderStatusStyle(status) {
-  const normalized = String(
-    status || ""
-  ).toLowerCase();
-
-  if (normalized === "completed") {
-    return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  }
-
-  if (
-    normalized === "rejected" ||
-    normalized === "cancelled"
-  ) {
-    return "bg-red-100 text-red-700 border-red-200";
-  }
-
-  if (
-    normalized === "payment_received" ||
-    normalized === "received_by_farmer"
-  ) {
-    return "bg-blue-100 text-blue-700 border-blue-200";
-  }
-
-  if (
-    normalized === "accepted" ||
-    normalized === "delivered_by_dealer"
-  ) {
-    return "bg-cyan-100 text-cyan-700 border-cyan-200";
-  }
-
-  return "bg-amber-100 text-amber-700 border-amber-200";
-}
-
 /* =========================================================
    MAIN COMPONENT
 ========================================================= */
@@ -102,15 +51,12 @@ export default function DealerDashboard() {
   const [stats, setStats] = useState({
     products: 0,
     lowStock: 0,
-    pendingOrders: 0,
-    acceptedOrders: 0,
     completedSales: 0,
-    totalOrders: 0,
     totalRevenue: 0,
   });
 
-  const [recentOrders, setRecentOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [readNotificationIds, setReadNotificationIds] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,29 +68,57 @@ export default function DealerDashboard() {
   ======================================================= */
 
   const unreadNotifications = useMemo(() => {
-    const currentUser = auth.currentUser;
+    return notifications.filter(
+      (notificationId) => !readNotificationIds.includes(notificationId)
+    ).length;
+  }, [notifications, readNotificationIds]);
 
-    if (!currentUser) {
-      return 0;
+  useEffect(() => {
+    function refreshReadNotificationIds() {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        setReadNotificationIds([]);
+        return;
+      }
+
+      try {
+        const saved = localStorage.getItem(
+          `dealerNotificationReads_${currentUser.uid}`
+        );
+        const parsed = saved ? JSON.parse(saved) : [];
+        setReadNotificationIds(Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        console.error("Dealer notification read state error:", error);
+        setReadNotificationIds([]);
+      }
     }
 
-    try {
-      const saved = localStorage.getItem(
-        `dealerNotificationReads_${currentUser.uid}`
+    function handleStorageChange(event) {
+      const currentUser = auth.currentUser;
+      if (
+        currentUser &&
+        event.key === `dealerNotificationReads_${currentUser.uid}`
+      ) {
+        refreshReadNotificationIds();
+      }
+    }
+
+    refreshReadNotificationIds();
+    window.addEventListener(
+      "dealer-notification-reads-updated",
+      refreshReadNotificationIds
+    );
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener(
+        "dealer-notification-reads-updated",
+        refreshReadNotificationIds
       );
-
-      const readIds = saved
-        ? JSON.parse(saved)
-        : [];
-
-      return notifications.filter(
-        (notificationId) =>
-          !readIds.includes(notificationId)
-      ).length;
-    } catch {
-      return notifications.length;
-    }
-  }, [notifications]);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
 
   /* =======================================================
      LOAD DASHBOARD
@@ -250,22 +224,6 @@ export default function DealerDashboard() {
           }))
         : [];
 
-      /* ===================================================
-         ORDER COUNTS
-      =================================================== */
-
-      const pendingOrders = orders.filter(
-        (order) =>
-          String(order.status || "")
-            .toLowerCase() === "pending"
-      );
-
-      const acceptedOrders = orders.filter(
-        (order) =>
-          String(order.status || "")
-            .toLowerCase() === "accepted"
-      );
-
       const completedOrders = orders.filter(
         (order) =>
           String(order.status || "")
@@ -333,32 +291,6 @@ export default function DealerDashboard() {
         });
 
       /* ===================================================
-         RECENT ORDERS
-      =================================================== */
-
-      const sortedOrders = [
-        ...orders,
-      ].sort((a, b) => {
-        const dateA = new Date(
-          a.updatedAt ||
-            a.createdAt ||
-            0
-        ).getTime();
-
-        const dateB = new Date(
-          b.updatedAt ||
-            b.createdAt ||
-            0
-        ).getTime();
-
-        return dateB - dateA;
-      });
-
-      setRecentOrders(
-        sortedOrders.slice(0, 5)
-      );
-
-      /* ===================================================
          DASHBOARD STATISTICS
       =================================================== */
 
@@ -368,18 +300,9 @@ export default function DealerDashboard() {
         lowStock:
           lowStockProducts.length,
 
-        pendingOrders:
-          pendingOrders.length,
-
-        acceptedOrders:
-          acceptedOrders.length,
-
         completedSales:
           recordedSales.length +
           olderCompletedOrders.length,
-
-        totalOrders:
-          orders.length,
 
         totalRevenue,
       });
@@ -389,28 +312,27 @@ export default function DealerDashboard() {
       =================================================== */
 
       const notificationIds = [];
+      const notificationStatuses = new Set([
+        "pending",
+        "cancelled",
+        "canceled",
+        "received_by_farmer",
+        "payment_received",
+        "completed",
+        "accepted",
+        "rejected",
+        "delivered_by_dealer",
+      ]);
 
       orders.forEach((order) => {
-        const notificationStatuses = [
-          "pending",
-          "cancelled",
-          "received_by_farmer",
-          "payment_received",
-          "completed",
-          "accepted",
-          "rejected",
-          "delivered_by_dealer",
-        ];
-
         const status = String(
-          order.status || ""
-        ).toLowerCase();
+          order.status || order.orderStatus || ""
+        )
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_");
 
-        if (
-          notificationStatuses.includes(
-            status
-          )
-        ) {
+        if (notificationStatuses.has(status)) {
           notificationIds.push(
             `order-${order.id}-${status}`
           );
@@ -436,8 +358,23 @@ export default function DealerDashboard() {
         }
       });
 
+      const deletedNotificationIds = new Set();
+      try {
+        const savedDeletedIds = localStorage.getItem(
+          `dealerNotificationDeletes_${currentUser.uid}`
+        );
+        const parsedDeletedIds = savedDeletedIds
+          ? JSON.parse(savedDeletedIds)
+          : [];
+        if (Array.isArray(parsedDeletedIds)) {
+          parsedDeletedIds.forEach((id) => deletedNotificationIds.add(id));
+        }
+      } catch (error) {
+        console.error("Dealer notification deletion state error:", error);
+      }
+
       setNotifications(
-        notificationIds
+        notificationIds.filter((id) => !deletedNotificationIds.has(id))
       );
     } catch (error) {
       console.error(
@@ -618,12 +555,6 @@ export default function DealerDashboard() {
                 Dealer Account Active
               </div>
 
-              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 px-4 py-2 rounded-xl text-sm">
-                📊 {formatNumber(
-                  stats.totalOrders
-                )} Total Orders
-              </div>
-
             </div>
 
           </div>
@@ -645,11 +576,9 @@ export default function DealerDashboard() {
               Manage Your Business
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
-              Each section has its own responsibility.
-              Product, order, sales and profile functions
-              are kept separate.
-            </p>
+              <p className="text-sm text-slate-500 mt-1">
+                Manage products, sales and your dealer profile here.
+              </p>
 
           </div>
 
@@ -733,88 +662,11 @@ export default function DealerDashboard() {
                 ORDERS
             ================================================= */}
 
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  "/dealer/orders"
-                )
-              }
-              className="group bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all"
-            >
-
-              <div className="flex items-start justify-between gap-3">
-
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">
-                  🛒
-                </div>
-
-                <span className="text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
-                  Orders
-                </span>
-
-              </div>
-
-              <h3 className="text-xl font-bold mt-5">
-                Farmer Orders
-              </h3>
-
-              <p className="text-sm text-white/80 mt-2 leading-5">
-                Review farmer orders, accept or
-                reject them, process delivery and
-                complete the order lifecycle.
-              </p>
-
-              <div className="space-y-2 mt-5">
-
-                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
-                  <span className="text-sm">
-                    Pending
-                  </span>
-
-                  <strong>
-                    {loading
-                      ? "—"
-                      : formatNumber(
-                          stats.pendingOrders
-                        )}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
-                  <span className="text-sm">
-                    Accepted
-                  </span>
-
-                  <strong>
-                    {loading
-                      ? "—"
-                      : formatNumber(
-                          stats.acceptedOrders
-                        )}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2.5">
-                  <span className="text-sm">
-                    Completed
-                  </span>
-
-                  <strong>
-                    {loading
-                      ? "—"
-                      : formatNumber(
-                          stats.completedSales
-                        )}
-                  </strong>
-                </div>
-
-              </div>
-
-              <div className="mt-5 text-sm font-bold">
-                Open Orders →
-              </div>
-
+            <button type="button" onClick={() => navigate("/dealer/orders")} className="group bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl p-6 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl">🛒</div>
+              <h3 className="text-xl font-bold mt-5">Farmer Orders</h3>
+              <p className="text-sm text-white/80 mt-2 leading-5">Open the dedicated page to review and process farmer orders.</p>
+              <div className="mt-5 text-sm font-bold">Open Orders →</div>
             </button>
 
             {/* =================================================
@@ -951,212 +803,6 @@ export default function DealerDashboard() {
             </button>
 
           </div>
-        </section>
-
-        {/* =================================================
-            ORDERS SECTION
-            ALL ORDER-RELATED INFORMATION STAYS HERE
-        ================================================= */}
-
-        <section className="bg-white border border-cyan-100 rounded-2xl shadow-sm mt-7 overflow-hidden">
-
-          <div className="p-5 md:p-6 border-b border-slate-100">
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
-              <div>
-
-                <p className="text-sm font-semibold text-cyan-600 uppercase tracking-wide">
-                  Orders
-                </p>
-
-                <h2 className="text-xl md:text-2xl font-bold text-slate-900 mt-1">
-                  Farmer Order Activity
-                </h2>
-
-                <p className="text-sm text-slate-500 mt-1">
-                  All order activity belongs to the
-                  Orders section.
-                </p>
-
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(
-                    "/dealer/orders"
-                  )
-                }
-                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl font-semibold transition"
-              >
-                View All Orders →
-              </button>
-
-            </div>
-
-            {/* ORDER STATUS */}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-
-              <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-
-                <div className="flex items-center justify-between">
-
-                  <span className="text-sm text-amber-700 font-medium">
-                    Pending
-                  </span>
-
-                  <span className="font-bold text-amber-800">
-                    {loading
-                      ? "—"
-                      : stats.pendingOrders}
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div className="bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3">
-
-                <div className="flex items-center justify-between">
-
-                  <span className="text-sm text-cyan-700 font-medium">
-                    Accepted
-                  </span>
-
-                  <span className="font-bold text-cyan-800">
-                    {loading
-                      ? "—"
-                      : stats.acceptedOrders}
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
-
-                <div className="flex items-center justify-between">
-
-                  <span className="text-sm text-emerald-700 font-medium">
-                    Completed
-                  </span>
-
-                  <span className="font-bold text-emerald-800">
-                    {loading
-                      ? "—"
-                      : stats.completedSales}
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* RECENT ORDERS */}
-
-          {loading ? (
-            <div className="p-8 text-center text-slate-500">
-              Loading recent orders...
-            </div>
-          ) : recentOrders.length === 0 ? (
-            <div className="p-8 text-center">
-
-              <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center text-3xl mx-auto">
-                🛒
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-800 mt-4">
-                No Orders Yet
-              </h3>
-
-              <p className="text-sm text-slate-500 mt-1">
-                Farmer orders will appear here
-                when they are placed.
-              </p>
-
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-
-              {recentOrders.map(
-                (order) => (
-                  <button
-                    key={order.id}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        "/dealer/orders"
-                      )
-                    }
-                    className="w-full text-left p-5 hover:bg-cyan-50/40 transition"
-                  >
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-
-                      <div className="flex items-start gap-4">
-
-                        <div className="w-11 h-11 rounded-xl bg-cyan-50 flex items-center justify-center text-xl shrink-0">
-                          📦
-                        </div>
-
-                        <div>
-
-                          <p className="font-bold text-slate-900">
-                            {order.orderId ||
-                              order.id}
-                          </p>
-
-                          <p className="text-sm text-slate-600 mt-1">
-                            {order.customerName ||
-                              order.farmerName ||
-                              order.customer ||
-                              "Farmer"}
-                          </p>
-
-                          <p className="text-xs text-slate-400 mt-1">
-                            {order.productName ||
-                              order.product ||
-                              "Order"}
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                      <div className="flex items-center gap-3">
-
-                        <span
-                          className={`border px-3 py-1.5 rounded-full text-xs font-semibold ${getOrderStatusStyle(
-                            order.status
-                          )}`}
-                        >
-                          {getOrderStatusLabel(
-                            order.status
-                          )}
-                        </span>
-
-                        <span className="font-bold text-slate-800">
-                          {formatCurrency(
-                            order.totalAmount
-                          )}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </button>
-                )
-              )}
-
-            </div>
-          )}
-
         </section>
 
         {/* =================================================

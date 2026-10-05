@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
+  browserSessionPersistence,
   sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
-  signOut,
 } from "firebase/auth";
 
 import { get, ref } from "firebase/database";
@@ -84,7 +85,7 @@ function getFriendlyAuthError(error) {
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  const selectedRole = localStorage.getItem("role");
+  const selectedRole = sessionStorage.getItem("role");
   const roleDetails = ROLE_CONFIG[selectedRole];
 
   const [email, setEmail] = useState("");
@@ -189,6 +190,9 @@ export default function LoginPage() {
       /*
        * Firebase Authentication login.
        */
+      // Keep this tab's user separate from other tabs so a Farmer and a
+      // Dealer can stay signed in side by side in the same browser profile.
+      await setPersistence(auth, browserSessionPersistence);
       const credential =
         await signInWithEmailAndPassword(
           auth,
@@ -213,8 +217,6 @@ export default function LoginPage() {
       if (!userSnapshot.exists()) {
         const pendingRequest =
           await checkPendingRequest(uid);
-
-        await signOut(auth);
 
         if (pendingRequest) {
           showMessage(
@@ -248,8 +250,6 @@ export default function LoginPage() {
         !registeredRole ||
         !ROLE_CONFIG[registeredRole]
       ) {
-        await signOut(auth);
-
         showMessage(
           "error",
           "This account has an invalid role configuration."
@@ -263,8 +263,6 @@ export default function LoginPage() {
        * and logging in using another role.
        */
       if (registeredRole !== selectedRole) {
-        await signOut(auth);
-
         showMessage(
           "warning",
           `This account is registered as ${
@@ -281,12 +279,25 @@ export default function LoginPage() {
        * Check whether administrator disabled
        * this account.
        */
-      if (
-        String(userData.status || "").toLowerCase() ===
-        "disabled"
-      ) {
-        await signOut(auth);
+      const accountStatus = String(userData.status || "")
+        .trim()
+        .toLowerCase();
 
+      if (
+        registeredRole === "dealer" &&
+        ["suspended", "deactivated", "blocked", "disabled"].includes(
+          accountStatus
+        )
+      ) {
+        showMessage(
+          "error",
+          "Your dealer account is suspended. Contact the administrator to reactivate it before logging in."
+        );
+
+        return;
+      }
+
+      if (accountStatus === "disabled") {
         showMessage(
           "error",
           "This account has been disabled by the administrator."
@@ -298,7 +309,7 @@ export default function LoginPage() {
       /*
        * Store the verified role.
        */
-      localStorage.setItem(
+      sessionStorage.setItem(
         "role",
         registeredRole
       );

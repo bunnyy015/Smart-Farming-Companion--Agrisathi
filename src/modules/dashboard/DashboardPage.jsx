@@ -7,17 +7,24 @@ import {
   query,
   ref,
 } from "firebase/database";
-import { auth, database } from "../../firebase";
+import { signOut } from "firebase/auth";
+import { auth, database, getAuthUser } from "../../firebase";
 import {
   getLanguage,
   subscribeLanguageChange,
   t,
 } from "../../utils/language";
+import LanguageSelector from "../../components/LanguageSelector";
 import FarmerHeader from "../../components/FarmerHeader";
-import VoiceAssistantCard from "../../components/VoiceAssistantCard";
-import QuickActions from "../../components/QuickActions";
 import TodayAdviceCard from "../../components/TodayAdviceCard";
 import MarketAlertCard from "../../components/MarketAlertCard";
+import VoiceAssistantCard from "../../components/VoiceAssistantCard";
+import {
+  getCurrentLocation,
+  getLocationErrorTranslationKey,
+  reverseGeocodeCoordinates,
+} from "../../services/currentLocationService";
+import { clearWeatherContext } from "../../utils/weatherContext";
 
 // Order statuses that trigger notifications
 const SUPPORTED_ORDER_STATUSES = [
@@ -28,13 +35,29 @@ const SUPPORTED_ORDER_STATUSES = [
   "payment_received",
   "completed",
   "cancelled",
+  "canceled",
+];
+
+const FARMER_FEATURES = [
+  { key: "profile", titleKey: "farmerProfile", descriptionKey: "featureProfileDescription", icon: "👤", path: "/profile" },
+  { key: "marketplace", titleKey: "dealerProducts", descriptionKey: "featureMarketplaceDescription", icon: "🏪", path: "/farmer/dealer-products" },
+  { key: "orders", titleKey: "orders", descriptionKey: "featureOrdersDescription", icon: "📦", path: "/farmer/orders" },
+  { key: "cropHealth", titleKey: "cropDisease", descriptionKey: "featureCropHealthDescription", icon: "🌿", path: "/crop-disease" },
+  { key: "weather", titleKey: "weather", descriptionKey: "featureWeatherDescription", icon: "🌦️", path: "/weather" },
+  { key: "marketPrices", titleKey: "marketPrices", descriptionKey: "featureMarketPricesDescription", icon: "📈", path: "/market-prices" },
+  { key: "schemes", titleKey: "govtSchemes", descriptionKey: "featureSchemesDescription", icon: "📋", path: "/govt-schemes" },
+  { key: "community", titleKey: "community", descriptionKey: "featureCommunityDescription", icon: "👥", path: "/community" },
+  { key: "notifications", titleKey: "notifications", descriptionKey: "featureNotificationsDescription", icon: "🔔", path: "/farmer/notifications" },
+  { key: "nearbyServices", titleKey: "nearbyServices", descriptionKey: "featureNearbyServicesDescription", icon: "📍", external: true },
 ];
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [farmer, setFarmer] = useState(null);
   const [weather, setWeather] = useState(null);
+  const [weatherLocationMessage, setWeatherLocationMessage] = useState("");
   const [notificationIds, setNotificationIds] = useState([]);
+  const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [latestOrder, setLatestOrder] = useState(null);
   const [marketRecord, setMarketRecord] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,40 +73,77 @@ export default function DashboardPage() {
     });
   }, []);
 
-  const unreadNotifications = useMemo(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      return 0;
+  const unreadNotifications = useMemo(
+    () =>
+      notificationIds.filter(
+        (notificationId) => !readNotificationIds.includes(notificationId)
+      ).length,
+    [notificationIds, readNotificationIds]
+  );
+
+  useEffect(() => {
+    function refreshReadNotificationIds() {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setReadNotificationIds([]);
+        return;
+      }
+
+      try {
+        const saved = localStorage.getItem(
+          `farmerNotificationReads_${currentUser.uid}`
+        );
+        const parsed = saved ? JSON.parse(saved) : [];
+        setReadNotificationIds(Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        console.error("Farmer notification read state error:", error);
+        setReadNotificationIds([]);
+      }
     }
-    try {
-      const saved = localStorage.getItem(
-        `farmerNotificationReads_${currentUser.uid}`
+
+    function handleStorageChange(event) {
+      const currentUser = auth.currentUser;
+      if (
+        currentUser &&
+        event.key === `farmerNotificationReads_${currentUser.uid}`
+      ) {
+        refreshReadNotificationIds();
+      }
+    }
+
+    refreshReadNotificationIds();
+    window.addEventListener(
+      "farmer-notification-reads-updated",
+      refreshReadNotificationIds
+    );
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener(
+        "farmer-notification-reads-updated",
+        refreshReadNotificationIds
       );
-      const readIds = saved ? JSON.parse(saved) : [];
-      return notificationIds.filter(
-        (notificationId) => !readIds.includes(notificationId)
-      ).length;
-    } catch {
-      return notificationIds.length;
-    }
-  }, [notificationIds]);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
 
   async function initializeDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const currentUser = auth.currentUser;
+      const currentUser = await getAuthUser();
       if (!currentUser) {
         navigate("/login", { replace: true });
         return;
       }
 
-      const userSnapshot = await get(
-        ref(database, `users/${currentUser.uid}`)
-      );
+      const [userSnapshot, farmerSnapshot] = await Promise.all([
+        get(ref(database, `users/${currentUser.uid}`)),
+        get(ref(database, `farmers/${currentUser.uid}`)),
+      ]);
 
       if (!userSnapshot.exists()) {
-        setError("Profile not found. Please contact support.");
+        setError(t("dashboardProfileMissing", {}, language));
         setLoading(false);
         return;
       }
@@ -95,10 +155,6 @@ export default function DashboardPage() {
         return;
       }
 
-      const farmerSnapshot = await get(
-        ref(database, `farmers/${currentUser.uid}`)
-      );
-
       const farmerProfile = {
         uid: currentUser.uid,
         ...userData,
@@ -108,22 +164,48 @@ export default function DashboardPage() {
 
       setFarmer(farmerProfile);
 
-      await Promise.all([
+      // Load secondary dashboard cards in the background so they don't
+      // delay showing the dashboard shell and navigation.
+      void Promise.all([
         loadOrderInformation(currentUser.uid),
-        loadWeather(farmerProfile),
+        loadWeather(),
         loadMarketRecord(farmerProfile),
-      ]);
+      ]).catch((summaryError) => {
+        console.error("Dashboard summary loading error:", summaryError);
+      });
 
     } catch (error) {
       console.error("Dashboard error:", error);
-      setError("Unable to load dashboard. Please refresh.");
+      setError(t("dashboardLoadError", {}, language));
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      sessionStorage.removeItem("role");
+      navigate("/role-selection", { replace: true });
+    } catch (logoutError) {
+      console.error("Farmer logout error:", logoutError);
+      setError("Unable to log out right now. Please try again.");
+    }
+  }
+
   async function loadOrderInformation(farmerUid) {
     try {
+      try {
+        const savedReadIds = localStorage.getItem(
+          `farmerNotificationReads_${farmerUid}`
+        );
+        const parsedReadIds = savedReadIds ? JSON.parse(savedReadIds) : [];
+        setReadNotificationIds(Array.isArray(parsedReadIds) ? parsedReadIds : []);
+      } catch (error) {
+        console.error("Farmer notification read state error:", error);
+        setReadNotificationIds([]);
+      }
+
       const ordersQuery = query(
         ref(database, "dealerOrders"),
         orderByChild("farmerUid"),
@@ -148,12 +230,37 @@ export default function DashboardPage() {
             new Date(first.updatedAt || first.createdAt || 0)
         );
 
+      let deletedNotificationIds = [];
+      try {
+        const savedDeletedIds = localStorage.getItem(
+          `farmerNotificationDeletes_${farmerUid}`
+        );
+        const parsedDeletedIds = savedDeletedIds
+          ? JSON.parse(savedDeletedIds)
+          : [];
+        deletedNotificationIds = Array.isArray(parsedDeletedIds)
+          ? parsedDeletedIds
+          : [];
+      } catch (error) {
+        console.error("Farmer notification deletion state error:", error);
+      }
+
       setNotificationIds(
         orders
+          .map((order) => ({
+            ...order,
+            normalizedStatus: String(order.status || order.orderStatus || "")
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, "_"),
+          }))
           .filter((order) =>
-            SUPPORTED_ORDER_STATUSES.includes(order.status)
+            SUPPORTED_ORDER_STATUSES.includes(order.normalizedStatus)
           )
-          .map((order) => `order-${order.id}-${order.status}`)
+          .map((order) => `order-${order.id}-${order.normalizedStatus}`)
+          .filter((notificationId) =>
+            !deletedNotificationIds.includes(notificationId)
+          )
       );
 
       setLatestOrder(
@@ -189,79 +296,82 @@ export default function DashboardPage() {
     }
   }
 
-  async function loadWeather(farmerProfile) {
+  async function loadWeather() {
     setWeatherLoading(true);
-    if (!navigator.geolocation) {
-      setWeatherLoading(false);
-      return;
-    }
+    setWeatherLocationMessage("");
+    setWeather(null);
+    clearWeatherContext();
+    let locationDetected = false;
+    try {
+      const { latitude, longitude } = await getCurrentLocation();
+      locationDetected = true;
+      const parameters = new URLSearchParams({
+        latitude: String(latitude),
+        longitude: String(longitude),
+        current: [
+          "temperature_2m",
+          "weather_code",
+          "relative_humidity_2m",
+          "wind_speed_10m",
+          "rain",
+        ].join(","),
+        hourly: "precipitation_probability",
+        forecast_days: "1",
+        timezone: "auto",
+      });
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const parameters = new URLSearchParams({
-            latitude: String(position.coords.latitude),
-            longitude: String(position.coords.longitude),
-            current: [
-              "temperature_2m",
-              "weather_code",
-              "relative_humidity_2m",
-              "wind_speed_10m",
-              "rain",
-            ].join(","),
-            hourly: "precipitation_probability",
-            forecast_days: "1",
-            timezone: "auto",
-          });
+      const [response, placeResult] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?${parameters.toString()}`),
+        reverseGeocodeCoordinates({ latitude, longitude })
+          .then((place) => ({ place }))
+          .catch((error) => ({ error })),
+      ]);
 
-          const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?${parameters.toString()}`
-          );
-
-          if (!response.ok) {
-            throw new Error("Weather request failed.");
-          }
-
-          const result = await response.json();
-          const futureRainValues =
-            result.hourly?.precipitation_probability || [];
-          const rainProbability =
-            futureRainValues.length > 0
-              ? Math.max(
-                  ...futureRainValues.slice(0, 12).map((value) => Number(value || 0))
-                )
-              : 0;
-
-          setWeather({
-            temperature: result.current?.temperature_2m,
-            code: result.current?.weather_code,
-            humidity: result.current?.relative_humidity_2m,
-            wind: result.current?.wind_speed_10m,
-            rain: result.current?.rain,
-            rainProbability,
-            location:
-              farmerProfile.village ||
-              farmerProfile.district ||
-              "Your farm",
-          });
-
-        } catch (error) {
-          console.error("Weather error:", error);
-          setWeather(null);
-        } finally {
-          setWeatherLoading(false);
-        }
-      },
-      () => {
-        setWeather(null);
-        setWeatherLoading(false);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 10 * 60 * 1000,
+      if (!response.ok) {
+        throw new Error(`Weather request failed (${response.status}).`);
       }
-    );
+
+      const result = await response.json();
+      const place = placeResult.place;
+      const location = [
+        place?.locality || place?.city,
+        place?.principalSubdivision,
+      ].filter(Boolean).join(", ") || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+      if (!place) {
+        setWeatherLocationMessage(t("locationCoordinatesOnly", {}, language));
+      }
+
+      const futureRainValues =
+        result.hourly?.precipitation_probability || [];
+      const rainProbability = futureRainValues.length > 0
+        ? Math.max(...futureRainValues.slice(0, 12).map((value) => Number(value || 0)))
+        : 0;
+
+      setWeather({
+        temperature: result.current?.temperature_2m,
+        code: result.current?.weather_code,
+        humidity: result.current?.relative_humidity_2m,
+        wind: result.current?.wind_speed_10m,
+        rain: result.current?.rain,
+        rainProbability,
+        location,
+      });
+    } catch (error) {
+      console.error("Weather/location error:", error);
+      setWeather(null);
+      setWeatherLocationMessage(
+        t(
+          locationDetected
+            ? "localWeatherFailed"
+            : getLocationErrorTranslationKey(error),
+          {},
+          language
+        )
+      );
+    } finally {
+      setWeatherLoading(false);
+    }
   }
 
   async function loadMarketRecord(farmerProfile) {
@@ -418,7 +528,7 @@ export default function DashboardPage() {
             {t("openingAgriSaathi", {}, language)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            Loading your personalized dashboard...
+            {t("dashboardLoading", {}, language)}
           </p>
         </div>
       </div>
@@ -431,7 +541,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-red-600 mb-2">
-            Oops! Something went wrong
+            {t("dashboardErrorTitle", {}, language)}
           </h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <div className="flex gap-3">
@@ -440,14 +550,14 @@ export default function DashboardPage() {
               onClick={handleRetry}
               className="flex-1 bg-green-700 text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-800 transition"
             >
-              🔄 Try Again
+              🔄 {t("retry", {}, language)}
             </button>
             <button
               type="button"
               onClick={() => navigate("/role-selection")}
               className="flex-1 border border-gray-300 px-4 py-3 rounded-xl font-semibold hover:bg-gray-50 transition"
             >
-              ← Go Back
+              ← {t("back", {}, language)}
             </button>
           </div>
         </div>
@@ -457,182 +567,177 @@ export default function DashboardPage() {
 
   const orderStatus = getOrderStatus(latestOrder);
 
+  const openNearbyServices = async () => {
+    const mapWindow = window.open("about:blank", "_blank");
+    if (!mapWindow) {
+      return;
+    }
+    mapWindow.opener = null;
+
+    try {
+      const { latitude, longitude } = await getCurrentLocation();
+      mapWindow.location.href =
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${latitude},${longitude}`
+        )}`;
+    } catch (locationError) {
+      mapWindow.close();
+      setWeatherLocationMessage(
+        t(getLocationErrorTranslationKey(locationError), {}, language)
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-green-50 pb-24">
-      <main className="w-full max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f3f8f2] text-slate-900">
+      <header className="border-b border-green-100 bg-white">
+        <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
+          <div>
+            <p className="text-xs font-bold uppercase text-green-700">
+              AgriSaathi
+            </p>
+            <h1 className="text-xl font-bold text-green-950">
+              {t("dashboardPageTitle", {}, language)}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <LanguageSelector compact />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg border border-green-200 px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-50"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-[1680px] space-y-6 px-4 py-5 sm:px-6 lg:space-y-8 lg:px-10 lg:py-8">
         <FarmerHeader
           farmer={farmer}
           weather={weather}
           weatherLoading={weatherLoading}
+          weatherMessage={weatherLocationMessage}
           unreadNotifications={unreadNotifications}
-          onNotifications={() => navigate("/farmer/notifications")}
+          showNotifications={false}
         />
 
-        <div className="px-4">
-          <VoiceAssistantCard
-            onOpen={() => navigate("/farmer/voice")}
-          />
+        <VoiceAssistantCard
+          onOpen={() => navigate("/farmer/voice")}
+        />
 
-          <QuickActions onNavigate={navigate} />
-
-          <TodayAdviceCard
-            weather={weather}
-            onOpenWeather={() => navigate("/weather")}
-          />
-
-          <MarketAlertCard
-            cropName={farmer?.mainCrop}
-            marketRecord={marketRecord}
-            loading={marketLoading}
-            onOpenMarket={() => navigate("/market-prices")}
-          />
-
-          {latestOrder && (
-            <section className="bg-white border border-blue-100 rounded-2xl shadow-sm p-4 mt-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    <span>📋</span> {t("latestOrder", {}, language)}
-                  </p>
-                  <h2 className="font-bold text-green-900 mt-1 truncate">
-                    {latestOrder.productName || t("farmProduct", {}, language)}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {t("quantity", {}, language)}: {latestOrder.quantity || 0}{" "}
-                    {latestOrder.unit || ""}
-                  </p>
-                  {latestOrder.dealerName && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      From: {latestOrder.dealerName}
-                    </p>
-                  )}
-                </div>
-                <span
-                  className={`${orderStatus.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1`}
-                >
-                  {orderStatus.icon} {orderStatus.label}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/orders")}
-                className="w-full bg-blue-50 text-blue-800 py-3 rounded-xl font-semibold mt-4 hover:bg-blue-100 transition"
-              >
-                📦 {t("trackOrder", {}, language)}
-              </button>
-            </section>
-          )}
-
-          <section className="grid grid-cols-4 gap-2 mt-5">
-            {[
-              ["🌤️", t("weather", {}, language), "/weather"],
-              ["📋", t("schemes", {}, language), "/govt-schemes"],
-              ["👥", t("community", {}, language), "/community"],
-              ["👤", t("profile", {}, language), "/profile"],
-            ].map(([icon, title, path]) => (
-              <button
-                type="button"
-                key={path}
-                onClick={() => navigate(path)}
-                className="bg-white border border-green-100 rounded-2xl min-h-24 px-2 py-3 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-              >
-                <div className="text-3xl">{icon}</div>
-                <p className="text-xs font-semibold mt-2 text-gray-700">
-                  {title}
-                </p>
-              </button>
-            ))}
-          </section>
-
-          <section className="bg-white border border-green-100 rounded-2xl shadow-sm p-4 mt-5">
-            <h2 className="font-bold text-green-900">
-              📍 {t("nearbyServices", {}, language)}
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {t(
-                "nearbyServicesDescription",
-                {},
-                language
-              )}
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                window.open(
-                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    `agriculture office soil testing lab farm equipment services near ${
-                      farmer?.district || farmer?.village || ""
-                    }`
-                  )}`,
-                  "_blank",
-                  "noopener,noreferrer"
-                )
-              }
-              className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold mt-4 hover:bg-green-800 transition"
-            >
-              🔍 {t("openNearbyServices", {}, language)}
-            </button>
-          </section>
-        </div>
-
-        <nav className="fixed bottom-0 left-0 right-0 z-40">
-          <div className="max-w-md mx-auto bg-white border-t border-gray-200 shadow-2xl px-2 py-2">
-            <div className="grid grid-cols-5">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="flex flex-col items-center py-2 text-green-700"
-              >
-                <span className="text-xl">🏠</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  {t("home", {}, language)}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/orders")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">📦</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  {t("orders", {}, language)}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/voice")}
-                className="flex flex-col items-center"
-              >
-                <span className="w-14 h-14 -mt-8 rounded-full bg-green-700 text-white flex items-center justify-center text-2xl shadow-lg border-4 border-green-50 hover:scale-105 transition-transform">
-                  🎤
-                </span>
-                <span className="text-[11px] font-semibold text-green-700 mt-1">
-                  {t("voice", {}, language)}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/community")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👥</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  {t("community", {}, language)}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👤</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  {t("profile", {}, language)}
-                </span>
-              </button>
-            </div>
+        <section className="grid gap-5 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <TodayAdviceCard
+              weather={weather}
+              showWeatherAction={false}
+            />
           </div>
-        </nav>
+          <div className="lg:col-span-5">
+            <MarketAlertCard
+              cropName={farmer?.mainCrop}
+              marketRecord={marketRecord}
+              loading={marketLoading}
+              showAction={false}
+            />
+          </div>
+        </section>
+
+        {latestOrder && (
+          <section className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                {t("latestOrder", {}, language)}
+              </p>
+              <h2 className="mt-1 truncate text-lg font-bold text-green-950">
+                {latestOrder.productName || t("farmProduct", {}, language)}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {t("quantity", {}, language)}: {latestOrder.quantity || 0}{" "}
+                {latestOrder.unit || ""}
+                {latestOrder.dealerName && (
+                  <span>
+                    <span aria-hidden="true"> · </span>
+                    {t("orderFrom", {}, language)} {latestOrder.dealerName}
+                  </span>
+                )}
+              </p>
+            </div>
+            <span
+              className={`${orderStatus.className} shrink-0 rounded-full px-3 py-2 text-sm font-semibold`}
+            >
+              {orderStatus.icon} {orderStatus.label}
+            </span>
+          </section>
+        )}
+
+        <section aria-labelledby="farmer-features-heading">
+          <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
+            <div>
+              <h2
+                id="farmer-features-heading"
+                className="text-xl font-bold text-green-950"
+              >
+                {t("farmerFeaturesTitle", {}, language)}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {t("farmerFeaturesDescription", {}, language)}
+              </p>
+            </div>
+            <span className="text-sm font-medium text-slate-500">
+              {FARMER_FEATURES.length} {t("availableFeatures", {}, language)}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {FARMER_FEATURES.map((feature, index) => {
+              const title = t(feature.titleKey, {}, language);
+              const description = t(
+                feature.descriptionKey,
+                feature.key === "notifications"
+                  ? { count: unreadNotifications }
+                  : {},
+                language
+              );
+
+              return (
+                <button
+                  type="button"
+                  key={feature.key}
+                  onClick={() =>
+                    feature.external
+                      ? openNearbyServices()
+                      : navigate(feature.path)
+                  }
+                  className="group flex min-h-36 items-start gap-4 rounded-xl border border-green-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-2xl">
+                    {feature.icon}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="font-bold text-green-950">
+                        {title}
+                      </span>
+                      <span className="text-xs font-semibold text-green-700">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-slate-600">
+                      {description}
+                    </span>
+                    {feature.key === "notifications" && unreadNotifications > 0 && (
+                      <span className="mt-3 inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+                        {unreadNotifications} {t("unread", {}, language)}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </main>
     </div>
   );

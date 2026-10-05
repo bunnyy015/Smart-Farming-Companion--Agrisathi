@@ -718,116 +718,48 @@ export default function DealerManagementPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div className="overflow-x-auto rounded-2xl border border-indigo-100 bg-white shadow-sm">
+              <table className="min-w-[980px] w-full text-left text-sm">
+                <thead className="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-950">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Dealer</th>
+                    <th className="px-4 py-3 font-semibold">Phone</th>
+                    <th className="px-4 py-3 font-semibold">Location</th>
+                    <th className="px-4 py-3 font-semibold">Registered</th>
+                    <th className="px-4 py-3 font-semibold">Products</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-indigo-100">
               {filteredDealers.map((dealer) => {
                 const status = getDealerStatus(dealer);
                 const isActive = status === "active";
 
                 return (
-                  <article
-                    key={dealer.uid}
-                    className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl">
-                          🏪
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-bold text-indigo-950 break-words">
-                              {getDealerName(dealer)}
-                            </h2>
-
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                isActive
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {isActive ? "Active" : "Suspended"}
-                            </span>
-                          </div>
-
-                          <p className="text-sm text-gray-500 mt-1 break-words">
-                            {getDealerEmail(dealer)}
-                          </p>
-                        </div>
+                  <tr key={dealer.uid} className="hover:bg-indigo-50/60">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-gray-900">{getDealerName(dealer)}</div>
+                      <div className="text-gray-500">{getDealerEmail(dealer)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{getDealerPhone(dealer)}</td>
+                    <td className="px-4 py-3 text-gray-700">{[getDealerVillage(dealer), getDealerDistrict(dealer)].filter((value) => value !== "Not provided").join(", ") || "Not provided"}</td>
+                    <td className="px-4 py-3 text-gray-700">{formatDate(dealer.createdAt || dealer.registeredAt)}</td>
+                    <td className="px-4 py-3 text-gray-700">{dealer.productCount || 0}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{isActive ? "Active" : "Suspended"}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setSelectedDealer(dealer)} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">View</button>
+                        <button type="button" disabled={actionLoading === dealer.uid} onClick={() => requestStatusChange(dealer)} className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${isActive ? "border-red-300 text-red-700 hover:bg-red-50" : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"}`}>{actionLoading === dealer.uid ? "Updating..." : isActive ? "Suspend" : "Reactivate"}</button>
                       </div>
-
-                      <div className="text-right bg-indigo-50 rounded-xl px-4 py-2 shrink-0">
-                        <p className="text-xs text-indigo-600">
-                          Products
-                        </p>
-
-                        <p className="text-2xl font-bold text-indigo-900">
-                          {dealer.productCount || 0}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-5">
-                      <InfoBox
-                        label="Phone"
-                        value={getDealerPhone(dealer)}
-                      />
-
-                      <InfoBox
-                        label="District"
-                        value={getDealerDistrict(dealer)}
-                      />
-
-                      <InfoBox
-                        label="Village"
-                        value={getDealerVillage(dealer)}
-                      />
-
-                      <InfoBox
-                        label="Registered"
-                        value={formatDate(
-                          dealer.createdAt ||
-                            dealer.registeredAt
-                        )}
-                      />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 mt-5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedDealer(dealer)
-                        }
-                        className="flex-1 bg-indigo-600 text-white rounded-xl py-3 font-semibold hover:bg-indigo-700 transition shadow-sm"
-                      >
-                        View Details
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={
-                          actionLoading === dealer.uid
-                        }
-                        onClick={() =>
-                          requestStatusChange(dealer)
-                        }
-                        className={`flex-1 rounded-xl py-3 font-semibold transition disabled:opacity-50 ${
-                          isActive
-                            ? "border border-red-300 text-red-700 hover:bg-red-50"
-                            : "border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                        }`}
-                      >
-                        {actionLoading === dealer.uid
-                          ? "Updating..."
-                          : isActive
-                          ? "Suspend"
-                          : "Reactivate"}
-                      </button>
-                    </div>
-                  </article>
+                    </td>
+                  </tr>
                 );
               })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

@@ -28,6 +28,18 @@ const emptyForm = {
   description: "",
 };
 
+const agricultureCategories = [
+  "Seeds",
+  "Fertilizer",
+  "Pesticide",
+  "Tools",
+  "Irrigation",
+  "Organic Inputs",
+  "Animal Feed",
+  "Crop Protection",
+  "Plant Growth Regulators",
+];
+
 const allowedImageTypes = [
   "image/jpeg",
   "image/png",
@@ -36,11 +48,15 @@ const allowedImageTypes = [
 
 export default function DealerProductsPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const showLowStockOnly =
     searchParams.get("filter") === "low-stock";
 
   const [products, setProducts] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [formOpen, setFormOpen] = useState(
+    () => searchParams.get("add") === "1"
+  );
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(emptyForm);
 
@@ -145,6 +161,28 @@ export default function DealerProductsPage() {
     setImagePreview("");
     setExistingImageUrl("");
     setExistingPublicId("");
+  }
+
+  function closeProductForm() {
+    resetForm();
+    setFormOpen(false);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("add");
+      return next;
+    });
+  }
+
+  function openAddForm() {
+    resetForm();
+    setFormOpen(true);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("filter");
+      next.set("add", "1");
+      return next;
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function loadProducts() {
@@ -461,7 +499,7 @@ export default function DealerProductsPage() {
         );
       }
 
-      resetForm();
+      closeProductForm();
       await loadProducts();
     } catch (error) {
       console.error(
@@ -512,6 +550,13 @@ export default function DealerProductsPage() {
   }
 
   function editProduct(product) {
+    setFormOpen(true);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("filter");
+      next.delete("add");
+      return next;
+    });
     setEditingId(product.id);
 
     setForm({
@@ -614,7 +659,7 @@ export default function DealerProductsPage() {
       if (
         editingId === deleteTarget.id
       ) {
-        resetForm();
+        closeProductForm();
       }
 
       setDeleteTarget(null);
@@ -650,7 +695,14 @@ export default function DealerProductsPage() {
     );
   }
 
-  const visibleProducts = showLowStockOnly
+  const availableCategories = Array.from(
+    new Set([
+      ...agricultureCategories,
+      ...products.map((product) => String(product.category || "").trim()).filter(Boolean),
+    ])
+  );
+
+  const visibleProducts = (showLowStockOnly
     ? products.filter((product) => {
         const available = Number(product.quantity || 0);
         const lowStockLevel = Number(
@@ -659,7 +711,10 @@ export default function DealerProductsPage() {
 
         return available <= lowStockLevel;
       })
-    : products;
+    : products).filter((product) =>
+    categoryFilter === "all" ||
+    String(product.category || "").trim().toLowerCase() === categoryFilter.toLowerCase()
+  );
 
   return (
     <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
@@ -724,24 +779,34 @@ export default function DealerProductsPage() {
             ← Dealer Dashboard
           </button>
 
-          <h1 className="text-3xl font-bold text-green-800 mt-3">
-            {showLowStockOnly
-              ? "⚠️ Low Stock Items"
-              : "📦 Products & Stock"}
-          </h1>
-
-          <p className="text-gray-600 mt-2">
-            {showLowStockOnly
-              ? "Showing only products at or below their low-stock level."
-              : "Add product images and update stock."}
-          </p>
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-green-800">
+                {showLowStockOnly ? "⚠️ Low Stock Items" : "📦 Products & Stock"}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {showLowStockOnly ? "Showing only products at or below their low-stock level." : "Manage agricultural products and stock."}
+              </p>
+            </div>
+            {!showLowStockOnly && (
+              <button type="button" onClick={openAddForm} className="shrink-0 bg-green-700 hover:bg-green-800 text-white px-5 py-3 rounded-xl font-semibold">
+                + Add Product
+              </button>
+            )}
+          </div>
         </header>
 
-        <div className="grid lg:grid-cols-3 gap-5">
+        <section className="bg-white rounded-2xl shadow p-4 mb-5">
+          <label htmlFor="product-category-filter" className="block text-sm font-semibold text-gray-700 mb-2">Filter by agricultural category</label>
+          <select id="product-category-filter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="w-full sm:max-w-sm border rounded-xl px-4 py-3 bg-white">
+            <option value="all">All categories</option>
+            {availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+        </section>
+
+        <div className={formOpen && !showLowStockOnly ? "grid lg:grid-cols-3 gap-5" : "block"}>
           <section
-            className={`bg-white rounded-2xl shadow p-5 ${
-              showLowStockOnly ? "hidden" : ""
-            }`}
+            className={`bg-white rounded-2xl shadow p-5 ${!formOpen || showLowStockOnly ? "hidden" : ""}`}
           >
             <h2 className="text-xl font-bold text-green-800">
               {editingId
@@ -771,21 +836,9 @@ export default function DealerProductsPage() {
                   Select category
                 </option>
 
-                <option value="Seeds">
-                  Seeds
-                </option>
-
-                <option value="Fertilizer">
-                  Fertilizer
-                </option>
-
-                <option value="Pesticide">
-                  Pesticide
-                </option>
-
-                <option value="Tools">
-                  Tools
-                </option>
+                {availableCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
               </select>
 
               <input
@@ -888,7 +941,7 @@ export default function DealerProductsPage() {
               {editingId && (
                 <button
                   type="button"
-                  onClick={resetForm}
+                  onClick={closeProductForm}
                   className="w-full border border-gray-300 py-3 rounded-xl font-semibold"
                 >
                   Cancel
@@ -898,11 +951,7 @@ export default function DealerProductsPage() {
           </section>
 
           <section
-            className={`space-y-4 ${
-              showLowStockOnly
-                ? "lg:col-span-3"
-                : "lg:col-span-2"
-            }`}
+            className={`space-y-4 ${formOpen && !showLowStockOnly ? "lg:col-span-2" : ""}`}
           >
             {visibleProducts.length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center">

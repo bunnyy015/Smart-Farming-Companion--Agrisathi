@@ -332,7 +332,7 @@ export default function FarmerProfilePage() {
 
   return (
     <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full">
         <StatusMessage message={message} onClose={() => setMessage(null)} />
 
         {/* Header */}

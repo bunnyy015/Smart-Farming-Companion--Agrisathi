@@ -3,13 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
 import {
   ArrowLeft,
-  Building2,
   CheckCircle2,
-  ChevronRight,
   CircleAlert,
-  Mail,
   MapPin,
-  Phone,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -625,18 +621,62 @@ export default function ApprovedDealersPage() {
 
             </div>
 
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-
-              {filteredDealers.map((dealer) => (
-                <DealerCard
-                  key={dealer.uid}
-                  dealer={dealer}
-                  onView={() =>
-                    setSelectedDealer(dealer)
-                  }
-                />
-              ))}
-
+            <div className="overflow-x-auto rounded-2xl border border-indigo-100 bg-white shadow-sm">
+              <table className="min-w-[900px] w-full text-left text-sm">
+                <thead className="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-950">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Dealer / Shop</th>
+                    <th className="px-4 py-3 font-semibold">Phone</th>
+                    <th className="px-4 py-3 font-semibold">Location</th>
+                    <th className="px-4 py-3 font-semibold">License</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-indigo-100">
+                  {filteredDealers.map((dealer) => (
+                    <tr key={dealer.uid} className="hover:bg-indigo-50/60">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-900">
+                          {getShopName(dealer)}
+                        </div>
+                        <div className="text-slate-500">
+                          {getDealerName(dealer)}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {cleanValue(dealer.email) || "Email not available"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {cleanValue(dealer.phone) || "Phone not available"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {[cleanValue(dealer.village), getDistrict(dealer)]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {cleanValue(dealer.licenseNumber) || "Not provided"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800">
+                          <CheckCircle2 size={14} />
+                          Approved
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDealer(dealer)}
+                          className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
           </section>
@@ -735,151 +775,6 @@ function AdminStatCard({
             className="text-indigo-700"
           />
         </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Dealer Card
-|--------------------------------------------------------------------------
-*/
-
-function DealerCard({
-  dealer,
-  onView,
-}) {
-  return (
-    <article className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all overflow-hidden">
-
-      {/* Card Header */}
-
-      <div className="p-5">
-
-        <div className="flex items-start justify-between gap-3">
-
-          <div className="flex items-start gap-3 min-w-0">
-
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-              <Store
-                size={23}
-                className="text-indigo-700"
-              />
-            </div>
-
-            <div className="min-w-0">
-
-              <h3 className="font-bold text-lg text-slate-950 truncate">
-                {getShopName(dealer)}
-              </h3>
-
-              <p className="text-sm text-slate-500 mt-0.5">
-                {getDealerName(dealer)}
-              </p>
-
-            </div>
-
-          </div>
-
-          <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-800 border border-indigo-100 rounded-full px-2.5 py-1 text-xs font-bold shrink-0">
-            <CheckCircle2 size={13} />
-            Approved
-          </span>
-
-        </div>
-
-        {/* Dealer summary */}
-
-        <div className="mt-5 space-y-3">
-
-          <DealerInfoRow
-            icon={MapPin}
-            label="District"
-            value={
-              dealer?.district ||
-              "Not available"
-            }
-          />
-
-          <DealerInfoRow
-            icon={Phone}
-            label="Phone"
-            value={
-              dealer?.phone ||
-              "Not available"
-            }
-          />
-
-          <DealerInfoRow
-            icon={Mail}
-            label="Email"
-            value={
-              dealer?.email ||
-              "Not available"
-            }
-          />
-
-        </div>
-
-      </div>
-
-      {/* Footer */}
-
-      <div className="border-t border-slate-100 bg-slate-50 px-5 py-3">
-
-        <button
-          type="button"
-          onClick={onView}
-          className="w-full inline-flex items-center justify-between text-sm font-semibold text-indigo-700 hover:text-indigo-900 transition"
-        >
-
-          <span>
-            View complete dealer details
-          </span>
-
-          <ChevronRight size={18} />
-
-        </button>
-
-      </div>
-
-    </article>
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| Dealer Info Row
-|--------------------------------------------------------------------------
-*/
-
-function DealerInfoRow({
-  icon: Icon,
-  label,
-  value,
-}) {
-  return (
-    <div className="flex items-center gap-3">
-
-      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-        <Icon
-          size={15}
-          className="text-slate-600"
-        />
-      </div>
-
-      <div className="min-w-0">
-
-        <p className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
-          {label}
-        </p>
-
-        <p className="text-sm text-slate-700 truncate mt-0.5">
-          {value}
-        </p>
 
       </div>
 

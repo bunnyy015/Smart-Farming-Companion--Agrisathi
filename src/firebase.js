@@ -1,5 +1,8 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  browserSessionPersistence,
+  initializeAuth,
+} from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
 
@@ -19,6 +22,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// Session persistence keeps each browser tab's Firebase identity independent.
+// This lets users work in different roles in separate tabs without one login
+// replacing the other tab's session, while still surviving refreshes.
+export const auth = initializeAuth(app, {
+  persistence: browserSessionPersistence,
+});
+
+// currentUser remains null until Firebase finishes restoring persisted auth.
+// Pages must await this before treating null as a real signed-out state.
+export async function getAuthUser() {
+  await auth.authStateReady();
+  return auth.currentUser;
+}
+
 export const database = getDatabase(app);
 export const storage = getStorage(app);

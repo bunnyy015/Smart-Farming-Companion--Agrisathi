@@ -1,9 +1,12 @@
-function buildAdvice(weather) {
+import useLanguage from "../utils/useLanguage";
+import { t } from "../utils/language";
+
+function buildAdvice(weather, language) {
   if (!weather) {
     return {
       icon: "🌦️",
-      title: "Check local weather",
-      text: "Allow location access before planning irrigation or pesticide spraying.",
+      title: t("adviceNeedWeatherTitle", {}, language),
+      text: t("adviceNeedWeatherText", {}, language),
       className:
         "from-blue-50 to-green-50 border-blue-200 text-blue-900",
     };
@@ -20,8 +23,8 @@ function buildAdvice(weather) {
   if (rain > 0 || rainProbability >= 60) {
     return {
       icon: "🌧️",
-      title: "Rain likely",
-      text: "Avoid pesticide spraying. Check the field after rain before irrigation.",
+      title: t("adviceRainTitle", {}, language),
+      text: t("adviceRainText", {}, language),
       className:
         "from-blue-50 to-cyan-50 border-blue-200 text-blue-900",
     };
@@ -30,8 +33,8 @@ function buildAdvice(weather) {
   if (wind >= 18) {
     return {
       icon: "💨",
-      title: "Strong wind",
-      text: "Avoid spraying because wind may carry pesticide away from the crop.",
+      title: t("adviceWindTitle", {}, language),
+      text: t("adviceWindText", {}, language),
       className:
         "from-yellow-50 to-orange-50 border-yellow-200 text-yellow-900",
     };
@@ -40,8 +43,8 @@ function buildAdvice(weather) {
   if (temperature >= 35) {
     return {
       icon: "☀️",
-      title: "Hot weather",
-      text: "Check soil moisture and irrigate early morning if the root zone is dry.",
+      title: t("adviceHeatTitle", {}, language),
+      text: t("adviceHeatText", {}, language),
       className:
         "from-orange-50 to-red-50 border-orange-200 text-orange-900",
     };
@@ -50,8 +53,8 @@ function buildAdvice(weather) {
   if (humidity >= 85) {
     return {
       icon: "💧",
-      title: "High humidity",
-      text: "Inspect leaves for fungal spots and avoid unnecessary evening irrigation.",
+      title: t("adviceHumidityTitle", {}, language),
+      text: t("adviceHumidityText", {}, language),
       className:
         "from-purple-50 to-blue-50 border-purple-200 text-purple-900",
     };
@@ -59,8 +62,8 @@ function buildAdvice(weather) {
 
   return {
     icon: "✅",
-    title: "Good field conditions",
-    text: "Weather appears suitable for normal farm work. Recheck before spraying.",
+    title: t("adviceGoodTitle", {}, language),
+    text: t("adviceGoodText", {}, language),
     className:
       "from-green-50 to-emerald-50 border-green-200 text-green-900",
   };
@@ -69,8 +72,10 @@ function buildAdvice(weather) {
 export default function TodayAdviceCard({
   weather,
   onOpenWeather,
+  showWeatherAction = true,
 }) {
-  const advice = buildAdvice(weather);
+  const language = useLanguage();
+  const advice = buildAdvice(weather, language);
 
   return (
     <section
@@ -81,7 +86,7 @@ export default function TodayAdviceCard({
 
         <div className="flex-1">
           <p className="text-xs font-semibold opacity-70">
-            TODAY&apos;S FARM ADVICE
+            {t("adviceEyebrow", {}, language)}
           </p>
 
           <h2 className="font-bold text-lg mt-1">
@@ -90,13 +95,15 @@ export default function TodayAdviceCard({
 
           <p className="text-sm mt-1">{advice.text}</p>
 
-          <button
-            type="button"
-            onClick={onOpenWeather}
-            className="text-sm font-bold mt-3 underline"
-          >
-            View full weather →
-          </button>
+          {showWeatherAction && onOpenWeather && (
+            <button
+              type="button"
+              onClick={onOpenWeather}
+              className="text-sm font-bold mt-3 underline"
+            >
+              {t("viewFullWeather", {}, language)} →
+            </button>
+          )}
         </div>
       </div>
     </section>

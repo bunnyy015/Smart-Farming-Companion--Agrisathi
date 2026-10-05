@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import {
   equalTo,
   get,
@@ -51,8 +52,9 @@ export default function DealerNotificationsPage() {
       const saved = localStorage.getItem(
         getReadStorageKey(uid)
       );
+      const parsed = saved ? JSON.parse(saved) : [];
 
-      return saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -63,9 +65,34 @@ export default function DealerNotificationsPage() {
       getReadStorageKey(uid),
       JSON.stringify(ids)
     );
+    window.dispatchEvent(new Event("dealer-notification-reads-updated"));
+  }
+
+  function getDeletedNotificationIds(uid) {
+    try {
+      const saved = localStorage.getItem(
+        `dealerNotificationDeletes_${uid}`
+      );
+      const parsed = saved ? JSON.parse(saved) : [];
+
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveDeletedNotificationIds(uid, ids) {
+    localStorage.setItem(
+      `dealerNotificationDeletes_${uid}`,
+      JSON.stringify(ids)
+    );
   }
 
   function createOrderNotification(order) {
+    const status = String(order.status || order.orderStatus || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
     const statusMap = {
       pending: {
         category: "orders",
@@ -80,7 +107,43 @@ export default function DealerNotificationsPage() {
         date: order.createdAt,
       },
 
+      accepted: {
+        category: "orders",
+        icon: "✅",
+        title: "Order accepted",
+        text: `You accepted ${order.farmerName || "the farmer"}'s request for ${
+          order.productName || "the product"
+        }.`,
+        color: "bg-blue-50 border-blue-200",
+        date: order.acceptedAt || order.updatedAt || order.createdAt,
+      },
+
+      rejected: {
+        category: "orders",
+        icon: "❌",
+        title: "Order rejected",
+        text: `You rejected ${order.farmerName || "the farmer"}'s request for ${
+          order.productName || "the product"
+        }.`,
+        color: "bg-red-50 border-red-200",
+        date: order.rejectedAt || order.updatedAt || order.createdAt,
+      },
+
       cancelled: {
+        category: "orders",
+        icon: "🚫",
+        title: "Order cancelled",
+        text: `${order.farmerName || "The farmer"} cancelled the order for ${
+          order.productName || "a product"
+        }.`,
+        color: "bg-gray-50 border-gray-200",
+        date:
+          order.cancelledAt ||
+          order.updatedAt ||
+          order.createdAt,
+      },
+
+      canceled: {
         category: "orders",
         icon: "🚫",
         title: "Order cancelled",
@@ -106,6 +169,17 @@ export default function DealerNotificationsPage() {
           order.farmerReceivedAt ||
           order.updatedAt ||
           order.createdAt,
+      },
+
+      delivered_by_dealer: {
+        category: "delivery",
+        icon: "🚚",
+        title: "Product marked delivered",
+        text: `You marked ${order.productName || "the product"} as delivered to ${
+          order.farmerName || "the farmer"
+        }.`,
+        color: "bg-purple-50 border-purple-200",
+        date: order.deliveredAt || order.updatedAt || order.createdAt,
       },
 
       payment_received: {
@@ -137,14 +211,14 @@ export default function DealerNotificationsPage() {
       },
     };
 
-    const details = statusMap[order.status];
+    const details = statusMap[status];
 
     if (!details) {
       return null;
     }
 
     return {
-      id: `order-${order.id}-${order.status}`,
+      id: `order-${order.id}-${status}`,
       orderId: order.id,
       ...details,
     };
@@ -261,7 +335,7 @@ export default function DealerNotificationsPage() {
         );
       }
 
-      const readIds = getReadNotificationIds(
+      const deletedIds = getDeletedNotificationIds(
         currentUser.uid
       );
 
@@ -269,17 +343,28 @@ export default function DealerNotificationsPage() {
         ...orderNotifications,
         ...stockNotifications,
       ]
-        .map((notification) => ({
-          ...notification,
-          read: readIds.includes(notification.id),
-        }))
+        .filter(
+          (notification) => !deletedIds.includes(notification.id)
+        )
         .sort(
           (first, second) =>
             new Date(second.date || 0) -
             new Date(first.date || 0)
         );
 
-      setNotifications(combinedNotifications);
+      const readIds = [
+        ...new Set([
+          ...getReadNotificationIds(currentUser.uid),
+          ...combinedNotifications.map((notification) => notification.id),
+        ]),
+      ];
+      saveReadNotificationIds(currentUser.uid, readIds);
+      setNotifications(
+        combinedNotifications.map((notification) => ({
+          ...notification,
+          read: true,
+        }))
+      );
     } catch (error) {
       console.error(
         "Dealer notifications error:",
@@ -358,6 +443,23 @@ export default function DealerNotificationsPage() {
       "success",
       "All notifications marked as read."
     );
+  }
+
+  function deleteNotification(notification) {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      return;
+    }
+
+    const deletedIds = getDeletedNotificationIds(currentUser.uid);
+    saveDeletedNotificationIds(currentUser.uid, [
+      ...new Set([...deletedIds, notification.id]),
+    ]);
+    setNotifications((current) =>
+      current.filter((item) => item.id !== notification.id)
+    );
+    showMessage("success", "Notification deleted.");
   }
 
   function openNotification(notification) {
@@ -503,24 +605,24 @@ export default function DealerNotificationsPage() {
           <section className="space-y-3">
             {filteredNotifications.map(
               (notification) => (
-                <button
-                  type="button"
+                <article
                   key={notification.id}
-                  onClick={() =>
-                    openNotification(notification)
-                  }
-                  className={`w-full text-left border rounded-2xl p-4 shadow-sm transition ${notification.color} ${
+                  className={`flex items-start gap-3 border rounded-2xl p-4 shadow-sm transition ${notification.color} ${
                     notification.read
                       ? "opacity-70"
                       : "ring-1 ring-green-300"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl">
+                  <button
+                    type="button"
+                    onClick={() => openNotification(notification)}
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                  >
+                    <span className="text-2xl">
                       {notification.icon}
-                    </div>
+                    </span>
 
-                    <div className="flex-1">
+                    <span className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <h2 className="font-bold text-gray-900">
                           {notification.title}
@@ -538,9 +640,19 @@ export default function DealerNotificationsPage() {
                       <p className="text-xs text-gray-500 mt-2">
                         {formatDate(notification.date)}
                       </p>
-                    </div>
-                  </div>
-                </button>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteNotification(notification)}
+                    aria-label={`Delete notification: ${notification.title}`}
+                    title="Delete notification"
+                    className="shrink-0 rounded-lg border border-red-200 bg-white/80 p-2 text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                  >
+                    <Trash2 size={18} aria-hidden="true" />
+                  </button>
+                </article>
               )
             )}
           </section>
