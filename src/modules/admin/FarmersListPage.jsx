@@ -831,10 +831,20 @@ export default function FarmersListPage() {
 
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-
-              {filteredFarmers.map(
-                (farmer) => {
+            <div className="overflow-x-auto rounded-2xl border border-green-100 bg-white shadow-sm">
+              <table className="min-w-[900px] w-full text-left text-sm">
+                <thead className="bg-green-50 text-xs uppercase tracking-wide text-green-900">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Farmer</th>
+                    <th className="px-4 py-3 font-semibold">Phone</th>
+                    <th className="px-4 py-3 font-semibold">Location</th>
+                    <th className="px-4 py-3 font-semibold">Registered</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-green-100">
+              {filteredFarmers.map((farmer) => {
                   const status =
                     getFarmerStatus(
                       farmer
@@ -848,133 +858,28 @@ export default function FarmersListPage() {
                     farmer.uid;
 
                   return (
-                    <article
-                      key={farmer.uid}
-                      className="bg-white rounded-2xl shadow-sm border border-green-100 p-5 hover:shadow-lg transition"
-                    >
-
-                      {/* Farmer Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-
-                        <div className="flex items-center gap-4">
-
-                          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-3xl">
-                            👨‍🌾
-                          </div>
-
-                          <div>
-
-                            <div className="flex flex-wrap items-center gap-2">
-
-                              <h2 className="text-xl font-bold text-green-900">
-                                {getFarmerName(
-                                  farmer
-                                )}
-                              </h2>
-
-                              <span
-                                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                  isActive
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {isActive
-                                  ? "Active"
-                                  : "Disabled"}
-                              </span>
-
-                            </div>
-
-                            <p className="text-sm text-gray-500 mt-1">
-                              {getFarmerEmail(
-                                farmer
-                              )}
-                            </p>
-
-                          </div>
+                    <tr key={farmer.uid} className="hover:bg-green-50/60">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900">{getFarmerName(farmer)}</div>
+                        <div className="text-gray-500">{getFarmerEmail(farmer)}</div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{getFarmerPhone(farmer)}</td>
+                      <td className="px-4 py-3 text-gray-700">{[getFarmerVillage(farmer), getFarmerDistrict(farmer)].filter((value) => value !== "Not provided").join(", ") || "Not provided"}</td>
+                      <td className="px-4 py-3 text-gray-700">{formatDate(farmer.createdAt || farmer.registeredAt)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{isActive ? "Active" : "Disabled"}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => setSelectedFarmer(farmer)} className="rounded-lg bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800">View</button>
+                          <button type="button" disabled={isProcessing} onClick={() => requestStatusChange(farmer)} className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${isActive ? "border-red-300 text-red-700 hover:bg-red-50" : "border-green-300 text-green-700 hover:bg-green-50"}`}>{isProcessing ? "Updating..." : isActive ? "Disable" : "Enable"}</button>
                         </div>
-
-                      </div>
-
-                      {/* Farmer Information */}
-                      <div className="grid grid-cols-2 gap-3 mt-5">
-
-                        <InfoBox
-                          label="Phone"
-                          value={getFarmerPhone(
-                            farmer
-                          )}
-                        />
-
-                        <InfoBox
-                          label="District"
-                          value={getFarmerDistrict(
-                            farmer
-                          )}
-                        />
-
-                        <InfoBox
-                          label="Village"
-                          value={getFarmerVillage(
-                            farmer
-                          )}
-                        />
-
-                        <InfoBox
-                          label="Main Crop"
-                          value={getFarmerCrop(
-                            farmer
-                          )}
-                        />
-
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col sm:flex-row gap-3 mt-5">
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedFarmer(
-                              farmer
-                            )
-                          }
-                          className="flex-1 bg-green-700 text-white rounded-xl py-3 font-semibold hover:bg-green-800 transition"
-                        >
-                          View Details
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            isProcessing
-                          }
-                          onClick={() =>
-                            requestStatusChange(
-                              farmer
-                            )
-                          }
-                          className={`flex-1 rounded-xl py-3 font-semibold transition disabled:opacity-50 ${
-                            isActive
-                              ? "border border-red-300 text-red-700 hover:bg-red-50"
-                              : "border border-green-300 text-green-700 hover:bg-green-50"
-                          }`}
-                        >
-                          {isProcessing
-                            ? "Updating..."
-                            : isActive
-                            ? "Disable Farmer"
-                            : "Enable Farmer"}
-                        </button>
-
-                      </div>
-
-                    </article>
+                      </td>
+                    </tr>
                   );
-                }
-              )}
-
+                })}
+                </tbody>
+              </table>
             </div>
           )}
 

@@ -1,0 +1,26 @@
+ Local-language, voice-first rural UX
+Expand to more regional languages and simpler voice interactions.
+Add audio alerts for weather, crop issues, and market rates.
+This is especially valuable for low-literacy and low-tech users.
+
+
+AI-powered crop calendar
+Generate planting, harvesting, and treatment schedules based on crop type and region.
+Send reminders for spraying, watering, and market timing.
+This becomes a daily-use personal assistant for farmers.
+
+ Predictive market intelligence
+Show price trends, seasonal cycles, and demand spikes before they happen.
+Alert farmers when a crop price is likely to rise or fall.
+Help dealers decide what to buy, store, and sell.
+
+
+ Farmer milestone tracking
+Track crop progress from sowing to harvest.
+Show health, productivity, and revenue milestones.
+Great for long-term farm analytics and digital record keeping.
+
+
+Crop recommendation by land profile
+Match crops to land type, soil, water availability, and climate.
+This can be a very valuable decision-support tool for new farmers.

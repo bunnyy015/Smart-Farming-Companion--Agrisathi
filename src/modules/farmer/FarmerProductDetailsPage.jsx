@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { get, push, ref, set } from "firebase/database";
-import { auth, database } from "../../firebase";
+import { auth, database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import QuantitySelector from "../../components/marketplace/QuantitySelector";
 import useLanguage from "../../utils/useLanguage";
@@ -48,7 +48,7 @@ export default function FarmerProductDetailsPage() {
     setLoading(true);
 
     try {
-      const currentUser = auth.currentUser;
+      const currentUser = await getAuthUser();
 
       if (!currentUser) {
         navigate("/login", { replace: true });
@@ -297,7 +297,7 @@ export default function FarmerProductDetailsPage() {
   if (!product) {
     return (
       <div className="min-h-screen bg-green-50 p-4 md:p-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="w-full">
           <StatusMessage
             message={message}
             onClose={() => setMessage(null)}
@@ -349,7 +349,7 @@ export default function FarmerProductDetailsPage() {
 
   return (
     <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}

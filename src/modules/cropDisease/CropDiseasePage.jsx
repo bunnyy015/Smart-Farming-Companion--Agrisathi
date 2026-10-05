@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { get, push, ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import { getLanguage, t } from "../../utils/language";
 import useLanguage from "../../utils/useLanguage";
 
 const MODELS = [
-  "gemini-2.5-flash",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
 ];
 
 const languageNames = {
@@ -91,6 +94,105 @@ function validateAnalysis(result) {
   };
 }
 
+const CROP_RECOMMENDATIONS = [
+  {
+    name: "Rice",
+    soil: ["Loamy Soil", "Clay Soil"],
+    water: ["High", "Moderate"],
+    climate: ["Humid", "Coastal"],
+    land: ["Lowland", "Irrigated"],
+    note: "Ideal for wet, irrigated lowlands and humid conditions.",
+  },
+  {
+    name: "Maize",
+    soil: ["Loamy Soil", "Black Soil", "Red Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Semi-arid", "Temperate"],
+    land: ["Irrigated", "Upland"],
+    note: "Balanced crop that grows well with moderate water and open sunlight.",
+  },
+  {
+    name: "Cotton",
+    soil: ["Black Soil", "Sandy Soil", "Loamy Soil"],
+    water: ["Low", "Moderate"],
+    climate: ["Dry", "Semi-arid"],
+    land: ["Rainfed", "Upland"],
+    note: "Suitable for warm climates and soils that drain well.",
+  },
+  {
+    name: "Groundnut",
+    soil: ["Red Soil", "Sandy Soil", "Loamy Soil"],
+    water: ["Low", "Moderate"],
+    climate: ["Semi-arid", "Dry"],
+    land: ["Rainfed", "Upland"],
+    note: "Works well in dry, warm fields with moderate moisture.",
+  },
+  {
+    name: "Chilli",
+    soil: ["Black Soil", "Loamy Soil", "Red Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Humid", "Semi-arid", "Coastal"],
+    land: ["Irrigated", "Upland"],
+    note: "Produces better when water and nutrient support are steady.",
+  },
+  {
+    name: "Turmeric",
+    soil: ["Black Soil", "Loamy Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Humid", "Coastal"],
+    land: ["Irrigated", "Lowland"],
+    note: "A moisture-loving crop that benefits from rich, well-drained soils.",
+  },
+  {
+    name: "Red Gram",
+    soil: ["Black Soil", "Red Soil", "Loamy Soil"],
+    water: ["Low", "Moderate"],
+    climate: ["Semi-arid", "Dry"],
+    land: ["Rainfed", "Upland"],
+    note: "A hardy pulse crop with low water needs and good drought tolerance.",
+  },
+  {
+    name: "Soybean",
+    soil: ["Black Soil", "Loamy Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Semi-arid", "Humid"],
+    land: ["Irrigated", "Upland"],
+    note: "Performs best in warm, moderately moist fields with good drainage.",
+  },
+  {
+    name: "Wheat",
+    soil: ["Loamy Soil", "Clay Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Temperate", "Semi-arid"],
+    land: ["Irrigated", "Upland"],
+    note: "A strong winter crop for fertile, well-managed fields.",
+  },
+  {
+    name: "Sugarcane",
+    soil: ["Loamy Soil", "Clay Soil", "Black Soil"],
+    water: ["High", "Moderate"],
+    climate: ["Humid", "Semi-arid"],
+    land: ["Irrigated", "Lowland"],
+    note: "A high-water crop that performs best with consistent irrigation.",
+  },
+  {
+    name: "Bajra",
+    soil: ["Sandy Soil", "Red Soil", "Loamy Soil"],
+    water: ["Low", "Moderate"],
+    climate: ["Dry", "Semi-arid"],
+    land: ["Rainfed", "Upland"],
+    note: "Excellent for dry and drought-prone conditions.",
+  },
+  {
+    name: "Vegetables",
+    soil: ["Loamy Soil", "Black Soil", "Red Soil"],
+    water: ["Moderate", "High"],
+    climate: ["Humid", "Temperate", "Coastal"],
+    land: ["Irrigated", "Lowland"],
+    note: "High-value crops that need consistent moisture and nutrient management.",
+  },
+];
+
 function ResultList({ title, items }) {
   if (!Array.isArray(items) || items.length === 0) {
     return null;
@@ -111,7 +213,7 @@ function ResultList({ title, items }) {
 function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
-    .replace(/[^a-z0-9\u0900-\u097f\u0c00-\u0c7f]+/g, " ")
+    .replace(/[^a-z0-9\p{Script=Devanagari}\p{Script=Telugu}]+/gu, " ")
     .trim();
 }
 
@@ -151,6 +253,100 @@ function findMatchingProducts(products, recommendation, category) {
   }
 
   return categoryProducts.slice(0, 3);
+}
+
+function getSoilMatches(soilType) {
+  const value = String(soilType || "").trim();
+  if (!value) {
+    return [];
+  }
+
+  const normalized = value.toLowerCase();
+  if (normalized.includes("black")) return ["Black Soil"];
+  if (normalized.includes("red")) return ["Red Soil"];
+  if (normalized.includes("sandy")) return ["Sandy Soil"];
+  if (normalized.includes("loam")) return ["Loamy Soil"];
+  if (normalized.includes("clay")) return ["Clay Soil"];
+  return [value];
+}
+
+function getWaterAvailability(irrigationType, fallback = "Moderate") {
+  const irrigation = String(irrigationType || "").trim().toLowerCase();
+  if (!irrigation) {
+    return fallback;
+  }
+
+  if (["rainfed", "tank"].includes(irrigation)) {
+    return "Low";
+  }
+
+  if (["borewell", "sprinkler", "canal"].includes(irrigation)) {
+    return "Moderate";
+  }
+
+  if (["drip"].includes(irrigation)) {
+    return "High";
+  }
+
+  return fallback;
+}
+
+function inferClimateZone(profile = {}) {
+  const district = String(profile.district || "").toLowerCase();
+  const state = String(profile.state || "").toLowerCase();
+
+  if (/[coastal|kerala|odisha|andhra|tamil|goa|karnataka]/.test(`${district} ${state}`)) {
+    return "Coastal";
+  }
+
+  if (/[telangana|rajasthan|gujarat|maharashtra|karnataka|madhya|andhra|punjab|haryana]/.test(`${district} ${state}`)) {
+    return "Semi-arid";
+  }
+
+  if (/[west bengal|assam|kerala|odisha]/.test(`${district} ${state}`)) {
+    return "Humid";
+  }
+
+  return "Semi-arid";
+}
+
+function recommendCropsForProfile(profile, selectedValues = {}) {
+  const cropRecommendations = CROP_RECOMMENDATIONS.map((crop) => {
+    const soilMatches = getSoilMatches(profile.soilType || selectedValues.soilType).includes(crop.soil[0]) ||
+      getSoilMatches(profile.soilType || selectedValues.soilType).some((soil) => crop.soil.includes(soil));
+
+    const waterLevel = selectedValues.waterAvailability || getWaterAvailability(profile.irrigationType, "Moderate");
+    const climateZone = selectedValues.climateZone || inferClimateZone(profile);
+    const landType = selectedValues.landType || (profile.irrigationType === "Rainfed" ? "Rainfed" : "Irrigated");
+
+    const soilScore = soilMatches ? 5 : 0;
+    const waterScore = crop.water.includes(waterLevel) ? 4 : 0;
+    const climateScore = crop.climate.includes(climateZone) ? 3 : 0;
+    const landScore = crop.land.includes(landType) ? 2 : 0;
+    const cropNameScore = (profile.mainCrop && profile.mainCrop.toLowerCase() === crop.name.toLowerCase()) ? 2 : 0;
+
+    const totalScore = soilScore + waterScore + climateScore + landScore + cropNameScore;
+    const reasons = [];
+
+    if (soilMatches) reasons.push("Matches your soil type");
+    if (crop.water.includes(waterLevel)) reasons.push("Suitable for your water availability");
+    if (crop.climate.includes(climateZone)) reasons.push(`Works in ${climateZone} climate`);
+    if (crop.land.includes(landType)) reasons.push(`Fits ${landType} land conditions`);
+    if (profile.mainCrop && profile.mainCrop.toLowerCase() === crop.name.toLowerCase()) {
+      reasons.push("Matches your current crop focus");
+    }
+
+    return {
+      ...crop,
+      totalScore,
+      reasons: reasons.length > 0 ? reasons : ["Good general option for local farming conditions"],
+    };
+  });
+
+  return cropRecommendations
+    .filter((crop) => crop.totalScore > 0)
+    .sort((first, second) => second.totalScore - first.totalScore)
+    .slice(0, 4);
 }
 
 function ProductCard({ product, onOpen }) {
@@ -208,7 +404,66 @@ export default function CropDiseasePage() {
   const [dealerProducts, setDealerProducts] = useState([]);
   const [matchingPesticides, setMatchingPesticides] = useState([]);
   const [matchingFertilizers, setMatchingFertilizers] = useState([]);
-  const [detectionHistory, setDetectionHistory] = useState([]);
+  const [profile, setProfile] = useState({});
+  const [recommendationInputs, setRecommendationInputs] = useState({
+    soilType: "",
+    waterAvailability: "",
+    climateZone: "",
+    landType: "",
+  });
+  const [recommendationResults, setRecommendationResults] = useState([]);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState("");
+  const [landPhoto, setLandPhoto] = useState(null);
+  const [landPhotoPreview, setLandPhotoPreview] = useState("");
+  const [landAnalysis, setLandAnalysis] = useState(null);
+  const [landAnalysisLoading, setLandAnalysisLoading] = useState(false);
+  const [landAnalysisError, setLandAnalysisError] = useState("");
+  const cropFileInput = useRef(null);
+  const landFileInput = useRef(null);
+  const cameraVideo = useRef(null);
+  const cameraStream = useRef(null);
+  const [cameraTarget, setCameraTarget] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setProfile({});
+        setRecommendationError(t("cropRecommendationLoginRequired", {}, language));
+        return;
+      }
+
+      try {
+        setRecommendationLoading(true);
+        const profileSnapshot = await get(ref(database, `farmers/${user.uid}`));
+        const farmerData = profileSnapshot.exists() ? profileSnapshot.val() : {};
+
+        setProfile(farmerData);
+        setRecommendationInputs((current) => ({
+          soilType: current.soilType || farmerData.soilType || "",
+          waterAvailability: current.waterAvailability || getWaterAvailability(farmerData.irrigationType, "Moderate"),
+          climateZone: current.climateZone || inferClimateZone(farmerData),
+          landType: current.landType || (farmerData.irrigationType === "Rainfed" ? "Rainfed" : "Irrigated"),
+        }));
+      } catch (profileError) {
+        console.error("Farm profile loading error:", profileError);
+        setRecommendationError(t("cropRecommendationLoadFailed", {}, language));
+      } finally {
+        setRecommendationLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [language]);
+
+  useEffect(() => {
+    if (!profile && !recommendationInputs.soilType && !recommendationInputs.waterAvailability) {
+      return;
+    }
+
+    const recommended = recommendCropsForProfile(profile, recommendationInputs);
+    setRecommendationResults(recommended);
+  }, [profile, recommendationInputs]);
 
   useEffect(() => {
     return () => {
@@ -217,6 +472,67 @@ export default function CropDiseasePage() {
       }
     };
   }, [preview]);
+
+  useEffect(() => {
+    return () => {
+      if (landPhotoPreview) URL.revokeObjectURL(landPhotoPreview);
+    };
+  }, [landPhotoPreview]);
+
+  useEffect(() => {
+    if (cameraVideo.current && cameraStream.current) {
+      cameraVideo.current.srcObject = cameraStream.current;
+      cameraVideo.current.play().catch(() => {});
+    }
+  }, [cameraTarget]);
+
+  useEffect(() => () => {
+    cameraStream.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  async function openCamera(target) {
+    const setTargetError = target === "land" ? setLandAnalysisError : setError;
+    setTargetError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setTargetError("Camera access is unavailable. Use Choose photo to select an image.");
+      return;
+    }
+    try {
+      cameraStream.current?.getTracks().forEach((track) => track.stop());
+      cameraStream.current = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      setCameraTarget(target);
+    } catch (cameraError) {
+      setTargetError(cameraError.name === "NotAllowedError"
+        ? "Camera permission was denied. Allow camera access or choose a photo file."
+        : "Could not open the camera. Use Choose photo to select an image.");
+    }
+  }
+
+  function closeCamera() {
+    cameraStream.current?.getTracks().forEach((track) => track.stop());
+    cameraStream.current = null;
+    setCameraTarget("");
+  }
+
+  function captureCameraPhoto() {
+    const video = cameraVideo.current;
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `${cameraTarget}-photo.jpg`, { type: "image/jpeg" });
+      const selectionEvent = { target: { files: [file] } };
+      if (cameraTarget === "land") selectLandPhoto(selectionEvent);
+      else selectPhoto(selectionEvent);
+      closeCamera();
+    }, "image/jpeg", 0.9);
+  }
 
   function selectPhoto(event) {
     const file = event.target.files?.[0];
@@ -246,6 +562,86 @@ export default function CropDiseasePage() {
     setError("");
     setEnhancementMessage("");
     setProcessingStage("");
+  }
+
+  function selectLandPhoto(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLandAnalysisError("Please select a valid JPG, PNG or WEBP image.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setLandAnalysisError("The image must be smaller than 10 MB.");
+      return;
+    }
+    setLandPhoto(file);
+    setLandPhotoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+    setLandAnalysis(null);
+    setLandAnalysisError("");
+  }
+
+  async function analyzeLandPhoto() {
+    if (!landPhoto) return;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      setLandAnalysisError("Land photo detection requires VITE_GEMINI_API_KEY.");
+      return;
+    }
+    setLandAnalysisLoading(true);
+    setLandAnalysisError("");
+    try {
+      const { base64, mimeType } = await fileToBase64(landPhoto);
+      const outputLanguage = languageNames[getLanguage()] || "English";
+      const prompt = `Inspect this farmland/soil photo. Estimate only visible soil texture/color and landform; do not claim lab-level certainty. If no soil or farmland is visible, set isLandPhoto false. Return only JSON in ${outputLanguage}: {"isLandPhoto":true,"soilType":"Black Soil|Red Soil|Sandy Soil|Loamy Soil|Clay Soil|Unclear","landType":"Irrigated|Rainfed|Lowland|Upland|Unclear","confidence":"high|medium|low","observation":""}. Mention visual uncertainty in observation.`;
+      let responseData;
+      let lastError;
+      for (const model of MODELS) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [
+                { inline_data: { mime_type: mimeType || "image/jpeg", data: base64 } },
+                { text: prompt },
+              ] }],
+              generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
+            }),
+          });
+          responseData = await response.json();
+          if (!response.ok) throw new Error(responseData?.error?.message || `Land analysis failed (${response.status}).`);
+          const responseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!responseText) throw new Error("The land analysis service returned no result.");
+          const parsed = extractJson(responseText);
+          if (!parsed.isLandPhoto) throw new Error("Please choose a clear photo showing soil or farmland.");
+          const result = {
+            soilType: ["Black Soil", "Red Soil", "Sandy Soil", "Loamy Soil", "Clay Soil"].includes(parsed.soilType) ? parsed.soilType : "Unclear",
+            landType: ["Irrigated", "Rainfed", "Lowland", "Upland"].includes(parsed.landType) ? parsed.landType : "Unclear",
+            confidence: ["high", "medium", "low"].includes(String(parsed.confidence).toLowerCase()) ? String(parsed.confidence).toLowerCase() : "low",
+            observation: typeof parsed.observation === "string" ? parsed.observation : "",
+          };
+          setLandAnalysis(result);
+          setRecommendationInputs((current) => ({
+            ...current,
+            soilType: result.soilType !== "Unclear" ? result.soilType : current.soilType,
+            landType: result.landType !== "Unclear" ? result.landType : current.landType,
+          }));
+          return;
+        } catch (error) {
+          lastError = error;
+          if (error.message?.startsWith("Please choose")) throw error;
+        }
+      }
+      throw lastError || new Error("Land photo analysis is unavailable.");
+    } catch (error) {
+      setLandAnalysisError(error.message || "Land photo analysis failed. Please try another image.");
+    } finally {
+      setLandAnalysisLoading(false);
+    }
   }
 
   function fileToBase64(file) {
@@ -575,14 +971,11 @@ Required JSON structure:
           <label className="block font-semibold text-gray-700 mt-5">
             {t("cropOrLeafPhoto", {}, language)}
           </label>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            capture="environment"
-            disabled={loading}
-            onChange={selectPhoto}
-            className="w-full border-2 border-dashed border-green-300 bg-green-50 rounded-xl p-4 mt-2 disabled:opacity-60"
-          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={() => openCamera("crop")} disabled={loading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">Take crop photo</button>
+            <button type="button" onClick={() => cropFileInput.current?.click()} disabled={loading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-60">Choose crop photo</button>
+          </div>
+          <input ref={cropFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={loading} onChange={selectPhoto} className="hidden" />
 
           <p className="text-sm text-gray-500 mt-2">
             {t("imageAutoEnhancement", {}, language)}
@@ -618,6 +1011,182 @@ Required JSON structure:
               ? processingStage || t("processingPhoto", {}, language)
               : t("detectDiseaseButton", {}, language)}
           </button>
+        </section>
+
+        <section className="bg-white rounded-2xl shadow p-5 mt-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm text-green-700 font-semibold uppercase tracking-wide">
+                {t("cropRecommendationBadge", {}, language)}
+              </p>
+              <h2 className="text-xl font-bold text-green-900 mt-1">
+                {t("cropRecommendationTitle", {}, language)}
+              </h2>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-600 mt-2">
+            {t("cropRecommendationSubtitle", {}, language)}
+          </p>
+
+          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
+            <label className="block text-sm font-semibold text-gray-800">
+              Land photo detection
+            </label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" onClick={() => openCamera("land")} disabled={landAnalysisLoading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">Take land photo</button>
+              <button type="button" onClick={() => landFileInput.current?.click()} disabled={landAnalysisLoading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-white disabled:opacity-60">Choose land photo</button>
+            </div>
+            <input ref={landFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={landAnalysisLoading} onChange={selectLandPhoto} className="hidden" />
+            {landPhotoPreview && (
+              <img src={landPhotoPreview} alt="Selected land" className="mt-3 max-h-64 w-full rounded-lg bg-white object-contain" />
+            )}
+            <p className="mt-2 text-xs text-gray-600">
+              Photo-based soil and land-type estimates are approximate; use a soil test for confirmation.
+            </p>
+            {landAnalysisError && <p role="alert" className="mt-2 text-sm text-red-700">{landAnalysisError}</p>}
+            {landAnalysis && (
+              <p className="mt-2 text-sm text-green-900">
+                Estimated {landAnalysis.soilType} soil, {landAnalysis.landType} land ({landAnalysis.confidence} confidence). {landAnalysis.observation}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={analyzeLandPhoto}
+              disabled={!landPhoto || landAnalysisLoading}
+              className="mt-3 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800 disabled:bg-gray-400"
+            >
+              {landAnalysisLoading ? "Detecting land..." : "Detect from land photo"}
+            </button>
+          </div>
+
+          {recommendationError && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 mt-4 text-sm">
+              ⚠️ {recommendationError}
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                {t("cropRecommendationSoil", {}, language)}
+              </label>
+              <select
+                value={recommendationInputs.soilType || ""}
+                onChange={(event) =>
+                  setRecommendationInputs((current) => ({
+                    ...current,
+                    soilType: event.target.value,
+                  }))
+                }
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">{t("cropRecommendationSelectSoil", {}, language)}</option>
+                <option value="Black Soil">Black Soil</option>
+                <option value="Red Soil">Red Soil</option>
+                <option value="Sandy Soil">Sandy Soil</option>
+                <option value="Loamy Soil">Loamy Soil</option>
+                <option value="Clay Soil">Clay Soil</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                {t("cropRecommendationWater", {}, language)}
+              </label>
+              <select
+                value={recommendationInputs.waterAvailability || ""}
+                onChange={(event) =>
+                  setRecommendationInputs((current) => ({
+                    ...current,
+                    waterAvailability: event.target.value,
+                  }))
+                }
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">{t("cropRecommendationSelectWater", {}, language)}</option>
+                <option value="Low">Low</option>
+                <option value="Moderate">Moderate</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                {t("cropRecommendationClimate", {}, language)}
+              </label>
+              <select
+                value={recommendationInputs.climateZone || ""}
+                onChange={(event) =>
+                  setRecommendationInputs((current) => ({
+                    ...current,
+                    climateZone: event.target.value,
+                  }))
+                }
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">{t("cropRecommendationSelectClimate", {}, language)}</option>
+                <option value="Dry">Dry</option>
+                <option value="Semi-arid">Semi-arid</option>
+                <option value="Humid">Humid</option>
+                <option value="Coastal">Coastal</option>
+                <option value="Temperate">Temperate</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                {t("cropRecommendationLand", {}, language)}
+              </label>
+              <select
+                value={recommendationInputs.landType || ""}
+                onChange={(event) =>
+                  setRecommendationInputs((current) => ({
+                    ...current,
+                    landType: event.target.value,
+                  }))
+                }
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">{t("cropRecommendationSelectLand", {}, language)}</option>
+                <option value="Irrigated">Irrigated</option>
+                <option value="Rainfed">Rainfed</option>
+                <option value="Lowland">Lowland</option>
+                <option value="Upland">Upland</option>
+              </select>
+            </div>
+          </div>
+
+          {recommendationLoading ? (
+            <div className="mt-4 text-sm text-gray-600">
+              {t("cropRecommendationLoading", {}, language)}
+            </div>
+          ) : recommendationResults.length > 0 ? (
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {recommendationResults.map((crop) => (
+                <article key={crop.name} className="border border-green-200 rounded-2xl p-4 bg-green-50">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-bold text-green-900">{crop.name}</h3>
+                    <span className="bg-green-700 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                      {crop.totalScore}/100
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-700 mt-2">{crop.note}</p>
+
+                  <ul className="mt-3 space-y-1 text-sm text-gray-700 list-disc pl-5">
+                    {crop.reasons.map((reason) => (
+                      <li key={`${crop.name}-${reason}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 text-sm text-gray-600">
+              {t("cropRecommendationNoMatch", {}, language)}
+            </div>
+          )}
         </section>
 
         {/* Results Section */}
@@ -730,6 +1299,18 @@ Required JSON structure:
           </button>
         </div>
       </div>
+      {cameraTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={cameraTarget === "land" ? "Land camera" : "Crop camera"}>
+          <div className="w-full max-w-xl rounded-xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-gray-900">{cameraTarget === "land" ? "Take land photo" : "Take crop photo"}</h2>
+              <button type="button" onClick={closeCamera} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Close</button>
+            </div>
+            <video ref={cameraVideo} autoPlay playsInline className="max-h-[65vh] w-full rounded-lg bg-black object-contain" />
+            <button type="button" onClick={captureCameraPhoto} className="mt-3 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-800">Capture photo</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

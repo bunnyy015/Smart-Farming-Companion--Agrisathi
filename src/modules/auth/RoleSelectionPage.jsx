@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getLanguage,
+  languages,
   setLanguage,
   subscribeLanguageChange,
   t,
@@ -66,7 +67,7 @@ export default function RoleSelectionPage() {
   function selectRole(role) {
     setSelectedRole(role);
 
-    localStorage.setItem("role", role);
+    sessionStorage.setItem("role", role);
 
     window.setTimeout(() => {
       navigate("/login");
@@ -127,9 +128,14 @@ export default function RoleSelectionPage() {
               className="rounded-lg border border-green-200 bg-white px-3 py-2 text-green-900"
               aria-label={t("selectLanguage", {}, language)}
             >
-              <option value="en">English</option>
-              <option value="te">తెలుగు</option>
-              <option value="hi">हिन्दी</option>
+              {languages.map((languageOption) => (
+                <option
+                  key={languageOption.code}
+                  value={languageOption.code}
+                >
+                  {languageOption.nativeName}
+                </option>
+              ))}
             </select>
           </label>
 

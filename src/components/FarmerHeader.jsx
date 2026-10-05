@@ -34,8 +34,10 @@ export default function FarmerHeader({
   farmer,
   weather,
   weatherLoading,
+  weatherMessage = "",
   unreadNotifications,
   onNotifications,
+  showNotifications = true,
 }) {
   const [language, setCurrentLanguage] = useState(getLanguage());
 
@@ -74,24 +76,26 @@ export default function FarmerHeader({
           </h1>
           {location && (
             <p className="text-xs text-green-100 mt-0.5 flex items-center gap-1">
-              <span>📍</span> {location}
+              <span>📍</span> {t("profileLocationLabel", {}, language)}: {location}
             </p>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onNotifications}
-          className="relative w-12 h-12 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition"
-          aria-label={t("openNotifications", {}, language)}
-        >
-          <span className="text-2xl">🔔</span>
-          {unreadNotifications > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {unreadNotifications > 99 ? "99+" : unreadNotifications}
-            </span>
-          )}
-        </button>
+        {showNotifications && (
+          <button
+            type="button"
+            onClick={onNotifications}
+            className="relative w-12 h-12 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition"
+            aria-label={t("openNotifications", {}, language)}
+          >
+            <span className="text-2xl">🔔</span>
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-6 h-6 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Weather Card */}
@@ -135,7 +139,7 @@ export default function FarmerHeader({
               🌤️ {t("weatherUnavailable", {}, language)}
             </p>
             <p className="text-sm text-green-100 mt-1">
-              {t("allowLocationForWeather", {}, language)}
+              {weatherMessage || t("allowLocationForWeather", {}, language)}
             </p>
           </div>
         )}

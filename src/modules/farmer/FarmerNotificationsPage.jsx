@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
@@ -61,6 +62,10 @@ function formatDate(value) {
 }
 
 function createOrderNotification(order) {
+  const status = String(order.status || order.orderStatus || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
   const statusData = {
     accepted: {
       category: "orders",
@@ -168,17 +173,32 @@ function createOrderNotification(order) {
         order.updatedAt ||
         order.createdAt,
     },
+
+    canceled: {
+      category: "orders",
+      icon: "🚫",
+      title: "Order cancelled",
+      text: `Your request for ${
+        order.productName || "the product"
+      } was cancelled.`,
+      className: "bg-gray-50 border-gray-200",
+      date:
+        order.cancelledAt ||
+        order.updatedAt ||
+        order.createdAt,
+    },
   };
 
-  const details = statusData[order.status];
+  const details = statusData[status];
 
   if (!details) {
     return null;
   }
 
   return {
-    id: `order-${order.id}-${order.status}`,
+    id: `order-${order.id}-${status}`,
     orderId: order.id,
+    orderStatus: status,
     ...details,
   };
 }
@@ -251,8 +271,9 @@ export default function FarmerNotificationsPage() {
       const saved = localStorage.getItem(
         getStorageKey(uid)
       );
+      const parsed = saved ? JSON.parse(saved) : [];
 
-      return saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -263,6 +284,7 @@ export default function FarmerNotificationsPage() {
       getStorageKey(uid),
       JSON.stringify(ids)
     );
+    window.dispatchEvent(new Event("farmer-notification-reads-updated"));
   }
 
   function getDeletedIds(uid) {
@@ -339,17 +361,25 @@ export default function FarmerNotificationsPage() {
           (notification) =>
             !deletedIds.includes(notification.id)
         )
-        .map((notification) => ({
-          ...notification,
-          read: readIds.includes(notification.id),
-        }))
         .sort(
           (first, second) =>
             new Date(second.date || 0) -
             new Date(first.date || 0)
         );
 
-      setNotifications(finalNotifications);
+      const updatedReadIds = [
+        ...new Set([
+          ...readIds,
+          ...finalNotifications.map((notification) => notification.id),
+        ]),
+      ];
+      saveReadIds(uid, updatedReadIds);
+      setNotifications(
+        finalNotifications.map((notification) => ({
+          ...notification,
+          read: true,
+        }))
+      );
     } catch (error) {
       console.error(
         "Farmer notifications error:",
@@ -438,15 +468,7 @@ export default function FarmerNotificationsPage() {
   function deleteNotification(notification) {
     const currentUser = auth.currentUser;
 
-    if (!currentUser || !notification.read) {
-      return;
-    }
-
-    const shouldDelete = window.confirm(
-      `Delete this notification?\n\n${notification.title}`
-    );
-
-    if (!shouldDelete) {
+    if (!currentUser) {
       return;
     }
 
@@ -464,7 +486,10 @@ export default function FarmerNotificationsPage() {
     markAsRead(notification.id);
 
     if (notification.orderId) {
-      navigate("/farmer/orders");
+      const orderFilter = ["accepted", "rejected"].includes(notification.orderStatus)
+        ? "active"
+        : "history";
+      navigate(orderFilter === "active" ? "/farmer/orders" : "/farmer/orders?filter=history");
     }
   }
 
@@ -483,8 +508,8 @@ export default function FarmerNotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 pb-24">
-      <main className="w-full max-w-md mx-auto">
+    <div className="min-h-screen bg-green-50">
+      <main className="w-full px-4 sm:px-6 lg:px-10">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
@@ -642,19 +667,24 @@ export default function FarmerNotificationsPage() {
                       </div>
                     </button>
 
-                    {notification.read && (
-                      <div className="flex justify-end mt-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            deleteNotification(notification)
-                          }
-                          className="min-h-10 px-3 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-700 hover:bg-red-50"
-                        >
-                          Delete notification
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => openNotification(notification)}
+                        className="w-full sm:w-auto min-h-10 px-3 rounded-lg border border-green-200 bg-white text-sm font-semibold text-green-800 hover:bg-green-50"
+                      >
+                        {notification.read ? "View order" : "Mark as read"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteNotification(notification)}
+                        aria-label={`Delete notification: ${notification.title}`}
+                        title="Delete notification"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                      >
+                        <Trash2 size={17} aria-hidden="true" />
+                      </button>
+                    </div>
                   </article>
                 )
               )}
@@ -662,69 +692,6 @@ export default function FarmerNotificationsPage() {
           )}
         </div>
 
-        <nav className="fixed bottom-0 left-0 right-0 z-40">
-          <div className="max-w-md mx-auto bg-white border-t border-gray-200 shadow-2xl px-2 py-2">
-            <div className="grid grid-cols-5">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">🏠</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Home
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/orders")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">🛒</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Orders
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/voice")}
-                className="flex flex-col items-center"
-              >
-                <span className="w-14 h-14 -mt-8 rounded-full bg-green-700 text-white flex items-center justify-center text-2xl shadow-lg border-4 border-green-50">
-                  🎤
-                </span>
-
-                <span className="text-[11px] font-semibold text-green-700 mt-1">
-                  Voice
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/community")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👥</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Community
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👤</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Profile
-                </span>
-              </button>
-            </div>
-          </div>
-        </nav>
       </main>
     </div>
   );

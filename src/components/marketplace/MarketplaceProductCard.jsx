@@ -37,83 +37,52 @@ export default function MarketplaceProductCard({
   onViewDetails,
 }) {
   const language = useLanguage();
-  const availableQuantity = Number(
-    product.quantity || 0
-  );
-
-  const lowStockLevel = Number(
-    product.lowStockLevel || 5
-  );
-
-  const isLowStock =
-    availableQuantity <= lowStockLevel;
+  const availableQuantity = Number(product.quantity || 0);
+  const lowStockLevel = Number(product.lowStockLevel || 5);
+  const isLowStock = availableQuantity <= lowStockLevel;
 
   return (
-    <article className="bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition overflow-hidden">
-      
-      {/* =========================
-          PRODUCT IMAGE
-      ========================== */}
-      <div className="relative bg-green-50 border-b border-green-100">
+    <article className="grid grid-cols-[84px_minmax(0,1fr)] gap-4 rounded-xl border border-green-100 bg-white p-4 shadow-sm transition hover:border-green-300 hover:shadow-md sm:grid-cols-[132px_minmax(0,1fr)] sm:gap-5">
+      <div className="relative h-28 overflow-hidden rounded-lg border border-green-100 bg-green-50 sm:h-32">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
-            alt={
-              product.productName ||
-              t("farmProduct", {}, language)
-            }
-            className="w-full h-52 object-contain bg-white"
+            alt={product.productName || t("farmProduct", {}, language)}
+            className="absolute inset-0 h-full w-full bg-white object-contain"
             loading="lazy"
             onError={(event) => {
-              event.currentTarget.style.display =
-                "none";
-
-              const fallback =
-                event.currentTarget
-                  .nextElementSibling;
-
-              if (fallback) {
-                fallback.style.display = "flex";
-              }
+              event.currentTarget.style.display = "none";
+              const fallback = event.currentTarget.nextElementSibling;
+              if (fallback) fallback.style.display = "flex";
             }}
           />
         ) : null}
 
-        {/* Image fallback */}
         <div
-          className={`${
-            product.imageUrl
-              ? "hidden"
-              : "flex"
-          } w-full h-52 items-center justify-center bg-green-50`}
+          className={`${product.imageUrl ? "hidden" : "flex"} absolute inset-0 items-center justify-center bg-green-50`}
         >
-          <div className="text-center">
-            <div className="text-6xl">
-              {getCategoryIcon(
-                product.category
-              )}
-            </div>
-
-            <p className="text-sm text-gray-500 mt-2">
-              {t("noProductImage", {}, language)}
-            </p>
-          </div>
-        </div>
-
-        {/* Category badge */}
-        <div className="absolute top-3 left-3">
-          <span className="bg-white/95 backdrop-blur-sm text-green-800 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-            {translateCategory(product.category, language)}
+          <span className="text-3xl sm:text-5xl" aria-hidden="true">
+            {getCategoryIcon(product.category)}
           </span>
         </div>
+      </div>
 
-        {/* Stock badge */}
-        <div className="absolute top-3 right-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="break-words text-lg font-bold text-green-950 sm:text-xl">
+              {product.productName || t("farmProduct", {}, language)}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              {translateCategory(product.category, language)}
+              {product.brand ? ` · ${product.brand}` : ""}
+            </p>
+          </div>
           <span
-            className={`rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ${
+            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
               isLowStock
-                ? "bg-yellow-100 text-yellow-800"
-                : "bg-green-100 text-green-700"
+                ? "bg-amber-100 text-amber-900"
+                : "bg-green-100 text-green-800"
             }`}
           >
             {isLowStock
@@ -121,147 +90,95 @@ export default function MarketplaceProductCard({
               : t("inStock", {}, language)}
           </span>
         </div>
-      </div>
 
-      {/* =========================
-          PRODUCT INFORMATION
-      ========================== */}
-      <div className="p-5">
-        <div className="flex items-start gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-green-900 break-words">
-                  {product.productName}
-                </h2>
+        {product.description && (
+          <p className="mt-2 whitespace-pre-line text-sm leading-5 text-gray-600">
+            {product.description}
+          </p>
+        )}
 
-                <p className="text-sm text-gray-500 mt-1">
-                  {translateCategory(product.category, language)}
-
-                  {product.brand
-                    ? ` • ${product.brand}`
-                    : ""}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* =========================
-            PRICE & STOCK
-        ========================== */}
-        <div className="grid grid-cols-2 gap-3 mt-5">
-          <div className="rounded-xl bg-green-50 p-3">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-lg bg-green-50 p-2.5">
             <p className="text-xs text-gray-500">
               {t("priceLabel", {}, language)}
             </p>
-
-            <p className="font-bold text-green-900 mt-1">
-              ₹
-              {Number(
-                product.price || 0
-              ).toFixed(2)}
+            <p className="mt-1 font-bold text-green-950">
+              ₹{Number(product.price || 0).toFixed(2)}
             </p>
-
             <p className="text-xs text-gray-500">
               {t("perUnit", { unit: product.unit || "unit" }, language)}
             </p>
           </div>
 
-          <div className="rounded-xl bg-blue-50 p-3">
+          <div className="rounded-lg bg-blue-50 p-2.5">
             <p className="text-xs text-gray-500">
               {t("availableLabel", {}, language)}
             </p>
-
-            <p className="font-bold text-blue-900 mt-1">
-              {availableQuantity}
+            <p className="mt-1 font-bold text-blue-950">
+              {availableQuantity} {product.unit || t("unitsLabel", {}, language)}
             </p>
+          </div>
 
+          <div className="rounded-lg bg-gray-50 p-2.5 sm:col-span-2">
             <p className="text-xs text-gray-500">
-              {product.unit || t("unitsLabel", {}, language)}
+              {t("dealerLabel", {}, language)}
+            </p>
+            <p className="mt-1 truncate font-semibold text-gray-800">
+              {product.dealerName || t("approvedDealer", {}, language)}
+            </p>
+            <p className="truncate text-xs text-gray-500">
+              {product.dealerDistrict ||
+                product.dealerState ||
+                t("locationNotAvailable", {}, language)}
             </p>
           </div>
         </div>
 
-        {/* =========================
-            DESCRIPTION
-        ========================== */}
-        {product.description && (
-          <p className="text-sm text-gray-600 mt-4 line-clamp-2">
-            {product.description}
-          </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-800">
+            {t("approvedDealer", {}, language)}
+          </span>
+          {product.dealerPhone && (
+            <a
+              href={`tel:${product.dealerPhone}`}
+              className="inline-flex min-h-9 items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+            >
+              {t("callDealer", {}, language)}
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="col-span-2 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+        {onViewDetails && (
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="min-h-11 w-full rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 sm:w-auto"
+          >
+            {t("viewProductDetails", {}, language)}
+          </button>
         )}
 
-        {/* =========================
-            DEALER INFORMATION
-        ========================== */}
-        <div className="border-t border-gray-100 mt-4 pt-4">
-          <p className="font-semibold text-gray-800">
-            🏪 {product.dealerName}
-          </p>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <QuantitySelector
+            value={quantity}
+            minimum={1}
+            maximum={availableQuantity}
+            disabled={sending}
+            onChange={onQuantityChange}
+          />
 
-          <p className="text-sm text-gray-500 mt-1">
-            📍{" "}
-            {product.dealerDistrict ||
-              product.dealerState ||
-              t("locationNotAvailable", {}, language)}
-          </p>
-
-          <div className="flex flex-wrap gap-3 mt-3">
-            {product.dealerPhone && (
-              <a
-                href={`tel:${product.dealerPhone}`}
-                className="inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition"
-              >
-                {t("callDealer", {}, language)}
-              </a>
-            )}
-
-            <span className="inline-flex items-center rounded-xl bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
-              {t("approvedDealer", {}, language)}
-            </span>
-          </div>
-        </div>
-
-        {/* =========================
-            ACTIONS
-        ========================== */}
-        <div className="flex flex-col gap-3 mt-5">
-          
-          {/* View Details */}
-          {onViewDetails && (
-            <button
-              type="button"
-              onClick={onViewDetails}
-              className="w-full border border-green-700 text-green-700 py-3 rounded-xl font-semibold hover:bg-green-50 transition"
-            >
-              {t("viewProductDetails", {}, language)}
-            </button>
-          )}
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <QuantitySelector
-              value={quantity}
-              minimum={1}
-              maximum={availableQuantity}
-              disabled={sending}
-              onChange={onQuantityChange}
-            />
-
-            <button
-              type="button"
-              disabled={
-                sending ||
-                availableQuantity <= 0
-              }
-              onClick={onRequestOrder}
-              className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-            >
-              {sending
-                ? t("sendingOrder", {}, language)
-                : t("requestOrder", {}, language)}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={sending || availableQuantity <= 0}
+            onClick={onRequestOrder}
+            className="min-h-11 flex-1 rounded-lg bg-green-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-400 sm:flex-initial"
+          >
+            {sending
+              ? t("sendingOrder", {}, language)
+              : t("requestOrder", {}, language)}
+          </button>
         </div>
       </div>
     </article>

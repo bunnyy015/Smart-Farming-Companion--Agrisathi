@@ -73,6 +73,26 @@ function getOrderStatus(order) {
   );
 }
 
+function getOrderSection(order) {
+  const status = getOrderStatus(order);
+
+  if (status === "pending") return "pending";
+  if (status === "completed") return "completed";
+  if ([
+    "accepted",
+    "delivered_by_dealer",
+    "received_by_farmer",
+    "payment_pending",
+    "payment_received",
+  ].includes(status)) {
+    return "farmer_received";
+  }
+
+  // Rejected, cancelled, and unknown statuses are intentionally hidden
+  // from the three primary order sections.
+  return null;
+}
+
 function getOrderProductId(order) {
   return (
     order?.productId ||
@@ -227,6 +247,13 @@ export default function DealerOrdersPage() {
 
   const [statusFilter, setStatusFilter] =
     useState("pending");
+
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("completed");
+  const [historyStartDate, setHistoryStartDate] = useState("");
+  const [historyEndDate, setHistoryEndDate] = useState("");
+
+  const [selectedCompletedOrder, setSelectedCompletedOrder] =
+    useState(null);
 
   const [message, setMessage] =
     useState(null);
@@ -1391,251 +1418,38 @@ export default function DealerOrdersPage() {
   }
 
   /* =======================================================
-     MARK DELIVERED
-  ======================================================= */
-
-  async function markDelivered(
-    order
-  ) {
-    if (
-      !order?.id ||
-      processingOrderId
-    ) {
-      return;
-    }
-
-    const status =
-      getOrderStatus(
-        order
-      );
-
-    if (status !== "received_by_farmer" || !order.farmerReceived) {
-      return;
-    }
-
-    setProcessingOrderId(
-      order.id
-    );
-
-    setMessage(null);
-
-    try {
-      const now =
-        new Date().toISOString();
-
-      await update(
-        ref(database),
-        {
-          [`dealerOrders/${order.id}/status`]:
-            "delivered_by_dealer",
-
-          [`dealerOrders/${order.id}/deliveredAt`]:
-            now,
-
-          [`dealerOrders/${order.id}/updatedAt`]:
-            now,
-        }
-      );
-
-      setOrders(
-        (currentOrders) =>
-          currentOrders.map(
-            (item) =>
-              item.id ===
-              order.id
-                ? {
-                    ...item,
-                    status:
-                      "delivered_by_dealer",
-                    deliveredAt:
-                      now,
-                    updatedAt:
-                      now,
-                  }
-                : item
-          )
-      );
-
-      setMessage({
-        type: "success",
-        text:
-          "Order marked as delivered.",
-      });
-    } catch (error) {
-      console.error(
-        "Delivery update error:",
-        error
-      );
-
-      setMessage({
-        type: "error",
-        text:
-          "The order could not be marked as delivered.",
-      });
-    } finally {
-      setProcessingOrderId(
-        null
-      );
-    }
-  }
-
-  /* =======================================================
      MARK PAYMENT RECEIVED
   ======================================================= */
 
-  async function markPaymentReceived(
-    order
-  ) {
+  async function markPaymentReceived(order) {
+    if (!order?.id || processingOrderId) return;
+    const status = getOrderStatus(order);
+    const farmerConfirmedReceipt =
+      status === "received_by_farmer" && order.farmerReceived;
     if (
-      !order?.id ||
-      processingOrderId
+      !farmerConfirmedReceipt &&
+      !["delivered_by_dealer", "payment_pending", "payment_received"].includes(status)
     ) {
       return;
     }
 
-    const status =
-      getOrderStatus(
-        order
-      );
-
-    if (
-      status !==
-        "delivered_by_dealer" &&
-      status !==
-        "payment_pending"
-    ) {
-      return;
-    }
-
-    setProcessingOrderId(
-      order.id
-    );
-
+    setProcessingOrderId(order.id);
     setMessage(null);
-
     try {
-      const now =
-        new Date().toISOString();
-
-      await update(
-        ref(database),
-        {
-          [`dealerOrders/${order.id}/status`]:
-            "payment_received",
-
-          [`dealerOrders/${order.id}/dealerPaymentReceived`]:
-            true,
-
-          [`dealerOrders/${order.id}/dealerPaymentReceivedAt`]:
-            now,
-
-          [`dealerOrders/${order.id}/paymentReceivedAt`]:
-            now,
-
-          [`dealerOrders/${order.id}/updatedAt`]:
-            now,
-        }
-      );
-
-      setOrders(
-        (currentOrders) =>
-          currentOrders.map(
-            (item) =>
-              item.id ===
-              order.id
-                ? {
-                    ...item,
-                    status:
-                      "payment_received",
-                    dealerPaymentReceived:
-                      true,
-                    dealerPaymentReceivedAt:
-                      now,
-                    paymentReceivedAt:
-                      now,
-                    updatedAt:
-                      now,
-                  }
-                : item
-          )
-      );
-
-      setMessage({
-        type: "success",
-        text:
-          "Payment completed. The order is now recorded in the farmer's history.",
-      });
-    } catch (error) {
-      console.error(
-        "Payment update error:",
-        error
-      );
-
-      setMessage({
-        type: "error",
-        text:
-          "Payment status could not be updated.",
-      });
-    } finally {
-      setProcessingOrderId(
-        null
-      );
-    }
-  }
-
-  /* =======================================================
-     COMPLETE ORDER
-  ======================================================= */
-
-  async function completeOrder(
-    order
-  ) {
-    if (
-      !order?.id ||
-      processingOrderId
-    ) {
-      return;
-    }
-
-    const status =
-      getOrderStatus(
-        order
-      );
-
-    if (
-      status !==
-      "payment_received"
-    ) {
-      return;
-    }
-
-    setProcessingOrderId(
-      order.id
-    );
-
-    setMessage(null);
-
-    try {
-      const dealerUid =
-        getOrderDealerUid(
-          order
-        ) ||
-        currentUser?.uid;
-
-      let productId =
-        getOrderProductId(
-          order
-        );
-
-      const quantity =
-        getOrderQuantity(
-          order
-        );
-
-      const now =
-        new Date().toISOString();
-
-      const updates = {};
+      const dealerUid = getOrderDealerUid(order) || currentUser?.uid;
+      let productId = getOrderProductId(order);
+      const quantity = getOrderQuantity(order);
+      const now = new Date().toISOString();
+      const updates = {
+        [`dealerOrders/${order.id}/status`]: "completed",
+        [`dealerOrders/${order.id}/dealerPaymentReceived`]: true,
+        [`dealerOrders/${order.id}/dealerPaymentReceivedAt`]:
+          order.dealerPaymentReceivedAt || now,
+        [`dealerOrders/${order.id}/paymentReceivedAt`]:
+          order.paymentReceivedAt || now,
+        [`dealerOrders/${order.id}/completedAt`]: now,
+        [`dealerOrders/${order.id}/updatedAt`]: now,
+      };
 
       if (
         dealerUid &&
@@ -1653,18 +1467,6 @@ export default function DealerOrdersPage() {
             resolvedProduct.id;
         }
       }
-
-      updates[
-        `dealerOrders/${order.id}/status`
-      ] = "completed";
-
-      updates[
-        `dealerOrders/${order.id}/completedAt`
-      ] = now;
-
-      updates[
-        `dealerOrders/${order.id}/updatedAt`
-      ] = now;
 
       if (
         dealerUid &&
@@ -1730,50 +1532,24 @@ export default function DealerOrdersPage() {
         }
       }
 
-      await update(
-        ref(database),
-        updates
-      );
-
-      setOrders(
-        (currentOrders) =>
-          currentOrders.map(
-            (item) =>
-              item.id ===
-              order.id
-                ? {
-                    ...item,
-                    status:
-                      "completed",
-                    completedAt:
-                      now,
-                    updatedAt:
-                      now,
-                  }
-                : item
-          )
-      );
-
-      setMessage({
-        type: "success",
-        text:
-          "Order completed successfully.",
-      });
+      await update(ref(database), updates);
+      setOrders((currentOrders) => currentOrders.map((item) => item.id === order.id
+        ? {
+            ...item,
+            status: "completed",
+            dealerPaymentReceived: true,
+            dealerPaymentReceivedAt: item.dealerPaymentReceivedAt || now,
+            paymentReceivedAt: item.paymentReceivedAt || now,
+            completedAt: now,
+            updatedAt: now,
+          }
+        : item));
+      setMessage({ type: "success", text: "Payment received. The order is now in completed history." });
     } catch (error) {
-      console.error(
-        "Order completion error:",
-        error
-      );
-
-      setMessage({
-        type: "error",
-        text:
-          "The order could not be completed.",
-      });
+      console.error("Payment and order completion error:", error);
+      setMessage({ type: "error", text: "Payment could not be recorded and the order could not be completed." });
     } finally {
-      setProcessingOrderId(
-        null
-      );
+      setProcessingOrderId(null);
     }
   }
 
@@ -1795,13 +1571,29 @@ export default function DealerOrdersPage() {
               order
             );
 
-          if (
-            statusFilter !==
-              "all" &&
-            status !==
-              statusFilter
-          ) {
+          const isCancelledHistory = ["cancelled", "canceled"].includes(status);
+          const inSelectedSection = getOrderSection(order) === statusFilter ||
+            (statusFilter === "completed" && isCancelledHistory);
+
+          if (!inSelectedSection) {
             return false;
+          }
+
+          if (statusFilter === "completed") {
+            const statusMatches = historyStatusFilter === "all" ||
+              (historyStatusFilter === "completed" && status === "completed") ||
+              (historyStatusFilter === "cancelled" && isCancelledHistory);
+            if (!statusMatches) return false;
+
+            const dateValue = isCancelledHistory
+              ? order.cancelledAt || order.updatedAt || order.createdAt
+              : order.completedAt || order.updatedAt || order.createdAt;
+            const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
+            const start = historyStartDate ? new Date(`${historyStartDate}T00:00:00`).getTime() : -Infinity;
+            const end = historyEndDate ? new Date(`${historyEndDate}T23:59:59.999`).getTime() : Infinity;
+            if (historyStartDate || historyEndDate) {
+              if (!Number.isFinite(timestamp) || timestamp < start || timestamp > end) return false;
+            }
           }
 
           if (!search) {
@@ -1812,12 +1604,15 @@ export default function DealerOrdersPage() {
             [
               order.id,
               order.orderId,
+              getOrderProductId(order),
               order.farmerUid,
               order.farmerName,
               order.customerName,
               order.farmerEmail,
               order.productName,
               order.product?.productName,
+              order.productId,
+              order.productKey,
               order.status,
               order.orderStatus,
             ]
@@ -1834,6 +1629,9 @@ export default function DealerOrdersPage() {
       orders,
       searchTerm,
       statusFilter,
+      historyStatusFilter,
+      historyStartDate,
+      historyEndDate,
     ]);
 
   /* =======================================================
@@ -1843,31 +1641,17 @@ export default function DealerOrdersPage() {
   const counts =
     useMemo(() => {
       const result = {
-        all: orders.length,
         pending: 0,
-        accepted: 0,
-        received_by_farmer: 0,
-        rejected: 0,
-        delivered_by_dealer: 0,
-        payment_received: 0,
+        farmer_received: 0,
         completed: 0,
-        cancelled: 0,
       };
 
       orders.forEach(
         (order) => {
-          const status =
-            getOrderStatus(
-              order
-            );
-
-          if (
-            Object.prototype.hasOwnProperty.call(
-              result,
-              status
-            )
-          ) {
-            result[status]++;
+          const section = getOrderSection(order);
+          if (section === "completed" && getOrderStatus(order) !== "completed") return;
+          if (section && Object.prototype.hasOwnProperty.call(result, section)) {
+            result[section]++;
           }
         }
       );
@@ -2003,61 +1787,18 @@ export default function DealerOrdersPage() {
       return <span className="text-sm font-semibold text-amber-700">Waiting for farmer to confirm order received</span>;
     }
 
-    if (status === "received_by_farmer") {
-      return (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() =>
-            markDelivered(order)
-          }
-          className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50 transition"
-        >
-          {busy
-            ? "Processing..."
-            : "Mark Delivered"}
-        </button>
-      );
-    }
-
     if (
-      status ===
-      "delivered_by_dealer"
+      (status === "received_by_farmer" && order.farmerReceived) ||
+      ["delivered_by_dealer", "payment_pending", "payment_received"].includes(status)
     ) {
       return (
         <button
           type="button"
           disabled={busy}
-          onClick={() =>
-            markPaymentReceived(
-              order
-            )
-          }
+          onClick={() => markPaymentReceived(order)}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50 transition"
         >
-          {busy
-            ? "Processing..."
-            : "Payment Received"}
-        </button>
-      );
-    }
-
-    if (
-      status ===
-      "payment_received"
-    ) {
-      return (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() =>
-            completeOrder(order)
-          }
-          className="bg-green-700 hover:bg-green-800 text-white px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50 transition"
-        >
-          {busy
-            ? "Processing..."
-            : "Complete Order"}
+          {busy ? "Processing..." : "Payment Received"}
         </button>
       );
     }
@@ -2124,6 +1865,12 @@ export default function DealerOrdersPage() {
       </span>
     );
   }
+
+  const completedOrderProduct = selectedCompletedOrder
+    ? getProductForOrder(selectedCompletedOrder)
+    : null;
+  const completedOrderAddress =
+    selectedCompletedOrder?.deliveryAddressDetails || {};
 
   /* =======================================================
      LOADING
@@ -2239,127 +1986,10 @@ export default function DealerOrdersPage() {
             SUMMARY
         ================================================== */}
 
-        <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-
-          <SummaryCard
-            label="All"
-            value={
-              counts.all
-            }
-            active={
-              statusFilter ===
-              "all"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "all"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Pending"
-            value={
-              counts.pending
-            }
-            active={
-              statusFilter ===
-              "pending"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "pending"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Accepted"
-            value={
-              counts.accepted
-            }
-            active={
-              statusFilter ===
-              "accepted"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "accepted"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Farmer Received"
-            value={counts.received_by_farmer}
-            active={statusFilter === "received_by_farmer"}
-            onClick={() => setStatusFilter("received_by_farmer")}
-          />
-
-          <SummaryCard
-            label="Delivered"
-            value={
-              counts.delivered_by_dealer
-            }
-            active={
-              statusFilter ===
-              "delivered_by_dealer"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "delivered_by_dealer"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Payment"
-            value={
-              counts.payment_received
-            }
-            active={
-              statusFilter ===
-              "payment_received"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "payment_received"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Completed"
-            value={
-              counts.completed
-            }
-            active={
-              statusFilter ===
-              "completed"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "completed"
-              )
-            }
-          />
-
-          <SummaryCard
-            label="Rejected"
-            value={
-              counts.rejected
-            }
-            active={
-              statusFilter ===
-              "rejected"
-            }
-            onClick={() =>
-              setStatusFilter(
-                "rejected"
-              )
-            }
-          />
-
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6" aria-label="Order sections">
+          <SummaryCard label="Pending Orders" value={counts.pending} active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
+          <SummaryCard label="Farmer Received" value={counts.farmer_received} active={statusFilter === "farmer_received"} onClick={() => setStatusFilter("farmer_received")} />
+          <SummaryCard label="Completed" value={counts.completed} active={statusFilter === "completed"} onClick={() => setStatusFilter("completed")} />
         </section>
 
         {/* =================================================
@@ -2368,7 +1998,7 @@ export default function DealerOrdersPage() {
 
         <section className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 mb-6">
 
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex gap-4">
 
             <div className="flex-1">
               <label
@@ -2389,72 +2019,34 @@ export default function DealerOrdersPage() {
                     event.target.value
                   )
                 }
-                placeholder="Search farmer, product, order ID..."
+                placeholder="Search order ID, farmer, email, product or product ID..."
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition"
               />
-            </div>
-
-            <div className="md:w-56">
-              <label
-                htmlFor="status-filter"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
-                Status
-              </label>
-
-              <select
-                id="status-filter"
-                value={
-                  statusFilter
-                }
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value
-                  )
-                }
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition"
-              >
-                <option value="all">
-                  All Orders
-                </option>
-
-                <option value="pending">
-                  Pending
-                </option>
-
-                <option value="accepted">
-                  Accepted
-                </option>
-
-                <option value="received_by_farmer">
-                  Farmer Received
-                </option>
-
-                <option value="delivered_by_dealer">
-                  Delivered
-                </option>
-
-                <option value="payment_received">
-                  Payment Received
-                </option>
-
-                <option value="completed">
-                  Completed
-                </option>
-
-                <option value="rejected">
-                  Rejected
-                </option>
-
-                <option value="cancelled">
-                  Cancelled
-                </option>
-              </select>
             </div>
 
           </div>
 
         </section>
+
+        {statusFilter === "completed" && (
+          <section className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:grid-cols-3">
+            <label className="text-sm font-semibold text-gray-700">
+              History status
+              <select value={historyStatusFilter} onChange={(event) => setHistoryStatusFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-gray-700">
+              From date
+              <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => setHistoryStartDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-gray-700">
+              To date
+              <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => setHistoryEndDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+            </label>
+          </section>
+        )}
 
         {/* =================================================
             ORDERS
@@ -2536,6 +2128,26 @@ export default function DealerOrdersPage() {
                   processingOrderId ===
                   order.id;
                 const address = order.deliveryAddressDetails || {};
+
+                if (status === "completed") {
+                  return (
+                    <article key={order.id} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs uppercase tracking-wide font-bold text-gray-400">Order ID</p>
+                        <p className="font-mono font-semibold text-gray-800 break-all">{orderId}</p>
+                        <p className="mt-2 font-semibold text-gray-900 truncate">{farmerName} · {productName}</p>
+                        <p className="text-sm text-gray-600">Quantity: {quantity} {order.unit || product?.unit || ""}</p>
+                      </div>
+                      <div className="text-sm sm:text-right text-gray-600">
+                        <p><span className="font-semibold">Ordered:</span> {formatDate(order.createdAt)}</p>
+                        <p className="mt-1"><span className="font-semibold">Completed:</span> {formatDate(order.completedAt)}</p>
+                      </div>
+                      <button type="button" onClick={() => setSelectedCompletedOrder(order)} className="shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white hover:from-blue-700 hover:to-cyan-600 transition">
+                        View Details →
+                      </button>
+                    </article>
+                  );
+                }
 
                 return (
                   <article
@@ -2791,6 +2403,78 @@ export default function DealerOrdersPage() {
             )}
 
           </section>
+        )}
+
+        {selectedCompletedOrder && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-5"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedCompletedOrder(null);
+            }}
+          >
+            <section role="dialog" aria-modal="true" aria-labelledby="completed-order-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+              <header className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-3xl bg-gradient-to-r from-blue-700 to-cyan-500 p-5 text-white sm:p-6">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">Completed order</p>
+                  <h2 id="completed-order-title" className="mt-1 break-all text-xl font-bold sm:text-2xl">{selectedCompletedOrder.orderId || selectedCompletedOrder.id}</h2>
+                </div>
+                <button type="button" autoFocus onClick={() => setSelectedCompletedOrder(null)} aria-label="Close order details" className="shrink-0 rounded-xl bg-white/15 px-3 py-2 font-semibold hover:bg-white/25">Close ✕</button>
+              </header>
+
+              <div className="space-y-5 p-5 sm:p-6">
+                <div>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Order and farmer</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InfoCard label="Order ID" value={selectedCompletedOrder.orderId || selectedCompletedOrder.id || "Not available"} />
+                    <InfoCard label="Current status" value={getOrderStatus(selectedCompletedOrder)} />
+                    <InfoCard label="Farmer name" value={selectedCompletedOrder.farmerName || selectedCompletedOrder.customerName || completedOrderAddress.name || "Not available"} />
+                    <InfoCard label="Farmer email" value={selectedCompletedOrder.farmerEmail || "Not available"} />
+                    <InfoCard label="Farmer UID" value={selectedCompletedOrder.farmerUid || "Not available"} />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Product and payment</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InfoCard label="Product name" value={getOrderProductName(selectedCompletedOrder) || completedOrderProduct?.productName || completedOrderProduct?.name || "Unknown Product"} />
+                    <InfoCard label="Product ID" value={getOrderProductId(selectedCompletedOrder) || completedOrderProduct?.id || "Not stored"} />
+                    <InfoCard label="Category" value={selectedCompletedOrder.category || completedOrderProduct?.category || "Not available"} />
+                    <InfoCard label="Quantity" value={`${getOrderQuantity(selectedCompletedOrder)} ${selectedCompletedOrder.unit || completedOrderProduct?.unit || ""}`} />
+                    <InfoCard label="Unit" value={selectedCompletedOrder.unit || completedOrderProduct?.unit || "Not available"} />
+                    <InfoCard label="Price per unit" value={formatCurrency(selectedCompletedOrder.price ?? completedOrderProduct?.price)} />
+                    <InfoCard label="Total amount" value={formatCurrency(selectedCompletedOrder.totalAmount ?? selectedCompletedOrder.total ?? (Number(selectedCompletedOrder.price ?? completedOrderProduct?.price ?? 0) * getOrderQuantity(selectedCompletedOrder)))} />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">Delivery address</h3>
+                  <div className="mt-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
+                    <p><span className="font-semibold">Name:</span> {completedOrderAddress.name || selectedCompletedOrder.farmerName || selectedCompletedOrder.customerName || "Not provided"}</p>
+                    <p><span className="font-semibold">Address:</span> {completedOrderAddress.address || selectedCompletedOrder.deliveryAddress || "Not provided"}</p>
+                    <p><span className="font-semibold">Village:</span> {completedOrderAddress.village || selectedCompletedOrder.farmerVillage || "Not provided"}</p>
+                    <p><span className="font-semibold">Mandal:</span> {completedOrderAddress.mandal || selectedCompletedOrder.farmerMandal || "Not provided"}</p>
+                    <p><span className="font-semibold">District:</span> {completedOrderAddress.district || selectedCompletedOrder.farmerDistrict || "Not provided"}</p>
+                    <p><span className="font-semibold">State:</span> {completedOrderAddress.state || selectedCompletedOrder.farmerState || "Not provided"}</p>
+                    <p><span className="font-semibold">PIN:</span> {completedOrderAddress.pincode || "Not provided"}</p>
+                    <p><span className="font-semibold">Phone:</span> {completedOrderAddress.phone || selectedCompletedOrder.farmerPhone || "Not provided"}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Order timeline</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InfoCard label="Order date" value={formatDate(selectedCompletedOrder.createdAt)} />
+                    <InfoCard label="Accepted date" value={formatDate(selectedCompletedOrder.acceptedAt)} />
+                    <InfoCard label="Delivered date" value={formatDate(selectedCompletedOrder.deliveredAt || selectedCompletedOrder.deliveryAt)} />
+                    <InfoCard label="Farmer received date" value={formatDate(selectedCompletedOrder.farmerReceivedAt || selectedCompletedOrder.receivedAt)} />
+                    <InfoCard label="Payment received date" value={formatDate(selectedCompletedOrder.paymentReceivedAt || selectedCompletedOrder.dealerPaymentReceivedAt)} />
+                    <InfoCard label="Completed date" value={formatDate(selectedCompletedOrder.completedAt)} />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         )}
 
         {/* =================================================

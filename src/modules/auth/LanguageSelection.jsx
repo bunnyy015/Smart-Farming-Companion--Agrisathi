@@ -8,6 +8,7 @@ import {
   t,
 } from "../../utils/language";
 import StatusMessage from "../../components/StatusMessage";
+import { cancelSpeech, speakLocalizedText } from "../../utils/speechOutput";
 
 const VOICE_PREVIEW_TEXT = {
   en: "Tap here to continue in English",
@@ -63,80 +64,51 @@ export default function LanguageSelection() {
     );
   }, [searchText]);
 
-  function chooseVoice(locale, code) {
-    const voices =
-      window.speechSynthesis?.getVoices?.() || [];
-
-    return (
-      voices.find(
-        (voice) =>
-          voice.lang.toLowerCase() ===
-          locale.toLowerCase()
-      ) ||
-      voices.find((voice) =>
-        voice.lang
-          .toLowerCase()
-          .startsWith(code.toLowerCase())
-      ) ||
-      null
-    );
-  }
-
-  function speakLanguage(language) {
-    if (!window.speechSynthesis) {
+  async function speakLanguage(language) {
+    if (
+      typeof window === "undefined" ||
+      !window.speechSynthesis
+    ) {
       setMessage({
         type: "warning",
-        text: "Voice preview is not supported on this browser.",
+        text: t("speechOutputUnsupported", {}, language.code),
       });
       return;
     }
 
-    window.speechSynthesis.cancel();
+    cancelSpeech();
+    setSpeakingCode(language.code);
+    setMessage(null);
 
-    const utterance = new SpeechSynthesisUtterance(
-      VOICE_PREVIEW_TEXT[language.code] ||
-        language.nativeName
+    const result = await speakLocalizedText(
+      VOICE_PREVIEW_TEXT[language.code] || language.nativeName,
+      language.code,
+      { rate: 0.9 }
     );
 
-    utterance.lang = language.locale;
-    utterance.rate = 0.9;
+    setSpeakingCode("");
 
-    const voice = chooseVoice(
-      language.locale,
-      language.code
-    );
-
-    if (voice) {
-      utterance.voice = voice;
-    }
-
-    utterance.onstart = () => {
-      setSpeakingCode(language.code);
-    };
-
-    utterance.onend = () => {
-      setSpeakingCode("");
-    };
-
-    utterance.onerror = () => {
+    if (["voice-unavailable", "unsupported", "error", "cloud-error"].includes(result.status)) {
       setSpeakingCode("");
       setMessage({
         type: "warning",
-        text: "This language voice is not available on this device.",
+        text: result.status === "cloud-error"
+          ? t("speechGenerationFailed", {}, language.code)
+          : result.status === "unsupported"
+            ? t("speechOutputUnsupported", {}, language.code)
+            : t("speechVoiceUnavailable", {}, language.code),
       });
-    };
-
-    window.speechSynthesis.speak(utterance);
+    }
   }
 
   function handleLanguageSelect(code) {
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
 
     const appliedLanguage = setLanguage(code);
     setSelectedLanguage(appliedLanguage);
 
     navigate(
-      getDestination(localStorage.getItem("role")),
+      getDestination(sessionStorage.getItem("role")),
       { replace: true }
     );
   }

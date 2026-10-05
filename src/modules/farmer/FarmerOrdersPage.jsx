@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
@@ -15,7 +15,6 @@ import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 
 const FILTERS = [
-  { value: "all", label: "All" },
   { value: "active", label: "Active" },
   { value: "history", label: "Order History" },
 ];
@@ -23,6 +22,7 @@ const FILTERS = [
 const ACTIVE_STATUSES = [
   "pending",
   "accepted",
+  "rejected",
   "delivered_by_dealer",
   "received_by_farmer",
 ];
@@ -45,12 +45,12 @@ function isHistoryOrder(order) {
   const status = String(order.status || order.orderStatus || "")
     .trim()
     .toLowerCase();
+  const normalizedStatus = status.replaceAll(" ", "_");
 
   return (
     isPaidOrder(order) ||
     order.farmerArchived === true ||
-    Boolean(order.acceptedAt || order.dealerAcceptedAt || order.rejectedAt) ||
-    ["accepted", "rejected", "cancelled", "canceled"].includes(status)
+    ["completed", "complete", "cancelled", "canceled"].includes(normalizedStatus)
   );
 }
 
@@ -159,19 +159,61 @@ function getStatusDetails(status) {
 
 export default function FarmerOrdersPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [orders, setOrders] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState("active");
+  const selectedFilter = FILTERS.some(
+    (filter) => filter.value === searchParams.get("filter")
+  )
+    ? searchParams.get("filter")
+    : "active";
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [expandedOrderId, setExpandedOrderId] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("completed");
+  const [historyStartDate, setHistoryStartDate] = useState("");
+  const [historyEndDate, setHistoryEndDate] = useState("");
 
   const [confirmation, setConfirmation] = useState(null);
   const [message, setMessage] = useState(null);
   const knownPaidOrderIds = useRef(new Set());
   const knownHistoryOrderIds = useRef(new Set());
+  const locallyHiddenHistoryOrderIds = useRef(new Set());
+
+  function getHiddenHistoryStorageKey(uid) {
+    return `farmerHiddenOrderHistory_${uid}`;
+  }
+
+  function showPaymentCompletedNotice(uid, order) {
+    const storageKey = `farmerPaymentNoticeOrderIds_${uid}`;
+    let shownOrderIds = [];
+
+    try {
+      shownOrderIds = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    } catch {
+      shownOrderIds = [];
+    }
+
+    if (shownOrderIds.includes(order.id)) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify([...shownOrderIds, order.id].slice(-100))
+      );
+    } catch {
+      // The notice can still be shown when browser storage is unavailable.
+    }
+
+    showMessage(
+      "success",
+      `Payment completed for ${order.productName || "your order"}. It is now in Order History.`
+    );
+  }
 
   const currentOrders = useMemo(
     () =>
@@ -202,6 +244,15 @@ export default function FarmerOrdersPage() {
         });
 
         return;
+      }
+
+      try {
+        const hiddenIds = JSON.parse(
+          localStorage.getItem(getHiddenHistoryStorageKey(user.uid)) || "[]"
+        );
+        locallyHiddenHistoryOrderIds.current = new Set(hiddenIds);
+      } catch {
+        locallyHiddenHistoryOrderIds.current = new Set();
       }
 
       await loadOrders(user.uid);
@@ -237,15 +288,12 @@ export default function FarmerOrdersPage() {
               isPaidOrder(order) &&
               !knownPaidOrderIds.current.has(order.id)
           );
-          const historyOnlyStatuses = [
-            "accepted",
-            "rejected",
-            "cancelled",
-            "canceled",
-          ];
+          const historyOnlyStatuses = ["cancelled", "canceled", "completed", "complete"];
           const newlyMovedToHistory = orderList.find(
             (order) =>
-              historyOnlyStatuses.includes(order.status) &&
+              historyOnlyStatuses.includes(
+                String(order.status || order.orderStatus || "").trim().toLowerCase().replaceAll(" ", "_")
+              ) &&
               !knownHistoryOrderIds.current.has(order.id)
           );
 
@@ -253,25 +301,24 @@ export default function FarmerOrdersPage() {
           knownHistoryOrderIds.current = new Set(
             orderList.filter(isHistoryOrder).map((order) => order.id)
           );
-          setOrders(orderList);
+          setOrders(orderList.filter((order) => !locallyHiddenHistoryOrderIds.current.has(order.id)));
 
           if (newlyPaidOrder) {
-            showMessage(
-              "success",
-              `Payment completed for ${newlyPaidOrder.productName || "your order"}. It is now in Order History.`
-            );
+            showPaymentCompletedNotice(user.uid, newlyPaidOrder);
           } else if (newlyMovedToHistory) {
+            const historyStatus = String(
+              newlyMovedToHistory.status || newlyMovedToHistory.orderStatus || ""
+            )
+              .trim()
+              .toLowerCase()
+              .replaceAll(" ", "_");
             const statusMessage = {
-              accepted:
-                "The dealer accepted your order. It is now in Order History.",
-              rejected:
-                "The dealer rejected your order. It is now in Order History.",
-              cancelled:
-                "The cancelled order is now in Order History.",
-              canceled:
-                "The cancelled order is now in Order History.",
-            }[newlyMovedToHistory.status];
-            showMessage("info", statusMessage);
+              cancelled: "The order is now in Order History.",
+              canceled: "The order is now in Order History.",
+              completed: "The completed order is now in Order History.",
+              complete: "The completed order is now in Order History.",
+            }[historyStatus];
+            showMessage("info", statusMessage || "The order is now in Order History.");
           }
         },
         (error) => {
@@ -288,8 +335,22 @@ export default function FarmerOrdersPage() {
   }, [navigate]);
 
   const filteredOrders = useMemo(() => {
-    if (selectedFilter === "all") {
-      return currentOrders;
+    if (selectedFilter === "history") {
+      return historyOrders.filter((order) => {
+        const status = String(order.status || order.orderStatus || "")
+          .trim().toLowerCase().replaceAll(" ", "_");
+        const statusMatches = (historyStatusFilter === "completed" && isPaidOrder(order)) ||
+          (historyStatusFilter === "cancelled" && ["cancelled", "canceled"].includes(status)) ||
+          (historyStatusFilter === "rejected" && ["rejected", "reject"].includes(status));
+        const dateValue = order.completedAt || order.paymentReceivedAt || order.cancelledAt || order.updatedAt || order.createdAt;
+        const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
+        const start = historyStartDate ? new Date(`${historyStartDate}T00:00:00`).getTime() : -Infinity;
+        const end = historyEndDate ? new Date(`${historyEndDate}T23:59:59.999`).getTime() : Infinity;
+        const dateMatches = !historyStartDate && !historyEndDate
+          ? true
+          : Number.isFinite(timestamp) && timestamp >= start && timestamp <= end;
+        return statusMatches && dateMatches;
+      });
     }
 
     if (selectedFilter === "active") {
@@ -303,11 +364,10 @@ export default function FarmerOrdersPage() {
     }
 
     return currentOrders;
-  }, [currentOrders, historyOrders, selectedFilter]);
+  }, [currentOrders, historyOrders, selectedFilter, historyStatusFilter, historyStartDate, historyEndDate]);
 
   const counts = useMemo(
     () => ({
-      all: currentOrders.length,
       active: currentOrders.filter((order) =>
         ACTIVE_STATUSES.includes(order.status)
       ).length,
@@ -381,7 +441,7 @@ export default function FarmerOrdersPage() {
             )
         );
 
-      setOrders(orderList);
+      setOrders(orderList.filter((order) => !locallyHiddenHistoryOrderIds.current.has(order.id)));
       knownPaidOrderIds.current = new Set(
         orderList.filter(isPaidOrder).map((order) => order.id)
       );
@@ -406,10 +466,7 @@ export default function FarmerOrdersPage() {
       });
 
       if (latestPaidOrder) {
-        showMessage(
-          "success",
-          `Payment completed for ${latestPaidOrder.productName || "your order"}. It is now in Order History.`
-        );
+        showPaymentCompletedNotice(uid, latestPaidOrder);
       }
     } catch (error) {
       console.error("Farmer orders error:", error);
@@ -449,9 +506,49 @@ export default function FarmerOrdersPage() {
     });
   }
 
+  function changeFilter(filter) {
+    setExpandedOrderId("");
+    navigate(
+      filter === "active" ? "/farmer/orders" : `/farmer/orders?filter=${filter}`,
+      { replace: true }
+    );
+  }
+
   function closeConfirmation() {
     if (!updatingId) {
       setConfirmation(null);
+    }
+  }
+
+  async function deleteHistoryOrder(order) {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !order?.id || !isHistoryOrder(order)) {
+      return;
+    }
+
+    if (order.farmerUid !== currentUser.uid) {
+      showMessage("error", "You can only delete your own order history.");
+      return;
+    }
+
+    try {
+      setUpdatingId(order.id);
+      const hiddenIds = new Set(locallyHiddenHistoryOrderIds.current);
+      hiddenIds.add(order.id);
+      localStorage.setItem(
+        getHiddenHistoryStorageKey(currentUser.uid),
+        JSON.stringify([...hiddenIds])
+      );
+      locallyHiddenHistoryOrderIds.current = hiddenIds;
+      setOrders((currentOrders) => currentOrders.filter((item) => item.id !== order.id));
+      setExpandedOrderId((currentId) => currentId === order.id ? "" : currentId);
+      showMessage("success", "Order removed from your history.");
+    } catch (error) {
+      console.error("Delete history order error:", error);
+      showMessage("error", "The order could not be hidden from history on this device.");
+    } finally {
+      setUpdatingId("");
     }
   }
 
@@ -480,8 +577,6 @@ export default function FarmerOrdersPage() {
           updatedAt: now,
         }
       );
-
-      setConfirmation(null);
 
       showMessage(
         "success",
@@ -541,9 +636,22 @@ export default function FarmerOrdersPage() {
         error
       );
 
+      const errorCode = String(error?.code || "").toLowerCase();
+      const errorText = String(error?.message || "").toLowerCase();
+      const permissionDenied =
+        errorCode.includes("permission_denied") ||
+        errorText.includes("permission denied");
+      const validationFailed =
+        errorCode.includes("invalid") ||
+        errorText.includes("validation");
+
       showMessage(
         "error",
-        "Product receipt could not be confirmed."
+        permissionDenied
+          ? "Firebase blocked this update. Its database rules must let the signed-in farmer update receipt fields on their own order."
+          : validationFailed
+            ? "Firebase rejected the receipt fields. Check the dealerOrders validation rules for farmerReceived, farmerReceivedAt, status, and updatedAt."
+            : "The order update failed. Check your connection and try again."
       );
     } finally {
       setUpdatingId("");
@@ -555,12 +663,7 @@ export default function FarmerOrdersPage() {
       return;
     }
 
-    if (confirmation.type === "cancel") {
-      cancelOrder(confirmation.order);
-      return;
-    }
-
-    confirmProductReceived(confirmation.order);
+    cancelOrder(confirmation.order);
   }
 
   function getConfirmationDetails() {
@@ -568,22 +671,12 @@ export default function FarmerOrdersPage() {
       return null;
     }
 
-    if (confirmation.type === "cancel") {
-      return {
-        icon: "🚫",
-        title: "Cancel this order?",
-        text: "The dealer will stop processing this request.",
-        actionText: "Cancel Order",
-        actionClass: "bg-red-600 text-white",
-      };
-    }
-
     return {
-      icon: "📦",
-      title: "Have you received this order?",
-      text: "Confirm only after the dealer has physically delivered the products.",
-      actionText: "Order Received",
-      actionClass: "bg-green-700 text-white",
+      icon: "🚫",
+      title: "Cancel this order?",
+      text: "The dealer will stop processing this request.",
+      actionText: "Cancel Order",
+      actionClass: "bg-red-600 text-white",
     };
   }
 
@@ -604,8 +697,8 @@ export default function FarmerOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 pb-24">
-      <main className="w-full max-w-md mx-auto">
+    <div className="min-h-screen bg-green-50">
+      <main className="w-full px-4 sm:px-6 lg:px-10">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
@@ -642,18 +735,11 @@ export default function FarmerOrdersPage() {
             </h1>
 
             <p className="text-green-100 text-sm mt-2">
-              View current orders or browse your order history.
+              Track requested orders or review completed and cancelled orders.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-5">
-            <div className="bg-white/15 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold">{orders.length}</p>
-              <p className="text-xs text-green-100 mt-1">
-                All Orders
-              </p>
-            </div>
-
+          <div className="grid grid-cols-2 gap-2 mt-5">
             <div className="bg-white/15 rounded-xl p-3 text-center">
               <p className="text-xl font-bold">
                 {counts.active}
@@ -665,7 +751,7 @@ export default function FarmerOrdersPage() {
 
             <button
               type="button"
-              onClick={() => navigate("/farmer/history")}
+              onClick={() => navigate("/farmer/orders?filter=history")}
               className="bg-white/20 rounded-xl p-3 text-center hover:bg-white/30"
             >
               <p className="text-xl font-bold">{historyOrders.length}</p>
@@ -687,7 +773,7 @@ export default function FarmerOrdersPage() {
               </p>
               <button
                 type="button"
-                onClick={() => navigate("/farmer/history")}
+                onClick={() => navigate("/farmer/orders?filter=history")}
                 className="mt-3 bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
               >
                 View Order History
@@ -734,7 +820,7 @@ export default function FarmerOrdersPage() {
                       type="button"
                       disabled={updatingId === confirmation.order.id}
                       onClick={executeConfirmation}
-                      className={`${confirmationDetails.actionClass} min-h-12 rounded-xl font-semibold disabled:bg-gray-400`}
+                      className={`${confirmationDetails.actionClass} min-h-10 px-3 py-2 text-sm rounded-xl font-semibold disabled:bg-gray-400`}
                     >
                       {updatingId === confirmation.order.id
                         ? "Please wait..."
@@ -745,7 +831,7 @@ export default function FarmerOrdersPage() {
                       type="button"
                       disabled={Boolean(updatingId)}
                       onClick={closeConfirmation}
-                      className="border border-gray-300 min-h-12 rounded-xl font-semibold disabled:opacity-50"
+                      className="border border-gray-300 min-h-10 px-3 py-2 text-sm rounded-xl font-semibold disabled:opacity-50"
                     >
                       Go Back
                     </button>
@@ -760,10 +846,7 @@ export default function FarmerOrdersPage() {
               <button
                 type="button"
                 key={filter.value}
-                onClick={() => {
-                  setSelectedFilter(filter.value);
-                  setExpandedOrderId("");
-                }}
+                onClick={() => changeFilter(filter.value)}
                 aria-pressed={selectedFilter === filter.value}
                 className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
                   selectedFilter === filter.value
@@ -775,6 +858,27 @@ export default function FarmerOrdersPage() {
               </button>
             ))}
           </section>
+
+          {selectedFilter === "history" && (
+            <section className="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:grid-cols-3">
+              <label className="text-sm font-semibold text-gray-700">
+                History status
+                <select value={historyStatusFilter} onChange={(event) => setHistoryStatusFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                From date
+                <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => setHistoryStartDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                To date
+                <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => setHistoryEndDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+              </label>
+            </section>
+          )}
 
           {filteredOrders.length === 0 ? (
             <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
@@ -798,7 +902,7 @@ export default function FarmerOrdersPage() {
               </button>}
             </section>
           ) : (
-            <section className="space-y-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 items-start">
               {filteredOrders.map((order) => {
                 const status = getStatusDetails(order.status);
                 const updating = updatingId === order.id;
@@ -806,8 +910,20 @@ export default function FarmerOrdersPage() {
                 return (
                   <article
                     key={order.id}
-                    className="bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden"
+                    className="relative bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden"
                   >
+                    {selectedFilter === "history" && (
+                      <button
+                        type="button"
+                        aria-label={`Delete ${order.productName || "order"} from history`}
+                        title="Delete from order history"
+                        disabled={Boolean(updatingId)}
+                        onClick={() => deleteHistoryOrder(order)}
+                        className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-red-100 bg-white text-sm text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        🗑️
+                      </button>
+                    )}
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -824,7 +940,7 @@ export default function FarmerOrdersPage() {
                         </div>
 
                         <span
-                          className={`${status.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold`}
+                          className={`${status.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${selectedFilter === "history" ? "mr-9" : ""}`}
                         >
                           {status.icon} {status.label}
                         </span>
@@ -852,6 +968,17 @@ export default function FarmerOrdersPage() {
                           </p>
                         </div>
                       </div>
+
+                      {["accepted", "delivered_by_dealer"].includes(order.status) && !order.farmerReceived && (
+                        <button
+                          type="button"
+                          disabled={updating}
+                          onClick={() => confirmProductReceived(order)}
+                          className="w-full sm:w-auto px-4 py-2.5 text-sm bg-green-700 text-white rounded-xl font-semibold mt-4 disabled:bg-gray-400"
+                        >
+                          {updating ? "Please wait..." : "📦 Confirm Order Received"}
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -918,7 +1045,7 @@ export default function FarmerOrdersPage() {
                           ].includes(order.status) && (
                             <a
                               href={`tel:${order.dealerPhone}`}
-                              className="w-full border border-blue-200 bg-blue-50 text-blue-700 min-h-12 rounded-xl font-semibold flex items-center justify-center"
+                            className="w-full sm:w-auto px-4 py-2.5 text-sm border border-blue-200 bg-blue-50 text-blue-700 rounded-xl font-semibold flex items-center justify-center"
                             >
                               📞 Call Dealer
                             </a>
@@ -931,39 +1058,26 @@ export default function FarmerOrdersPage() {
                             onClick={() =>
                               openConfirmation("cancel", order)
                             }
-                            className="w-full border border-red-500 text-red-700 min-h-12 rounded-xl font-semibold disabled:opacity-50"
+                            className="w-full sm:w-auto px-4 py-2.5 text-sm border border-red-500 text-red-700 rounded-xl font-semibold disabled:opacity-50"
                           >
                             Cancel Order
                           </button>
                         )}
 
-                        {["accepted", "delivered_by_dealer"].includes(order.status) && !order.farmerReceived && (
-                            <button
-                              type="button"
-                              disabled={updating}
-                              onClick={() =>
-                                openConfirmation("received", order)
-                              }
-                              className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold disabled:bg-gray-400"
-                            >
-                              📦 Order Received
-                            </button>
-                          )}
-
                         {order.status === "completed" && (
-                          <div className="bg-green-50 text-green-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                          <div className="bg-green-50 text-green-700 px-4 py-2.5 text-sm rounded-xl font-bold flex items-center justify-center">
                             ✅ Order Completed
                           </div>
                         )}
 
                         {order.status === "rejected" && (
-                          <div className="bg-red-50 text-red-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                          <div className="bg-red-50 text-red-700 px-4 py-2.5 text-sm rounded-xl font-bold flex items-center justify-center">
                             ❌ Rejected by Dealer
                           </div>
                         )}
 
                         {order.status === "cancelled" && (
-                          <div className="bg-gray-100 text-gray-700 min-h-12 rounded-xl font-bold flex items-center justify-center">
+                          <div className="bg-gray-100 text-gray-700 px-4 py-2.5 text-sm rounded-xl font-bold flex items-center justify-center">
                             🚫 Order Cancelled
                           </div>
                         )}
@@ -977,68 +1091,6 @@ export default function FarmerOrdersPage() {
           )}
         </div>
 
-        <nav className="fixed bottom-0 left-0 right-0 z-40">
-          <div className="max-w-md mx-auto bg-white border-t border-gray-200 shadow-2xl px-2 py-2">
-            <div className="grid grid-cols-5">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">🏠</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Home
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="flex flex-col items-center py-2 text-green-700"
-              >
-                <span className="text-xl">🛒</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Orders
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/farmer/voice")}
-                className="flex flex-col items-center"
-              >
-                <span className="w-14 h-14 -mt-8 rounded-full bg-green-700 text-white flex items-center justify-center text-2xl shadow-lg border-4 border-green-50">
-                  🎤
-                </span>
-
-                <span className="text-[11px] font-semibold text-green-700 mt-1">
-                  Voice
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/community")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👥</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Community
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                className="flex flex-col items-center py-2 text-gray-600"
-              >
-                <span className="text-xl">👤</span>
-                <span className="text-[11px] font-semibold mt-1">
-                  Profile
-                </span>
-              </button>
-            </div>
-          </div>
-        </nav>
       </main>
     </div>
   );

@@ -76,7 +76,9 @@ export default function AdminOrderManagementPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [historyStartDate, setHistoryStartDate] = useState("");
+  const [historyEndDate, setHistoryEndDate] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
 
   // Read orders from Firebase in realtime
@@ -210,8 +212,8 @@ export default function AdminOrderManagementPage() {
       const status = getOrderStatus(order);
 
       const matchesStatus =
-        statusFilter === "all" ||
-        status === statusFilter;
+        !statusFilter ||
+        (statusFilter === "completed" ? status === "delivered" : status === statusFilter);
 
       const searchableText = [
         order.id,
@@ -233,9 +235,21 @@ export default function AdminOrderManagementPage() {
         !searchText ||
         searchableText.includes(searchText);
 
-      return matchesStatus && matchesSearch;
+      const dateValue = status === "cancelled"
+        ? order.cancelledAt || order.updatedAt || order.createdAt
+        : status === "delivered"
+          ? order.completedAt || order.updatedAt || order.createdAt
+          : order.createdAt || order.updatedAt;
+      const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
+      const start = historyStartDate ? new Date(`${historyStartDate}T00:00:00`).getTime() : -Infinity;
+      const end = historyEndDate ? new Date(`${historyEndDate}T23:59:59.999`).getTime() : Infinity;
+      const matchesDate = !historyStartDate && !historyEndDate
+        ? true
+        : Number.isFinite(timestamp) && timestamp >= start && timestamp <= end;
+
+      return matchesStatus && matchesSearch && matchesDate;
     });
-  }, [orders, search, statusFilter]);
+  }, [orders, search, statusFilter, historyStartDate, historyEndDate]);
 
   // Update order status
   const handleStatusChange = async (
@@ -626,6 +640,9 @@ export default function AdminOrderManagementPage() {
               window.history.back()
             }
           >
+            <option value="" disabled>
+              Filter by status
+            </option>
             ← Back
           </button>
         </div>
@@ -695,8 +712,8 @@ export default function AdminOrderManagementPage() {
               setStatusFilter(e.target.value)
             }
           >
-            <option value="all">
-              All Orders
+            <option value="" disabled>
+              Filter by status
             </option>
 
             <option value="pending">
@@ -711,10 +728,36 @@ export default function AdminOrderManagementPage() {
               Delivered
             </option>
 
+            <option value="completed">
+              Completed
+            </option>
+
             <option value="cancelled">
               Cancelled
             </option>
           </select>
+
+          <label className="filter-select">
+            From date
+            <input
+              type="date"
+              value={historyStartDate}
+              max={historyEndDate || undefined}
+              onChange={(event) => setHistoryStartDate(event.target.value)}
+              aria-label="Filter orders from date"
+            />
+          </label>
+
+          <label className="filter-select">
+            To date
+            <input
+              type="date"
+              value={historyEndDate}
+              min={historyStartDate || undefined}
+              onChange={(event) => setHistoryEndDate(event.target.value)}
+              aria-label="Filter orders to date"
+            />
+          </label>
 
         </div>
 

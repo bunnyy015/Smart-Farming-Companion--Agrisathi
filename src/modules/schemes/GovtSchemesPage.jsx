@@ -1,108 +1,104 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useLanguage from "../../utils/useLanguage";
-import { getSpeechLocale, t } from "../../utils/language";
+import { t } from "../../utils/language";
+import { cancelSpeech, speakLocalizedText } from "../../utils/speechOutput";
+import { resolveGovernmentSchemesPath, subscribeToGovernmentSchemes } from "../../services/governmentSchemesService";
+import { DEFAULT_SCHEMES } from "./defaultGovernmentSchemes";
 
 export default function GovtSchemesPage() {
   const navigate = useNavigate();
   const language = useLanguage();
-
   const [search, setSearch] = useState("");
 
-  const schemes = [
-    {
-      titleKey: "schemeTitlePmkisan",
-      categoryKey: "schemeCategoryFinancial",
-      benefitKey: "schemeBenefitPmkisan",
-      eligibilityKey: "schemeEligibilityPmkisan",
-      documentsKey: "schemeDocumentsPmkisan",
-      icon: "💰",
-      applyUrl: "https://pmkisan.gov.in/RegistrationFormupdated.aspx",
-      applyLabel: "Apply on PM-KISAN",
-      applicationNote: "Use the official new farmer registration form.",
-    },
-    {
-      titleKey: "schemeTitleInsurance",
-      categoryKey: "schemeCategoryInsurance",
-      benefitKey: "schemeBenefitInsurance",
-      eligibilityKey: "schemeEligibilityInsurance",
-      documentsKey: "schemeDocumentsInsurance",
-      icon: "🛡️",
-      applyUrl: "https://pmfby.gov.in/selfRegistration",
-      applyLabel: "Apply for crop insurance",
-      applicationNote: "Check notified crops, area and enrollment dates before applying.",
-    },
-    {
-      titleKey: "schemeTitleCredit",
-      categoryKey: "schemeCategoryLoan",
-      benefitKey: "schemeBenefitCredit",
-      eligibilityKey: "schemeEligibilityCredit",
-      documentsKey: "schemeDocumentsCredit",
-      icon: "🏦",
-      applyUrl: "https://pmkisan.gov.in/Documents/Kcc.pdf",
-      applyLabel: "Get KCC application form",
-      applicationNote: "Submit the completed form to a participating bank.",
-    },
-    {
-      titleKey: "schemeTitleSoil",
-      categoryKey: "schemeCategorySoil",
-      benefitKey: "schemeBenefitSoil",
-      eligibilityKey: "schemeEligibilityAllFarmers",
-      documentsKey: "schemeDocumentsSoil",
-      icon: "🌱",
-      applyUrl: "https://soilhealth.dac.gov.in/soilhealthcard",
-      applyLabel: "Get Soil Health Card",
-      applicationNote: "Use the official portal to access Soil Health Card services.",
-    },
-    {
-      titleKey: "schemeTitleIrrigation",
-      categoryKey: "schemeCategoryIrrigation",
-      benefitKey: "schemeBenefitIrrigation",
-      eligibilityKey: "schemeEligibilityIrrigation",
-      documentsKey: "schemeDocumentsCredit",
-      icon: "💧",
-      applyUrl: "https://pmksy.gov.in/Default.aspx",
-      applyLabel: "Official scheme information",
-      applicationNote: "For assistance or applications, contact your state agriculture or horticulture department.",
-    },
-    {
-      titleKey: "schemeTitleEnam",
-      categoryKey: "schemeCategoryMarket",
-      benefitKey: "schemeBenefitEnam",
-      eligibilityKey: "schemeEligibilityEnam",
-      documentsKey: "schemeDocumentsEnam",
-      icon: "📈",
-      applyUrl: "https://enam.gov.in/registration",
-      applyLabel: "Register on e-NAM",
-      applicationNote: "Farmer registration is completed through the official e-NAM portal.",
-    },
-  ];
+  const [schemes, setSchemes] = useState(DEFAULT_SCHEMES);
+  const [schemesLoading, setSchemesLoading] = useState(true);
+  const [speechMessage, setSpeechMessage] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe;
+
+    resolveGovernmentSchemesPath()
+      .then((path) => {
+        if (cancelled) return;
+        unsubscribe = subscribeToGovernmentSchemes(
+          path,
+          (records, initialized) => {
+            if (records.length || initialized) {
+              setSchemes(records);
+            }
+            setSchemesLoading(false);
+          },
+          (error) => {
+            console.warn("Unable to load government schemes:", error);
+            setSchemesLoading(false);
+          }
+        );
+      })
+      .catch((error) => {
+        console.warn("Unable to connect to government schemes:", error);
+        if (!cancelled) setSchemesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  function getSchemeDetails(scheme) {
+    const list = (value) => Array.isArray(value)
+      ? value
+      : String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+
+    const legacyText = (field, value, original) => scheme.migratedFromFarmerDefaults
+      && field && original === value
+      ? t(field, {}, language)
+      : value || t(field, {}, language);
+
+    return {
+      title: legacyText(scheme.titleKey, scheme.title || scheme.schemeName, scheme.defaultValues?.title),
+      category: legacyText(scheme.categoryKey, scheme.category || scheme.department, scheme.defaultValues?.category),
+      benefits: legacyText(scheme.benefitKey, scheme.benefits || scheme.benefit, scheme.defaultValues?.benefits),
+      eligibility: legacyText(scheme.eligibilityKey, scheme.eligibility, scheme.defaultValues?.eligibility),
+      documents: legacyText(scheme.documentsKey, scheme.requiredDocuments || scheme.documents, scheme.defaultValues?.requiredDocuments),
+      steps: list(scheme.applicationProcess || scheme.registrationSteps),
+      applicationNote: scheme.applicationNote || "",
+      applicationLink: scheme.applicationLink || scheme.applyUrl || "",
+      applyLabel: scheme.applyLabel || "Apply",
+      icon: scheme.icon || "🌾",
+    };
+  }
 
   const filteredSchemes = schemes.filter((scheme) => {
-    const text = `
-      ${t(scheme.titleKey, {}, language)}
-      ${t(scheme.categoryKey, {}, language)}
-      ${t(scheme.benefitKey, {}, language)}
-      ${t(scheme.eligibilityKey, {}, language)}
-    `.toLowerCase();
-
-    return text.includes(search.toLowerCase());
+    const details = getSchemeDetails(scheme);
+    return [details.title, details.category, details.benefits, details.eligibility,
+      scheme.department, scheme.state, details.documents].join(" ").toLowerCase().includes(search.toLowerCase());
   });
 
-  function speakScheme(scheme) {
-    const message = `${t(scheme.titleKey, {}, language)}. ${t("schemeBenefitLabel", {}, language)} ${t(scheme.benefitKey, {}, language)}. ${t("schemeEligibilityLabel", {}, language)} ${t(scheme.eligibilityKey, {}, language)}. ${t("schemeDocumentsLabel", {}, language)} ${t(scheme.documentsKey, {}, language)}`;
+  async function speakScheme(scheme) {
+    const details = getSchemeDetails(scheme);
+    const message = `${details.title}. ${t("schemeBenefitLabel", {}, language)} ${details.benefits}. ${t("schemeEligibilityLabel", {}, language)} ${details.eligibility}. ${t("schemeDocumentsLabel", {}, language)} ${details.documents}`;
 
-    const speech = new SpeechSynthesisUtterance(message);
-    speech.lang = getSpeechLocale(language);
-    speech.rate = 0.9;
+    cancelSpeech();
+    setSpeechMessage("");
+    const result = await speakLocalizedText(message, language, { rate: 0.9 });
 
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(speech);
+    if (["voice-unavailable", "unsupported", "error", "cloud-error"].includes(result.status)) {
+      setSpeechMessage(
+        result.status === "cloud-error"
+          ? t("speechGenerationFailed", {}, language)
+          : result.status === "unsupported"
+            ? t("speechOutputUnsupported", {}, language)
+            : t("speechVoiceUnavailable", {}, language)
+      );
+    }
   }
 
   return (
     <div className="min-h-screen bg-green-50 p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full">
         <div className="bg-green-700 text-white rounded-2xl shadow-lg p-6 mb-6">
           <button
             onClick={() => navigate("/dashboard")}
@@ -129,39 +125,59 @@ export default function GovtSchemesPage() {
           />
         </div>
 
+        {speechMessage && (
+          <p role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            {speechMessage}
+          </p>
+        )}
+
+        {schemesLoading && <p className="mb-4 text-sm text-green-800">{t("loading", {}, language)}</p>}
+
         <div className="grid md:grid-cols-2 gap-5">
           {filteredSchemes.map((scheme) => (
             <div
-              key={scheme.titleKey}
+              key={scheme.id || scheme.titleKey || scheme.title}
               className="bg-white rounded-2xl shadow-lg p-6"
             >
-              <div className="text-5xl mb-3">{scheme.icon}</div>
+              {(() => { const details = getSchemeDetails(scheme); return <>
+              <div className="text-5xl mb-3">{details.icon}</div>
 
               <h2 className="text-2xl font-bold text-green-700">
-                {t(scheme.titleKey, {}, language)}
+                {details.title}
               </h2>
 
               <p className="text-sm text-gray-500 mt-1">
-                {t(scheme.categoryKey, {}, language)}
+                {[scheme.department, details.category, scheme.state].filter(Boolean).join(" · ")}
               </p>
+
+              {scheme.description && <p className="mt-3 text-gray-700">{scheme.description}</p>}
 
               <div className="mt-4 space-y-2 text-gray-700">
                 <p>
-                  <b>{t("schemeBenefitLabel", {}, language)}</b> {t(scheme.benefitKey, {}, language)}
+                  <b>{t("schemeBenefitLabel", {}, language)}</b> {details.benefits}
                 </p>
 
                 <p>
-                  <b>{t("schemeEligibilityLabel", {}, language)}</b> {t(scheme.eligibilityKey, {}, language)}
+                  <b>{t("schemeEligibilityLabel", {}, language)}</b> {details.eligibility}
                 </p>
 
                 <p>
-                  <b>{t("schemeDocumentsLabel", {}, language)}</b> {t(scheme.documentsKey, {}, language)}
+                  <b>{t("schemeDocumentsLabel", {}, language)}</b> {details.documents}
                 </p>
               </div>
 
-              <p className="text-sm text-gray-600 bg-green-50 rounded-lg p-3 mt-4">
-                {scheme.applicationNote}
-              </p>
+              {details.steps.length > 0 && <section className="mt-5 rounded-xl border border-green-100 bg-green-50 p-4">
+                <h3 className="font-bold text-green-900">
+                  How to register
+                </h3>
+                <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-700">
+                  {details.steps.map((step, index) => (
+                    <li key={`${index}-${step}`}>{step}</li>
+                  ))}
+                </ol>
+              </section>}
+
+              {details.applicationNote && <p className="text-sm text-gray-600 bg-green-50 rounded-lg p-3 mt-4">{details.applicationNote}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
                 <button
@@ -172,15 +188,16 @@ export default function GovtSchemesPage() {
                   {t("speakScheme", {}, language)}
                 </button>
 
-                <a
-                  href={scheme.applyUrl}
+                {details.applicationLink && <a
+                  href={details.applicationLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-green-700 text-white py-3 px-3 rounded-lg font-semibold text-center hover:bg-green-800 transition"
                 >
-                  {scheme.applyLabel} ↗
-                </a>
+                  {details.applyLabel} ↗
+                </a>}
               </div>
+              </>; })()}
             </div>
           ))}
         </div>

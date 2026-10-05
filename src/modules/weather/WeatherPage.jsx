@@ -1,11 +1,19 @@
-import { saveWeatherContext } from "../../utils/weatherContext";
+import {
+  clearWeatherContext,
+  saveWeatherContext,
+} from "../../utils/weatherContext";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
-import { auth, database } from "../../firebase";
+import { auth, database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
+import {
+  getCurrentLocation,
+  getLocationErrorTranslationKey,
+  reverseGeocodeCoordinates,
+} from "../../services/currentLocationService";
 
 const WEATHER_CODES = {
   0: { labelKey: "conditionClearSky", icon: "☀️" },
@@ -143,7 +151,7 @@ export default function WeatherPage() {
     setLoading(true);
 
     try {
-      const currentUser = auth.currentUser;
+      const currentUser = await getAuthUser();
 
       if (!currentUser) {
         navigate("/login", { replace: true });
@@ -263,71 +271,39 @@ export default function WeatherPage() {
   }
 
   async function detectCurrentLocation() {
-    if (!navigator.geolocation) {
-      showMessage(
-        "error",
-        t("locationUnsupported", {}, language)
-      );
-
-      setLoading(false);
-      return;
-    }
-
     setDetectingLocation(true);
+    setMessage(null);
+    setLocation(null);
+    setCurrentWeather(null);
+    setHourlyForecast([]);
+    setDailyForecast([]);
+    clearWeatherContext();
+    let locationDetected = false;
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } =
-            position.coords;
-
-          await loadLocationAndWeather(
-            latitude,
-            longitude
-          );
-        } catch (error) {
-          console.error(
-            "Location weather error:",
-            error
-          );
-
-          showMessage(
-            "error",
-            t("localWeatherFailed", {}, language)
-          );
-        } finally {
-          setDetectingLocation(false);
-          setLoading(false);
-        }
-      },
-
-      (error) => {
-        console.error(
-          "Geolocation error:",
-          error
-        );
-
-        showMessage(
-          "warning",
-          t("locationAccessNeeded", {}, language)
-        );
-
-        setDetectingLocation(false);
-        setLoading(false);
-      },
-
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 10 * 60 * 1000,
-      }
-    );
+    try {
+      const deviceLocation = await getCurrentLocation();
+      const { latitude, longitude } = deviceLocation;
+      locationDetected = true;
+      await loadLocationAndWeather(deviceLocation);
+    } catch (error) {
+      console.error("Geolocation/weather error:", error);
+      const translationKey = locationDetected
+        ? "localWeatherFailed"
+        : getLocationErrorTranslationKey(error);
+      showMessage(
+        locationDetected ? "error" : "warning",
+        t(translationKey, {}, language)
+      );
+    } finally {
+      setDetectingLocation(false);
+      setLoading(false);
+    }
   }
 
   async function loadLocationAndWeather(
-    latitude,
-    longitude
+    deviceLocation
   ) {
+    const { latitude, longitude } = deviceLocation;
     const weatherParameters =
       new URLSearchParams({
         latitude: String(latitude),
@@ -375,49 +351,36 @@ export default function WeatherPage() {
         forecast_days: "7",
       });
 
-    const placeParameters =
-      new URLSearchParams({
-        latitude: String(latitude),
-        longitude: String(longitude),
-        localityLanguage: "en",
-      });
-
     const weatherUrl =
       `https://api.open-meteo.com/v1/forecast?${weatherParameters.toString()}`;
 
-    const placeUrl =
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?${placeParameters.toString()}`;
+    const [weatherResponse, placeResult] = await Promise.all([
+      fetch(weatherUrl),
+      reverseGeocodeCoordinates({ latitude, longitude })
+        .then((data) => ({ data }))
+        .catch((error) => ({ error })),
+    ]);
 
-    const [weatherResponse, placeResponse] =
-      await Promise.all([
-        fetch(weatherUrl),
-        fetch(placeUrl),
-      ]);
+    const placeData = placeResult.data || null;
+    const locationDetails = buildLocationDetails(
+      placeData,
+      deviceLocation
+    );
+    setLocation(locationDetails);
 
-    if (!weatherResponse.ok) {
-      throw new Error(
-        "Weather service failed"
-      );
+    if (!placeData) {
+      console.warn("Unable to reverse-geocode current device coordinates:", placeResult.error);
+      showMessage("warning", t("locationCoordinatesOnly", {}, language));
     }
 
-    if (!placeResponse.ok) {
-      throw new Error(
-        "Location service failed"
-      );
+    if (!weatherResponse.ok) {
+      const error = new Error("Weather service failed");
+      error.code = "WEATHER_REQUEST_FAILED";
+      throw error;
     }
 
     const weatherData =
       await weatherResponse.json();
-
-    const placeData =
-      await placeResponse.json();
-
-   const locationDetails =
-  buildLocationDetails(
-    placeData,
-    latitude,
-    longitude
-  );
 
 const currentWeatherDetails =
   weatherData.current || null;
@@ -431,8 +394,6 @@ const dailyForecastDetails =
   buildDailyForecast(
     weatherData.daily
   );
-
-setLocation(locationDetails);
 
 setCurrentWeather(
   currentWeatherDetails
@@ -460,9 +421,9 @@ saveWeatherContext({
 
   function buildLocationDetails(
     placeData,
-    latitude,
-    longitude
+    deviceLocation
   ) {
+    const { latitude, longitude, accuracy, timestamp, source } = deviceLocation;
     const administrative =
       placeData?.localityInfo?.administrative ||
       [];
@@ -484,17 +445,22 @@ saveWeatherContext({
     return {
       latitude,
       longitude,
+      accuracy,
+      timestamp,
+      source,
 
       village:
-        placeData.locality ||
-        placeData.city ||
+        placeData?.locality ||
+        placeData?.city ||
         findAdministrative([
           "village",
           "town",
           "city",
         ]) ||
-        profile?.village ||
-        t("currentLocation", {}, language),
+        t("coordinatesLocationLabel", {
+          latitude: Number(latitude).toFixed(4),
+          longitude: Number(longitude).toFixed(4),
+        }, language),
 
       mandal:
         findAdministrative([
@@ -503,24 +469,18 @@ saveWeatherContext({
           "tehsil",
           "subdistrict",
           "sub-district",
-        ]) ||
-        profile?.mandal ||
-        "",
+        ]) || "",
 
       district:
-        findAdministrative(["district"]) ||
-        placeData.city ||
-        profile?.district ||
-        "",
+        findAdministrative(["district"]) || "",
 
       state:
-        placeData.principalSubdivision ||
+        placeData?.principalSubdivision ||
         findAdministrative(["state"]) ||
-        profile?.state ||
         "",
 
-      country: placeData.countryName || "",
-      postcode: placeData.postcode || "",
+      country: placeData?.countryName || "",
+      postcode: placeData?.postcode || "",
     };
   }
 
@@ -1108,7 +1068,7 @@ saveWeatherContext({
 
   return (
     <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}

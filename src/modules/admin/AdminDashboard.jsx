@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth, database } from "../../firebase";
 
@@ -42,7 +42,9 @@ function countCollectionRecords(data) {
     return 0;
   }
 
-  const entries = Object.values(data);
+  const entries = Object.entries(data)
+    .filter(([key]) => key !== "_initialized")
+    .map(([, value]) => value);
 
   if (!entries.length) {
     return 0;
@@ -238,8 +240,19 @@ export default function AdminDashboardPage() {
        * ============================================
        */
 
-      const usersData =
-        await safeRead("users");
+      const [
+        usersData,
+        dealerRequestsData,
+        productsData,
+        ordersData,
+        governmentSchemesData,
+      ] = await Promise.all([
+        safeRead("users"),
+        safeRead("dealerRequests"),
+        safeRead("dealerProducts"),
+        safeRead("dealerOrders"),
+        safeRead("governmentSchemes"),
+      ]);
 
       let farmers = 0;
       let dealers = 0;
@@ -316,9 +329,6 @@ export default function AdminDashboardPage() {
        * ============================================
        */
 
-      const dealerRequestsData =
-        await safeRead("dealerRequests");
-
       const dealerRequests =
         countPendingDealerRequests(
           dealerRequestsData
@@ -334,9 +344,6 @@ export default function AdminDashboardPage() {
        * ============================================
        */
 
-      const productsData =
-        await safeRead("dealerProducts");
-
       const products =
         countCollectionRecords(
           productsData
@@ -351,9 +358,6 @@ export default function AdminDashboardPage() {
        * dealerOrders/{orderId}
        * ============================================
        */
-
-      const ordersData =
-        await safeRead("dealerOrders");
 
       const orders =
         countCollectionRecords(
@@ -374,10 +378,7 @@ export default function AdminDashboardPage() {
        * ============================================
        */
 
-      let schemesData =
-        await safeRead(
-          "governmentSchemes"
-        );
+      let schemesData = governmentSchemesData;
 
       if (!schemesData) {
         schemesData =
@@ -432,12 +433,15 @@ export default function AdminDashboardPage() {
     loadStats();
   }
 
-  function handleLogout() {
-    localStorage.removeItem("role");
-
-    navigate("/role-selection", {
-      replace: true,
-    });
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      sessionStorage.removeItem("role");
+      navigate("/role-selection", { replace: true });
+    } catch (error) {
+      console.error("Admin logout error:", error);
+      setErrorMessage("Unable to log out right now. Please try again.");
+    }
   }
 
   const totalPendingApprovals =
@@ -484,17 +488,6 @@ export default function AdminDashboardPage() {
       valueColor: "text-purple-800",
     },
 
-    {
-      title: "Total Admins",
-      value: stats.admins,
-      icon: "🛡️",
-      description:
-        "Active administrators",
-      path: "/admin",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-      valueColor: "text-blue-800",
-    },
   ];
 
   /*
@@ -548,54 +541,6 @@ export default function AdminDashboardPage() {
    */
 
   const adminOptions = [
-    {
-      title: "Farmers",
-      description:
-        "View and manage registered farmers.",
-      icon: "👨‍🌾",
-      path: "/admin/farmers",
-    },
-
-    {
-      title: "Dealers",
-      description:
-        "View and manage approved dealers.",
-      icon: "🏪",
-      path: "/admin/dealers",
-    },
-
-    {
-      title: "Approvals",
-      description:
-        "Approve or reject dealer registration requests.",
-      icon: "📋",
-      path: "/admin/dealer-requests",
-    },
-
-    {
-      title: "Products",
-      description:
-        "Monitor products listed by dealers.",
-      icon: "🛒",
-      path: "/admin/products",
-    },
-
-    {
-      title: "Orders",
-      description:
-        "Monitor farmer orders and order status.",
-      icon: "📦",
-      path: "/admin/orders",
-    },
-
-    {
-      title: "Government Schemes",
-      description:
-        "Manage agricultural government schemes.",
-      icon: "🌾",
-      path: "/admin/schemes",
-    },
-
     {
       title: "Reports & Statistics",
       description:
@@ -852,132 +797,6 @@ export default function AdminDashboardPage() {
               </button>
 
             ))}
-
-          </div>
-
-        </section>
-
-        {/* APPROVAL SUMMARY */}
-
-        <section className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 md:p-6 mt-7">
-
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-            <div>
-
-              <h2 className="text-xl font-bold text-indigo-950">
-                📋 Approval Summary
-              </h2>
-
-              <p className="text-gray-600 text-sm mt-1">
-                Review pending dealer registration requests.
-              </p>
-
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  "/admin/dealer-requests"
-                )
-              }
-              className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-sm"
-            >
-              Open Approvals
-            </button>
-
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-
-              <p className="text-sm text-orange-700">
-                Dealer Requests
-              </p>
-
-              <p className="text-2xl font-bold text-orange-900 mt-1">
-                {loading
-                  ? "..."
-                  : stats.dealerRequests}
-              </p>
-
-            </div>
-
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-
-              <p className="text-sm text-purple-700">
-                Total Pending
-              </p>
-
-              <p className="text-2xl font-bold text-purple-900 mt-1">
-                {loading
-                  ? "..."
-                  : totalPendingApprovals}
-              </p>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* ACCOUNT SUMMARY */}
-
-        <section className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 md:p-6 mt-7">
-
-          <h2 className="text-xl font-bold text-indigo-950">
-            👥 Account Summary
-          </h2>
-
-          <p className="text-gray-600 text-sm mt-1">
-            Registered platform accounts stored under users/.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-
-            <div className="bg-green-50 rounded-xl p-4">
-
-              <p className="text-sm text-green-700">
-                Farmers
-              </p>
-
-              <p className="text-2xl font-bold text-green-900 mt-1">
-                {loading
-                  ? "..."
-                  : stats.farmers}
-              </p>
-
-            </div>
-
-            <div className="bg-orange-50 rounded-xl p-4">
-
-              <p className="text-sm text-orange-700">
-                Dealers
-              </p>
-
-              <p className="text-2xl font-bold text-orange-900 mt-1">
-                {loading
-                  ? "..."
-                  : stats.dealers}
-              </p>
-
-            </div>
-
-            <div className="bg-gray-50 rounded-xl p-4">
-
-              <p className="text-sm text-gray-700">
-                Admins
-              </p>
-
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {loading
-                  ? "..."
-                  : stats.admins}
-              </p>
-
-            </div>
 
           </div>
 

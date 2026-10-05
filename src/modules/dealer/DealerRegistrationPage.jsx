@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  browserSessionPersistence,
+  createUserWithEmailAndPassword,
+  setPersistence,
+  signOut,
+} from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import "./DealerTheme.css";
@@ -98,6 +103,8 @@ export default function DealerRegistrationPage() {
     try {
       setLoading(true);
 
+      await setPersistence(auth, browserSessionPersistence);
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         form.email,
@@ -125,7 +132,7 @@ export default function DealerRegistrationPage() {
 
       await signOut(auth);
 
-      localStorage.setItem("role", "dealer");
+      sessionStorage.setItem("role", "dealer");
 
       alert("Dealer request submitted successfully. Wait for admin approval.");
 

@@ -9,7 +9,7 @@ import {
   ref,
   set,
 } from "firebase/database";
-import { auth, database } from "../../firebase";
+import { auth, database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import CategoryFilter from "../../components/marketplace/CategoryFilter";
 import MarketplaceProductCard from "../../components/marketplace/MarketplaceProductCard";
@@ -117,7 +117,7 @@ export default function FarmerDealerProductsPage() {
     setLoading(true);
 
     try {
-      const currentUser = auth.currentUser;
+      const currentUser = await getAuthUser();
 
       if (!currentUser) {
         navigate("/login", { replace: true });
@@ -568,7 +568,7 @@ export default function FarmerDealerProductsPage() {
 
   return (
     <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
@@ -696,7 +696,7 @@ export default function FarmerDealerProductsPage() {
               onRefresh={loadMarketplace}
             />
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
               {products.map((product) => {
                 const key =
                   getProductKey(product);

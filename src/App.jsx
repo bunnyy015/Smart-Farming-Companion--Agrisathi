@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -13,40 +14,36 @@ import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
 import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
 import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
+import DealerAccessGuard from "./components/DealerAccessGuard";
 
 // ==============================
 // Farmer
 // ==============================
-import DashboardPage from "./modules/dashboard/DashboardPage";
-import VoiceAssistantPage from "./utils/VoiceAssistantPage";
-import WeatherPage from "./modules/weather/WeatherPage";
-import MarketPricesPage from "./modules/market/MarketPricesPage";
-import CropDiseasePage from "./modules/cropDisease/CropDiseasePage";
-import FarmerProfilePage from "./modules/profile/FarmerProfilePage";
-import GovtSchemesPage from "./modules/schemes/GovtSchemesPage";
-
-import FarmerDealerProductsPage from "./modules/farmer/FarmerDealerProductsPage";
-import FarmerProductDetailsPage from "./modules/farmer/FarmerProductDetailsPage";
-import FarmerOrdersPage from "./modules/farmer/FarmerOrdersPage";
-import FarmerOrderHistoryPage from "./modules/farmer/FarmerOrderHistoryPage";
-import FarmerNotificationsPage from "./modules/farmer/FarmerNotificationsPage";
-
-import CommunityPage from "./modules/community/CommunityPage";
+const DashboardPage = lazy(() => import("./modules/dashboard/DashboardPage"));
+const VoiceAssistantPage = lazy(() => import("./utils/VoiceAssistantPage"));
+const WeatherPage = lazy(() => import("./modules/weather/WeatherPage"));
+const MarketPricesPage = lazy(() => import("./modules/market/MarketPricesPage"));
+const CropDiseasePage = lazy(() => import("./modules/cropDisease/CropDiseasePage"));
+const FarmerProfilePage = lazy(() => import("./modules/profile/FarmerProfilePage"));
+const GovtSchemesPage = lazy(() => import("./modules/schemes/GovtSchemesPage"));
+const FarmerDealerProductsPage = lazy(() => import("./modules/farmer/FarmerDealerProductsPage"));
+const FarmerProductDetailsPage = lazy(() => import("./modules/farmer/FarmerProductDetailsPage"));
+const FarmerOrdersPage = lazy(() => import("./modules/farmer/FarmerOrdersPage"));
+const FarmerNotificationsPage = lazy(() => import("./modules/farmer/FarmerNotificationsPage"));
+const CommunityPage = lazy(() => import("./modules/community/CommunityPage"));
 
 // ==============================
 // Admin
 // ==============================
 import AdminDashboard from "./modules/admin/AdminDashboard";
 import FarmersListPage from "./modules/admin/FarmersListPage";
-import FarmerManagementPage from "./modules/admin/FarmerManagementPage";
-import OrderManagementPage from "./modules/admin/OrderManagementPage";
 import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
-import ApprovedDealersPage from "./modules/admin/ApprovedDealersPage";
 import MarketPricesManagementPage from "./modules/admin/MarketPricesManagementPage";
 import DealerManagementPage from "./modules/admin/DealerManagementPage";
 import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
 import AdminProductsPage from "./modules/admin/AdminProductsPage";
 import AdminOrderManagementPage from "./modules/admin/AdminOrderManagementPage";
+import AdminGovernmentSchemesPage from "./modules/admin/AdminGovernmentSchemesPage";
 
 // ==============================
 // Dealer
@@ -63,7 +60,14 @@ import DealerProfilePage from "./modules/dealer/DealerProfilePage";
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense
+        fallback={(
+          <div className="min-h-screen flex items-center justify-center bg-green-50 text-green-800 font-medium">
+            Loading page…
+          </div>
+        )}
+      >
+        <Routes>
 
         {/* =====================================================
             AUTHENTICATION ROUTES
@@ -131,7 +135,7 @@ function App() {
 
         <Route
           path="/farmer/history"
-          element={<FarmerOrderHistoryPage />}
+          element={<Navigate to="/farmer/orders?filter=history" replace />}
         />
 
         <Route
@@ -191,7 +195,7 @@ function App() {
 
         <Route
           path="/admin/farmer-management"
-          element={<FarmerManagementPage />}
+          element={<Navigate to="/admin/farmers" replace />}
         />
 
 
@@ -206,7 +210,7 @@ function App() {
 
         <Route
           path="/admin/dealers"
-          element={<ApprovedDealersPage />}
+          element={<Navigate to="/admin/dealer-management" replace />}
         />
 
         <Route
@@ -244,6 +248,11 @@ function App() {
           element={<AdminProductsPage />}
         />
 
+        <Route
+          path="/admin/schemes"
+          element={<AdminGovernmentSchemesPage />}
+        />
+
 
         {/* =====================================================
             ADMIN - REPORTS
@@ -266,7 +275,7 @@ function App() {
 
         <Route
           path="/dealer"
-          element={<DealerDashboard />}
+          element={<DealerAccessGuard><DealerDashboard /></DealerAccessGuard>}
         />
 
         <Route
@@ -276,27 +285,27 @@ function App() {
 
         <Route
           path="/dealer/products"
-          element={<DealerProductsPage />}
+          element={<DealerAccessGuard><DealerProductsPage /></DealerAccessGuard>}
         />
 
         <Route
           path="/dealer/stock"
-          element={<DealerStockPage />}
+          element={<DealerAccessGuard><DealerStockPage /></DealerAccessGuard>}
         />
 
         <Route
           path="/dealer/orders"
-          element={<DealerOrdersPage />}
+          element={<DealerAccessGuard><DealerOrdersPage /></DealerAccessGuard>}
         />
 
         <Route
           path="/dealer/sales"
-          element={<DealerSalesPage />}
+          element={<DealerAccessGuard><DealerSalesPage /></DealerAccessGuard>}
         />
 
         <Route
           path="/dealer/notifications"
-          element={<DealerNotificationsPage />}
+          element={<DealerAccessGuard><DealerNotificationsPage /></DealerAccessGuard>}
         />
 
 
@@ -306,7 +315,7 @@ function App() {
 
         <Route
           path="/dealer/profile"
-          element={<DealerProfilePage />}
+          element={<DealerAccessGuard><DealerProfilePage /></DealerAccessGuard>}
         />
 
 
@@ -319,7 +328,8 @@ function App() {
           element={<SplashPage />}
         />
 
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
