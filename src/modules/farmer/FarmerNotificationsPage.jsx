@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
@@ -160,33 +159,6 @@ function createOrderNotification(order) {
         order.createdAt,
     },
 
-    cancelled: {
-      category: "orders",
-      icon: "🚫",
-      title: "Order cancelled",
-      text: `Your request for ${
-        order.productName || "the product"
-      } was cancelled.`,
-      className: "bg-gray-50 border-gray-200",
-      date:
-        order.cancelledAt ||
-        order.updatedAt ||
-        order.createdAt,
-    },
-
-    canceled: {
-      category: "orders",
-      icon: "🚫",
-      title: "Order cancelled",
-      text: `Your request for ${
-        order.productName || "the product"
-      } was cancelled.`,
-      className: "bg-gray-50 border-gray-200",
-      date:
-        order.cancelledAt ||
-        order.updatedAt ||
-        order.createdAt,
-    },
   };
 
   const details = statusData[status];
@@ -208,13 +180,24 @@ export default function FarmerNotificationsPage() {
 
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNotificationIds, setSelectedNotificationIds] = useState([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState(null);
+  const longPressTimer = useRef(null);
+  const suppressNotificationClick = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      clearTimeout(longPressTimer.current);
+      suppressNotificationClick.current = false;
+      setSelectionMode(false);
+      setSelectedNotificationIds([]);
+      setDeleteConfirmation(false);
+
       if (!user) {
         navigate("/login", {
           replace: true,
@@ -228,6 +211,8 @@ export default function FarmerNotificationsPage() {
 
     return () => unsubscribe();
   }, [navigate]);
+
+  useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
   const filteredNotifications = useMemo(() => {
     if (selectedFilter === "all") {
@@ -292,8 +277,9 @@ export default function FarmerNotificationsPage() {
       const saved = localStorage.getItem(
         `farmerNotificationDeletes_${uid}`
       );
+      const parsed = saved ? JSON.parse(saved) : [];
 
-      return saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -307,6 +293,7 @@ export default function FarmerNotificationsPage() {
   }
 
   async function loadNotifications(uid, isRefresh = false) {
+    cancelSelection();
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -465,25 +452,119 @@ export default function FarmerNotificationsPage() {
     );
   }
 
-  function deleteNotification(notification) {
-    const currentUser = auth.currentUser;
+  function toggleNotificationSelection(notification) {
+    setSelectionMode(true);
+    setSelectedNotificationIds((currentIds) =>
+      currentIds.includes(notification.id)
+        ? currentIds.filter((id) => id !== notification.id)
+        : [...currentIds, notification.id]
+    );
+  }
 
-    if (!currentUser) {
+  function startNotificationLongPress(notification) {
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      suppressNotificationClick.current = true;
+      setSelectionMode(true);
+      setSelectedNotificationIds((currentIds) =>
+        currentIds.includes(notification.id)
+          ? currentIds
+          : [...currentIds, notification.id]
+      );
+    }, 600);
+  }
+
+  function stopNotificationLongPress() {
+    clearTimeout(longPressTimer.current);
+  }
+
+  function handleNotificationCardClick(notification, event) {
+    if (suppressNotificationClick.current) {
+      suppressNotificationClick.current = false;
+      event.preventDefault();
       return;
     }
 
-    const deletedIds = getDeletedIds(currentUser.uid);
-    saveDeletedIds(currentUser.uid, [
-      ...new Set([...deletedIds, notification.id]),
-    ]);
-    setNotifications((current) =>
-      current.filter((item) => item.id !== notification.id)
-    );
-    showMessage("success", "Notification deleted.");
+    if (
+      selectionMode &&
+      !event.target.closest?.("button, a, input, select, textarea")
+    ) {
+      toggleNotificationSelection(notification);
+    }
+  }
+
+  function handleNotificationAction(notification, event) {
+    if (suppressNotificationClick.current) {
+      suppressNotificationClick.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (selectionMode) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleNotificationSelection(notification);
+      return;
+    }
+
+    event.stopPropagation();
+    openNotification(notification);
+  }
+
+  function cancelSelection() {
+    clearTimeout(longPressTimer.current);
+    setSelectionMode(false);
+    setSelectedNotificationIds([]);
+    setDeleteConfirmation(false);
+  }
+
+  function deleteSelectedNotifications() {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      showMessage("error", "Sign in again to delete notifications.");
+      return;
+    }
+
+    const selectedIds = notifications
+      .filter((notification) =>
+        selectedNotificationIds.includes(notification.id)
+      )
+      .map((notification) => notification.id);
+
+    if (selectedIds.length === 0) {
+      setDeleteConfirmation(false);
+      return;
+    }
+
+    try {
+      const deletedIds = getDeletedIds(currentUser.uid);
+      saveDeletedIds(currentUser.uid, [
+        ...new Set([...deletedIds, ...selectedIds]),
+      ]);
+      setNotifications((current) =>
+        current.filter((notification) => !selectedIds.includes(notification.id))
+      );
+      setDeleteConfirmation(false);
+      setSelectionMode(false);
+      setSelectedNotificationIds([]);
+      showMessage(
+        "success",
+        selectedIds.length === 1
+          ? "Notification deleted."
+          : "Selected notifications deleted."
+      );
+    } catch (error) {
+      console.error("Farmer notification deletion error:", error);
+      showMessage("error", "The selected notifications could not be deleted.");
+    }
   }
 
   function openNotification(notification) {
-    markAsRead(notification.id);
+    if (!selectionMode) {
+      markAsRead(notification.id);
+    }
 
     if (notification.orderId) {
       const orderFilter = ["accepted", "rejected"].includes(notification.orderStatus)
@@ -571,6 +652,29 @@ export default function FarmerNotificationsPage() {
               </button>
             )}
           </div>
+          {selectionMode && (
+            <section className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/15 p-3">
+              <button
+                type="button"
+                onClick={cancelSelection}
+                className="min-h-11 rounded-xl px-3 font-semibold hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <span className="font-bold">
+                {selectedNotificationIds.length} selected
+              </span>
+              {selectedNotificationIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmation(true)}
+                  className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              )}
+            </section>
+          )}
         </header>
 
         <div className="px-4">
@@ -579,9 +683,10 @@ export default function FarmerNotificationsPage() {
               <button
                 type="button"
                 key={filter.value}
-                onClick={() =>
-                  setSelectedFilter(filter.value)
-                }
+                onClick={() => {
+                  if (selectedFilter !== filter.value) cancelSelection();
+                  setSelectedFilter(filter.value);
+                }}
                 className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
                   selectedFilter === filter.value
                     ? "bg-green-700 text-white"
@@ -616,81 +721,131 @@ export default function FarmerNotificationsPage() {
               </button>
             </section>
           ) : (
-            <section className="space-y-3">
+            <section className="divide-y divide-green-100 overflow-hidden rounded-xl border border-green-100 bg-white shadow-sm">
               {filteredNotifications.map(
                 (notification) => (
                   <article
                     key={notification.id}
-                    className={`w-full text-left border rounded-2xl p-4 shadow-sm active:scale-[0.98] transition ${notification.className} ${
-                      notification.read
-                        ? "opacity-70"
-                        : "ring-2 ring-green-300"
+                    onClick={(event) =>
+                      handleNotificationCardClick(notification, event)
+                    }
+                    onMouseDown={(event) =>
+                      startNotificationLongPress(notification, event)
+                    }
+                    onMouseUp={stopNotificationLongPress}
+                    onMouseLeave={stopNotificationLongPress}
+                    onTouchStart={(event) =>
+                      startNotificationLongPress(notification, event)
+                    }
+                    onTouchEnd={stopNotificationLongPress}
+                    onTouchMove={stopNotificationLongPress}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setSelectionMode(true);
+                      setSelectedNotificationIds((currentIds) =>
+                        currentIds.includes(notification.id)
+                          ? currentIds
+                          : [...currentIds, notification.id]
+                      );
+                    }}
+                    className={`w-full text-left transition select-none touch-manipulation ${
+                      selectedNotificationIds.includes(notification.id)
+                          ? "bg-green-50 ring-2 ring-inset ring-green-500"
+                        : notification.read
+                            ? "bg-white"
+                            : "bg-green-50/60"
+                    } ${
+                      selectionMode ? "cursor-pointer" : ""
                     }`}
                   >
                     <button
                       type="button"
-                      onClick={() =>
-                        openNotification(notification)
+                      onClick={(event) =>
+                        handleNotificationAction(notification, event)
                       }
-                      className="w-full text-left"
+                      className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 shrink-0 bg-white/70 rounded-full flex items-center justify-center text-2xl">
-                          {notification.icon}
-                        </div>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 text-lg">
+                        {notification.icon}
+                      </span>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3">
-                            <h2 className="font-bold text-gray-900">
-                              {notification.title}
-                            </h2>
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        <span className="font-semibold text-gray-900">
+                          {notification.title}
+                        </span>
+                        <span className="text-gray-500"> — </span>
+                        <span className="text-gray-700">
+                          {notification.text}
+                        </span>
+                      </span>
 
-                            {!notification.read && (
-                              <span className="w-3 h-3 shrink-0 bg-green-600 rounded-full mt-1" />
-                            )}
-                          </div>
-
-                          <p className="text-sm text-gray-700 mt-1">
-                            {notification.text}
-                          </p>
-
-                          <div className="flex items-center justify-between mt-3">
-                            <p className="text-xs text-gray-500">
-                              {formatDate(notification.date)}
-                            </p>
-
-                            <span className="text-xs font-semibold text-green-700">
-                              View order →
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      {!notification.read && (
+                        <span
+                          aria-label="Unread"
+                          className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-600"
+                        />
+                      )}
+                      {selectedNotificationIds.includes(notification.id) && (
+                        <span
+                          aria-label="Selected"
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-700 text-xs font-bold text-white"
+                        >
+                          ✓
+                        </span>
+                      )}
+                      <span className="hidden shrink-0 text-xs text-gray-500 sm:inline">
+                        {formatDate(notification.date)}
+                      </span>
+                      <span aria-hidden="true" className="shrink-0 text-green-700">
+                        →
+                      </span>
                     </button>
 
-                    <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-center sm:justify-between">
-                      <button
-                        type="button"
-                        onClick={() => openNotification(notification)}
-                        className="w-full sm:w-auto min-h-10 px-3 rounded-lg border border-green-200 bg-white text-sm font-semibold text-green-800 hover:bg-green-50"
-                      >
-                        {notification.read ? "View order" : "Mark as read"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteNotification(notification)}
-                        aria-label={`Delete notification: ${notification.title}`}
-                        title="Delete notification"
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
-                      >
-                        <Trash2 size={17} aria-hidden="true" />
-                      </button>
-                    </div>
+                    <span className="sr-only">
+                      {notification.read ? "Read notification" : "Unread notification"}
+                    </span>
                   </article>
                 )
               )}
             </section>
           )}
         </div>
+
+        {deleteConfirmation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="farmer-delete-notifications-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <h2
+                id="farmer-delete-notifications-title"
+                className="text-xl font-bold text-gray-900"
+              >
+                {selectedNotificationIds.length === 1
+                  ? "Delete this notification?"
+                  : `Delete ${selectedNotificationIds.length} selected notifications?`}
+              </h2>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmation(false)}
+                  className="min-h-11 rounded-xl border border-gray-300 px-4 font-semibold text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteSelectedNotifications}
+                  className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
 
       </main>
     </div>

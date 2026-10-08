@@ -12,6 +12,16 @@ const MODELS = [
   "gemini-3.5-flash",
 ];
 
+// Keep crop diagnosis available if one model is temporarily overloaded.
+const DISEASE_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
+
 const languageNames = {
   en: "English",
   te: "Telugu",
@@ -803,62 +813,86 @@ Required JSON structure:
 `.trim();
 
     let lastError = null;
+    let sawTemporaryCapacityError = false;
 
-    for (const model of MODELS) {
-      try {
-        setProcessingStage("Checking crop health...");
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
-                {
+    for (let modelIndex = 0; modelIndex < DISEASE_MODELS.length; modelIndex += 1) {
+      const model = DISEASE_MODELS[modelIndex];
+      const attempts = modelIndex === 0 ? 2 : 1;
+
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
+        try {
+          setProcessingStage(
+            modelIndex === 0
+              ? "Checking crop health..."
+              : `Trying backup crop model ${modelIndex} of ${DISEASE_MODELS.length - 1}...`
+          );
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: controller.signal,
+              body: JSON.stringify({
+                contents: [{
                   role: "user",
                   parts: [
-                    {
-                      inline_data: {
-                        mime_type: mimeType || "image/jpeg",
-                        data: base64,
-                      },
-                    },
-                    {
-                      text: prompt,
-                    },
+                    { inline_data: { mime_type: mimeType || "image/jpeg", data: base64 } },
+                    { text: prompt },
                   ],
+                }],
+                generationConfig: {
+                  temperature: 0.2,
+                  responseMimeType: "application/json",
                 },
-              ],
-              generationConfig: {
-                temperature: 0.2,
-                responseMimeType: "application/json",
-              },
-            }),
+              }),
+            }
+          );
+          const data = await response.json();
+
+          if (!response.ok) {
+            const message = data?.error?.message || `Disease service failed with status ${response.status}.`;
+            const temporaryCapacityError = [408, 429, 500, 502, 503, 504].includes(response.status) ||
+              /high demand|overloaded|temporarily unavailable|try again later/i.test(message);
+            lastError = new Error(message);
+            if (temporaryCapacityError) sawTemporaryCapacityError = true;
+
+            if (temporaryCapacityError && modelIndex === 0 && attempt === 0) {
+              const retryAfter = Number(response.headers.get("Retry-After"));
+              const delay = Number.isFinite(retryAfter) && retryAfter > 0
+                ? Math.min(retryAfter * 1000, 1500)
+                : 700 + Math.floor(Math.random() * 400);
+              setProcessingStage("Crop service is busy; retrying once...");
+              await new Promise((resolve) => window.setTimeout(resolve, delay));
+              continue;
+            }
+            break;
           }
-        );
 
-        const data = await response.json();
+          const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!responseText) {
+            lastError = new Error("The disease service returned no result.");
+            break;
+          }
 
-        if (!response.ok) {
-          lastError = new Error(data?.error?.message || `Disease service failed with status ${response.status}.`);
-          continue;
+          return validateAnalysis(extractJson(responseText));
+        } catch (modelError) {
+          console.error(`Disease model ${model} failed:`, modelError);
+          lastError = modelError;
+          if (modelError.name === "AbortError" || modelError instanceof TypeError) {
+            sawTemporaryCapacityError = true;
+          }
+        } finally {
+          window.clearTimeout(timeoutId);
         }
-
-        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!responseText) {
-          lastError = new Error("The disease service returned no result.");
-          continue;
-        }
-
-        return validateAnalysis(extractJson(responseText));
-      } catch (modelError) {
-        console.error(`Disease model ${model} failed:`, modelError);
-        lastError = modelError;
       }
     }
 
+    if (sawTemporaryCapacityError) {
+      throw new Error("Crop analysis is temporarily busy. Your photo is still selected; please try again in a moment.");
+    }
     throw lastError || new Error("The image analysis service is unavailable.");
   }
 

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
 import {
   equalTo,
   get,
@@ -17,6 +16,9 @@ export default function DealerNotificationsPage() {
 
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNotificationIds, setSelectedNotificationIds] = useState([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
 
@@ -88,6 +90,45 @@ export default function DealerNotificationsPage() {
     );
   }
 
+  function toggleNotificationSelection(notificationId) {
+    setSelectionMode(true);
+    setSelectedNotificationIds((currentIds) =>
+      currentIds.includes(notificationId)
+        ? currentIds.filter((id) => id !== notificationId)
+        : [...currentIds, notificationId]
+    );
+  }
+
+  function cancelSelection() {
+    setSelectionMode(false);
+    setSelectedNotificationIds([]);
+    setDeleteConfirmation(false);
+  }
+
+  function deleteSelectedNotifications() {
+    const currentUser = auth.currentUser;
+    const selectedIds = notifications
+      .filter((notification) => selectedNotificationIds.includes(notification.id))
+      .map((notification) => notification.id);
+    if (!currentUser || selectedIds.length === 0) {
+      setDeleteConfirmation(false);
+      return;
+    }
+
+    try {
+      saveDeletedNotificationIds(currentUser.uid, [
+        ...new Set([...getDeletedNotificationIds(currentUser.uid), ...selectedIds]),
+      ]);
+      setNotifications((current) => current.filter((item) => !selectedIds.includes(item.id)));
+      cancelSelection();
+      showMessage("success", selectedIds.length === 1 ? "Notification deleted." : "Selected notifications deleted.");
+    } catch (error) {
+      console.error("Dealer notification deletion error:", error);
+      setDeleteConfirmation(false);
+      showMessage("error", "The selected notifications could not be deleted.");
+    }
+  }
+
   function createOrderNotification(order) {
     const status = String(order.status || order.orderStatus || "")
       .trim()
@@ -127,34 +168,6 @@ export default function DealerNotificationsPage() {
         }.`,
         color: "bg-red-50 border-red-200",
         date: order.rejectedAt || order.updatedAt || order.createdAt,
-      },
-
-      cancelled: {
-        category: "orders",
-        icon: "🚫",
-        title: "Order cancelled",
-        text: `${order.farmerName || "The farmer"} cancelled the order for ${
-          order.productName || "a product"
-        }.`,
-        color: "bg-gray-50 border-gray-200",
-        date:
-          order.cancelledAt ||
-          order.updatedAt ||
-          order.createdAt,
-      },
-
-      canceled: {
-        category: "orders",
-        icon: "🚫",
-        title: "Order cancelled",
-        text: `${order.farmerName || "The farmer"} cancelled the order for ${
-          order.productName || "a product"
-        }.`,
-        color: "bg-gray-50 border-gray-200",
-        date:
-          order.cancelledAt ||
-          order.updatedAt ||
-          order.createdAt,
       },
 
       received_by_farmer: {
@@ -258,6 +271,7 @@ export default function DealerNotificationsPage() {
   }
 
   async function loadNotifications() {
+    cancelSelection();
     setLoading(true);
 
     try {
@@ -445,23 +459,6 @@ export default function DealerNotificationsPage() {
     );
   }
 
-  function deleteNotification(notification) {
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      return;
-    }
-
-    const deletedIds = getDeletedNotificationIds(currentUser.uid);
-    saveDeletedNotificationIds(currentUser.uid, [
-      ...new Set([...deletedIds, notification.id]),
-    ]);
-    setNotifications((current) =>
-      current.filter((item) => item.id !== notification.id)
-    );
-    showMessage("success", "Notification deleted.");
-  }
-
   function openNotification(notification) {
     markAsRead(notification.id);
 
@@ -562,12 +559,30 @@ export default function DealerNotificationsPage() {
                   Mark All Read
                 </button>
               )}
+              {!selectionMode && notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode(true)}
+                  className="bg-white/15 text-white px-4 py-2.5 rounded-xl font-semibold"
+                >
+                  Select
+                </button>
+              )}
             </div>
           </div>
 
           <div className="bg-white/15 rounded-xl px-4 py-3 mt-4">
             <strong>{unreadCount}</strong> unread notifications
           </div>
+          {selectionMode && (
+            <section className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/15 p-3">
+              <button type="button" onClick={cancelSelection} className="rounded-xl px-3 py-2 font-semibold hover:bg-white/10">Cancel</button>
+              <span className="font-bold">{selectedNotificationIds.length} selected</span>
+              {selectedNotificationIds.length > 0 && (
+                <button type="button" onClick={() => setDeleteConfirmation(true)} className="rounded-xl bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700">Delete</button>
+              )}
+            </section>
+          )}
         </header>
 
         <section className="flex gap-2 overflow-x-auto py-5">
@@ -575,9 +590,10 @@ export default function DealerNotificationsPage() {
             <button
               type="button"
               key={filter.value}
-              onClick={() =>
-                setSelectedFilter(filter.value)
-              }
+              onClick={() => {
+                if (selectedFilter !== filter.value) cancelSelection();
+                setSelectedFilter(filter.value);
+              }}
               className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
                 selectedFilter === filter.value
                   ? "bg-green-700 text-white"
@@ -608,14 +624,26 @@ export default function DealerNotificationsPage() {
                 <article
                   key={notification.id}
                   className={`flex items-start gap-3 border rounded-2xl p-4 shadow-sm transition ${notification.color} ${
-                    notification.read
+                    selectedNotificationIds.includes(notification.id)
+                      ? "ring-2 ring-blue-500"
+                      : notification.read
                       ? "opacity-70"
                       : "ring-1 ring-green-300"
                   }`}
                 >
+                  {selectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedNotificationIds.includes(notification.id)}
+                      aria-label={`Select notification: ${notification.title}`}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={() => toggleNotificationSelection(notification.id)}
+                      className="mt-1 h-5 w-5 shrink-0 accent-green-700"
+                    />
+                  )}
                   <button
                     type="button"
-                    onClick={() => openNotification(notification)}
+                    onClick={() => selectionMode ? toggleNotificationSelection(notification.id) : openNotification(notification)}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left"
                   >
                     <span className="text-2xl">
@@ -643,21 +671,25 @@ export default function DealerNotificationsPage() {
                     </span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => deleteNotification(notification)}
-                    aria-label={`Delete notification: ${notification.title}`}
-                    title="Delete notification"
-                    className="shrink-0 rounded-lg border border-red-200 bg-white/80 p-2 text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
-                  >
-                    <Trash2 size={18} aria-hidden="true" />
-                  </button>
                 </article>
               )
             )}
           </section>
         )}
       </div>
+      {deleteConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="dealer-delete-notifications-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 id="dealer-delete-notifications-title" className="text-xl font-bold text-gray-900">
+              {selectedNotificationIds.length === 1 ? "Delete this notification?" : `Delete ${selectedNotificationIds.length} selected notifications?`}
+            </h2>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setDeleteConfirmation(false)} className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700">Cancel</button>
+              <button type="button" onClick={deleteSelectedNotifications} className="rounded-xl bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700">Delete</button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -34,8 +34,6 @@ const SUPPORTED_ORDER_STATUSES = [
   "received_by_farmer",
   "payment_received",
   "completed",
-  "cancelled",
-  "canceled",
 ];
 
 const FARMER_FEATURES = [
@@ -47,7 +45,6 @@ const FARMER_FEATURES = [
   { key: "marketPrices", titleKey: "marketPrices", descriptionKey: "featureMarketPricesDescription", icon: "📈", path: "/market-prices" },
   { key: "schemes", titleKey: "govtSchemes", descriptionKey: "featureSchemesDescription", icon: "📋", path: "/govt-schemes" },
   { key: "community", titleKey: "community", descriptionKey: "featureCommunityDescription", icon: "👥", path: "/community" },
-  { key: "notifications", titleKey: "notifications", descriptionKey: "featureNotificationsDescription", icon: "🔔", path: "/farmer/notifications" },
   { key: "nearbyServices", titleKey: "nearbyServices", descriptionKey: "featureNearbyServicesDescription", icon: "📍", external: true },
 ];
 
@@ -277,12 +274,11 @@ export default function DashboardPage() {
             order.paymentStatus === "completed";
 
           const statusIsInHistory =
-            ["accepted", "rejected", "cancelled", "canceled"].includes(status) ||
+            ["accepted", "rejected"].includes(status) ||
             Boolean(
               order.acceptedAt ||
                 order.dealerAcceptedAt ||
-                order.rejectedAt ||
-                order.cancelledAt
+                order.rejectedAt
             );
 
           return !order.farmerArchived && !paid && !statusIsInHistory;
@@ -496,11 +492,6 @@ export default function DashboardPage() {
         className: "bg-green-100 text-green-800",
         icon: "🎉",
       },
-      cancelled: {
-        label: t("cancelled", {}, language),
-        className: "bg-gray-100 text-gray-700",
-        icon: "✕",
-      },
     };
 
     return (
@@ -567,53 +558,76 @@ export default function DashboardPage() {
 
   const orderStatus = getOrderStatus(latestOrder);
 
-  const openNearbyServices = async () => {
-    const mapWindow = window.open("about:blank", "_blank");
-    if (!mapWindow) {
-      return;
-    }
-    mapWindow.opener = null;
-
-    try {
-      const { latitude, longitude } = await getCurrentLocation();
-      mapWindow.location.href =
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          `${latitude},${longitude}`
-        )}`;
-    } catch (locationError) {
-      mapWindow.close();
-      setWeatherLocationMessage(
-        t(getLocationErrorTranslationKey(locationError), {}, language)
-      );
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#f3f8f2] text-slate-900">
-      <header className="border-b border-green-100 bg-white">
-        <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
-          <div>
-            <p className="text-xs font-bold uppercase text-green-700">
-              AgriSaathi
-            </p>
-            <h1 className="text-xl font-bold text-green-950">
-              {t("dashboardPageTitle", {}, language)}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSelector compact />
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-green-200 px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-50"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto w-full max-w-[1680px] space-y-6 px-4 py-5 sm:px-6 lg:space-y-8 lg:px-10 lg:py-8">
+        <header className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-green-800 via-green-700 to-emerald-600 px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -left-8 h-48 w-48 rounded-full bg-lime-300/10" />
+
+          <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-3xl shadow-sm sm:h-18 sm:w-18">
+                🌱
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-green-100 sm:text-sm">
+                  AGRISAATHI FARMER PORTAL
+                </p>
+                <h1 className="mt-1 text-2xl font-bold sm:text-3xl md:text-4xl">
+                  {t("dashboardPageTitle", {}, language)}
+                </h1>
+                <p className="mt-1 text-sm text-green-100 sm:text-base">
+                  Manage your farm, orders, weather and farmer services.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => initializeDashboard()}
+                disabled={loading}
+                className="rounded-xl border border-white/25 bg-white/15 px-4 py-2.5 font-semibold transition hover:bg-white/25 disabled:opacity-50"
+              >
+                {loading ? "Refreshing..." : "↻ Refresh"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/farmer/notifications")}
+                className="relative rounded-xl bg-white px-4 py-2.5 font-semibold text-green-800 shadow-sm transition hover:bg-green-50"
+                aria-label={`${t("notifications", {}, language)}${
+                  unreadNotifications > 0
+                    ? `, ${unreadNotifications} ${t("unread", {}, language)}`
+                    : ""
+                }`}
+              >
+                🔔 {t("notifications", {}, language)}
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-2 -top-2 flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+              <LanguageSelector compact />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-xl border border-white/35 px-4 py-2.5 font-semibold transition hover:bg-white/10"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+
+          <div className="relative mt-6">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm">
+              <span className="h-2.5 w-2.5 rounded-full bg-lime-300" />
+              Farmer Account Active
+            </span>
+          </div>
+        </header>
+
         <FarmerHeader
           farmer={farmer}
           weather={weather}
@@ -693,21 +707,15 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {FARMER_FEATURES.map((feature, index) => {
               const title = t(feature.titleKey, {}, language);
-              const description = t(
-                feature.descriptionKey,
-                feature.key === "notifications"
-                  ? { count: unreadNotifications }
-                  : {},
-                language
-              );
+              const description = t(feature.descriptionKey, {}, language);
 
               return (
                 <button
                   type="button"
                   key={feature.key}
                   onClick={() =>
-                    feature.external
-                      ? openNearbyServices()
+                  feature.external
+                      ? navigate("/farmer/nearby-services")
                       : navigate(feature.path)
                   }
                   className="group flex min-h-36 items-start gap-4 rounded-xl border border-green-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
@@ -727,11 +735,6 @@ export default function DashboardPage() {
                     <span className="mt-1 block text-sm leading-5 text-slate-600">
                       {description}
                     </span>
-                    {feature.key === "notifications" && unreadNotifications > 0 && (
-                      <span className="mt-3 inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
-                        {unreadNotifications} {t("unread", {}, language)}
-                      </span>
-                    )}
                   </span>
                 </button>
               );

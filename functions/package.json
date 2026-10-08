@@ -1,0 +1,12 @@
+{
+  "name": "agrisathi-functions",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "scripts": { "lint": "eslint ." },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}

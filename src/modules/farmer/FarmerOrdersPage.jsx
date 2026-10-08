@@ -50,7 +50,19 @@ function isHistoryOrder(order) {
   return (
     isPaidOrder(order) ||
     order.farmerArchived === true ||
-    ["completed", "complete", "cancelled", "canceled"].includes(normalizedStatus)
+    ["completed", "complete"].includes(normalizedStatus)
+  );
+}
+
+function isEligibleHistoryOrder(order) {
+  const status = String(order.status || order.orderStatus || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_");
+
+  return (
+    isPaidOrder(order) ||
+    ["rejected", "reject"].includes(status)
   );
 }
 
@@ -137,13 +149,6 @@ function getStatusDetails(status) {
       message: "The dealer could not accept this request.",
     },
 
-    cancelled: {
-      icon: "🚫",
-      label: "Cancelled",
-      className: "bg-gray-100 text-gray-700",
-      progress: 0,
-      message: "This order request was cancelled.",
-    },
   };
 
   return (
@@ -176,15 +181,14 @@ export default function FarmerOrdersPage() {
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
 
-  const [confirmation, setConfirmation] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [message, setMessage] = useState(null);
   const knownPaidOrderIds = useRef(new Set());
   const knownHistoryOrderIds = useRef(new Set());
-  const locallyHiddenHistoryOrderIds = useRef(new Set());
-
-  function getHiddenHistoryStorageKey(uid) {
-    return `farmerHiddenOrderHistory_${uid}`;
-  }
+  const longPressTimer = useRef(null);
+  const suppressOrderClick = useRef(false);
 
   function showPaymentCompletedNotice(uid, order) {
     const storageKey = `farmerPaymentNoticeOrderIds_${uid}`;
@@ -227,7 +231,7 @@ export default function FarmerOrdersPage() {
   );
 
   const historyOrders = useMemo(
-    () => orders.filter(isHistoryOrder),
+    () => orders.filter((order) => isHistoryOrder(order) && !order.farmerArchived),
     [orders]
   );
 
@@ -244,15 +248,6 @@ export default function FarmerOrdersPage() {
         });
 
         return;
-      }
-
-      try {
-        const hiddenIds = JSON.parse(
-          localStorage.getItem(getHiddenHistoryStorageKey(user.uid)) || "[]"
-        );
-        locallyHiddenHistoryOrderIds.current = new Set(hiddenIds);
-      } catch {
-        locallyHiddenHistoryOrderIds.current = new Set();
       }
 
       await loadOrders(user.uid);
@@ -288,7 +283,7 @@ export default function FarmerOrdersPage() {
               isPaidOrder(order) &&
               !knownPaidOrderIds.current.has(order.id)
           );
-          const historyOnlyStatuses = ["cancelled", "canceled", "completed", "complete"];
+          const historyOnlyStatuses = ["completed", "complete"];
           const newlyMovedToHistory = orderList.find(
             (order) =>
               historyOnlyStatuses.includes(
@@ -301,7 +296,7 @@ export default function FarmerOrdersPage() {
           knownHistoryOrderIds.current = new Set(
             orderList.filter(isHistoryOrder).map((order) => order.id)
           );
-          setOrders(orderList.filter((order) => !locallyHiddenHistoryOrderIds.current.has(order.id)));
+          setOrders(orderList);
 
           if (newlyPaidOrder) {
             showPaymentCompletedNotice(user.uid, newlyPaidOrder);
@@ -313,8 +308,6 @@ export default function FarmerOrdersPage() {
               .toLowerCase()
               .replaceAll(" ", "_");
             const statusMessage = {
-              cancelled: "The order is now in Order History.",
-              canceled: "The order is now in Order History.",
               completed: "The completed order is now in Order History.",
               complete: "The completed order is now in Order History.",
             }[historyStatus];
@@ -334,22 +327,32 @@ export default function FarmerOrdersPage() {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    if (selectedFilter !== "history") {
+      clearTimeout(longPressTimer.current);
+      setSelectionMode(false);
+      setSelectedOrderIds([]);
+      setDeleteConfirmation(false);
+    }
+  }, [selectedFilter]);
+
+  useEffect(() => () => clearTimeout(longPressTimer.current), []);
+
   const filteredOrders = useMemo(() => {
     if (selectedFilter === "history") {
       return historyOrders.filter((order) => {
         const status = String(order.status || order.orderStatus || "")
           .trim().toLowerCase().replaceAll(" ", "_");
         const statusMatches = (historyStatusFilter === "completed" && isPaidOrder(order)) ||
-          (historyStatusFilter === "cancelled" && ["cancelled", "canceled"].includes(status)) ||
           (historyStatusFilter === "rejected" && ["rejected", "reject"].includes(status));
-        const dateValue = order.completedAt || order.paymentReceivedAt || order.cancelledAt || order.updatedAt || order.createdAt;
+        const dateValue = order.completedAt || order.paymentReceivedAt || order.updatedAt || order.createdAt;
         const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
         const start = historyStartDate ? new Date(`${historyStartDate}T00:00:00`).getTime() : -Infinity;
         const end = historyEndDate ? new Date(`${historyEndDate}T23:59:59.999`).getTime() : Infinity;
         const dateMatches = !historyStartDate && !historyEndDate
           ? true
           : Number.isFinite(timestamp) && timestamp >= start && timestamp <= end;
-        return statusMatches && dateMatches;
+        return !order.farmerArchived && statusMatches && dateMatches;
       });
     }
 
@@ -441,7 +444,7 @@ export default function FarmerOrdersPage() {
             )
         );
 
-      setOrders(orderList.filter((order) => !locallyHiddenHistoryOrderIds.current.has(order.id)));
+      setOrders(orderList);
       knownPaidOrderIds.current = new Set(
         orderList.filter(isPaidOrder).map((order) => order.id)
       );
@@ -499,14 +502,10 @@ export default function FarmerOrdersPage() {
     await loadOrders(currentUser.uid, true);
   }
 
-  function openConfirmation(type, order) {
-    setConfirmation({
-      type,
-      order,
-    });
-  }
-
   function changeFilter(filter) {
+    clearTimeout(longPressTimer.current);
+    setSelectionMode(false);
+    setSelectedOrderIds([]);
     setExpandedOrderId("");
     navigate(
       filter === "active" ? "/farmer/orders" : `/farmer/orders?filter=${filter}`,
@@ -514,86 +513,149 @@ export default function FarmerOrdersPage() {
     );
   }
 
-  function closeConfirmation() {
-    if (!updatingId) {
-      setConfirmation(null);
+  function toggleOrderSelection(order) {
+    if (!isEligibleHistoryOrder(order)) {
+      return;
+    }
+
+    setSelectionMode(true);
+    setSelectedOrderIds((currentIds) =>
+      currentIds.includes(order.id)
+        ? currentIds.filter((id) => id !== order.id)
+        : [...currentIds, order.id]
+    );
+  }
+
+  function startOrderLongPress(order) {
+    if (selectedFilter !== "history" || !isEligibleHistoryOrder(order)) {
+      return;
+    }
+
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      suppressOrderClick.current = true;
+      setSelectionMode(true);
+      setSelectedOrderIds((currentIds) =>
+        currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
+      );
+    }, 600);
+  }
+
+  function stopOrderLongPress() {
+    clearTimeout(longPressTimer.current);
+  }
+
+  function handleOrderCardClick(order, event) {
+    if (suppressOrderClick.current) {
+      suppressOrderClick.current = false;
+      event.preventDefault();
+      return;
+    }
+
+    if (selectionMode && !event.target.closest?.("button, a, input, select, textarea")) {
+      toggleOrderSelection(order);
     }
   }
 
-  async function deleteHistoryOrder(order) {
+  async function hideSelectedHistoryOrders() {
     const currentUser = auth.currentUser;
+    const selectedOrders = filteredOrders.filter(
+      (order) =>
+        selectedOrderIds.includes(order.id) &&
+        isEligibleHistoryOrder(order)
+    );
 
-    if (!currentUser || !order?.id || !isHistoryOrder(order)) {
+    if (!currentUser || selectedOrders.length === 0) {
+      setDeleteConfirmation(false);
       return;
     }
 
-    if (order.farmerUid !== currentUser.uid) {
-      showMessage("error", "You can only delete your own order history.");
+    if (selectedOrders.some((order) => order.farmerUid !== currentUser.uid)) {
+      showMessage("error", "You can only delete orders from your own history.");
       return;
     }
 
     try {
-      setUpdatingId(order.id);
-      const hiddenIds = new Set(locallyHiddenHistoryOrderIds.current);
-      hiddenIds.add(order.id);
-      localStorage.setItem(
-        getHiddenHistoryStorageKey(currentUser.uid),
-        JSON.stringify([...hiddenIds])
+      setUpdatingId("archiving-history");
+      const results = await Promise.allSettled(
+        selectedOrders.map((order) =>
+          update(ref(database, `dealerOrders/${order.id}`), {
+            farmerArchived: true,
+          })
+        )
       );
-      locallyHiddenHistoryOrderIds.current = hiddenIds;
-      setOrders((currentOrders) => currentOrders.filter((item) => item.id !== order.id));
-      setExpandedOrderId((currentId) => currentId === order.id ? "" : currentId);
-      showMessage("success", "Order removed from your history.");
+      const archivedIds = new Set(
+        results.flatMap((result, index) =>
+          result.status === "fulfilled" ? [selectedOrders[index].id] : []
+        )
+      );
+      const failedIds = selectedOrders
+        .filter((order) => !archivedIds.has(order.id))
+        .map((order) => order.id);
+
+      if (archivedIds.size > 0) {
+        setOrders((currentOrders) => currentOrders.map((order) =>
+          archivedIds.has(order.id)
+            ? { ...order, farmerArchived: true }
+            : order
+        ));
+        setExpandedOrderId((currentId) =>
+          archivedIds.has(currentId) ? "" : currentId
+        );
+      }
+
+      setSelectedOrderIds(failedIds);
+      setSelectionMode(failedIds.length > 0);
+      setDeleteConfirmation(false);
+      if (failedIds.length > 0) {
+        console.error(
+          "Farmer order hiding failed for selected order IDs:",
+          failedIds
+        );
+        showMessage(
+          "error",
+          archivedIds.size > 0
+          ? `${archivedIds.size} order${archivedIds.size === 1 ? "" : "s"} deleted. ${failedIds.length} could not be deleted.`
+            : "The selected orders could not be deleted. Check database permissions and try again."
+        );
+      } else {
+        showMessage(
+          "success",
+          selectedOrders.length === 1
+            ? "Order deleted from your history."
+            : "Orders deleted from your history."
+        );
+      }
     } catch (error) {
-      console.error("Delete history order error:", error);
-      showMessage("error", "The order could not be hidden from history on this device.");
+      console.error("Delete history orders error:", error);
+      showMessage("error", "The selected orders could not be deleted from your history.");
     } finally {
       setUpdatingId("");
     }
   }
 
-  async function cancelOrder(order) {
-    if (order.status !== "pending") {
-      showMessage(
-        "warning",
-        "Only waiting orders can be cancelled."
-      );
+  function cancelSelection() {
+    clearTimeout(longPressTimer.current);
+    setSelectionMode(false);
+    setSelectedOrderIds([]);
+    setDeleteConfirmation(false);
+  }
 
-      setConfirmation(null);
-      return;
-    }
+  const selectableVisibleOrderIds = filteredOrders
+    .filter(isEligibleHistoryOrder)
+    .map((order) => order.id);
+  const allVisibleOrdersSelected =
+    selectableVisibleOrderIds.length > 0 &&
+    selectableVisibleOrderIds.every((id) => selectedOrderIds.includes(id));
 
-    try {
-      setUpdatingId(order.id);
-
-      const now = new Date().toISOString();
-
-      await update(
-        ref(database, `dealerOrders/${order.id}`),
-        {
-          status: "cancelled",
-          cancelledBy: "farmer",
-          cancelledAt: now,
-          updatedAt: now,
-        }
-      );
-
-      showMessage(
-        "success",
-        "The order request was cancelled."
-      );
-
-      await refreshOrders();
-    } catch (error) {
-      console.error("Cancel order error:", error);
-
-      showMessage(
-        "error",
-        "The order could not be cancelled."
-      );
-    } finally {
-      setUpdatingId("");
-    }
+  function toggleSelectAll() {
+    setSelectionMode(true);
+    setSelectedOrderIds((currentIds) => {
+      if (allVisibleOrdersSelected) {
+        return currentIds.filter((id) => !selectableVisibleOrderIds.includes(id));
+      }
+      return [...new Set([...currentIds, ...selectableVisibleOrderIds])];
+    });
   }
 
   async function confirmProductReceived(order) {
@@ -658,30 +720,6 @@ export default function FarmerOrdersPage() {
     }
   }
 
-  function executeConfirmation() {
-    if (!confirmation) {
-      return;
-    }
-
-    cancelOrder(confirmation.order);
-  }
-
-  function getConfirmationDetails() {
-    if (!confirmation) {
-      return null;
-    }
-
-    return {
-      icon: "🚫",
-      title: "Cancel this order?",
-      text: "The dealer will stop processing this request.",
-      actionText: "Cancel Order",
-      actionClass: "bg-red-600 text-white",
-    };
-  }
-
-  const confirmationDetails = getConfirmationDetails();
-
   if (loading) {
     return (
       <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
@@ -735,7 +773,7 @@ export default function FarmerOrdersPage() {
             </h1>
 
             <p className="text-green-100 text-sm mt-2">
-              Track requested orders or review completed and cancelled orders.
+              Track requested orders or review completed orders.
             </p>
           </div>
 
@@ -781,66 +819,6 @@ export default function FarmerOrdersPage() {
             </section>
           )}
 
-          {confirmation && confirmationDetails && (
-            <section className="bg-white border-2 border-green-200 rounded-2xl shadow-lg p-4 mt-5">
-              <div className="flex items-start gap-3">
-                <div className="text-3xl">
-                  {confirmationDetails.icon}
-                </div>
-
-                <div className="flex-1">
-                  <h2 className="font-bold text-lg text-gray-900">
-                    {confirmationDetails.title}
-                  </h2>
-
-                  <p className="text-sm text-gray-600 mt-1">
-                    {confirmationDetails.text}
-                  </p>
-
-                  <div className="bg-gray-50 rounded-xl p-3 mt-3">
-                    <p className="font-bold text-green-900">
-                      {confirmation.order.productName ||
-                        "Farm Product"}
-                    </p>
-
-                    <p className="text-sm text-gray-600 mt-1">
-                      {confirmation.order.quantity || 0}{" "}
-                      {confirmation.order.unit || "units"}
-                    </p>
-
-                    <p className="font-semibold mt-1">
-                      {formatMoney(
-                        confirmation.order.totalAmount
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <button
-                      type="button"
-                      disabled={updatingId === confirmation.order.id}
-                      onClick={executeConfirmation}
-                      className={`${confirmationDetails.actionClass} min-h-10 px-3 py-2 text-sm rounded-xl font-semibold disabled:bg-gray-400`}
-                    >
-                      {updatingId === confirmation.order.id
-                        ? "Please wait..."
-                        : confirmationDetails.actionText}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={Boolean(updatingId)}
-                      onClick={closeConfirmation}
-                      className="border border-gray-300 min-h-10 px-3 py-2 text-sm rounded-xl font-semibold disabled:opacity-50"
-                    >
-                      Go Back
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
           <section className="flex gap-2 overflow-x-auto py-5">
             {FILTERS.map((filter) => (
               <button
@@ -863,21 +841,90 @@ export default function FarmerOrdersPage() {
             <section className="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:grid-cols-3">
               <label className="text-sm font-semibold text-gray-700">
                 History status
-                <select value={historyStatusFilter} onChange={(event) => setHistoryStatusFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
+                <select value={historyStatusFilter} onChange={(event) => { cancelSelection(); setHistoryStatusFilter(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
                   <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
                   <option value="rejected">Rejected</option>
                 </select>
               </label>
               <label className="text-sm font-semibold text-gray-700">
                 From date
-                <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => setHistoryStartDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+                <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => { cancelSelection(); setHistoryStartDate(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
               </label>
               <label className="text-sm font-semibold text-gray-700">
                 To date
-                <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => setHistoryEndDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+                <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => { cancelSelection(); setHistoryEndDate(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
               </label>
             </section>
+          )}
+
+          {selectedFilter === "history" && selectionMode && (
+            <section className="sticky top-2 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-green-200 bg-white p-3 shadow-lg">
+              <button
+                type="button"
+                onClick={cancelSelection}
+                className="min-h-11 rounded-xl px-3 font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <span className="font-bold text-green-900">
+                {selectedOrderIds.length} Selected
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  disabled={selectableVisibleOrderIds.length === 0}
+                  className="min-h-11 rounded-xl border border-green-200 px-3 font-semibold text-green-800 disabled:opacity-50"
+                >
+                  {allVisibleOrdersSelected ? "Deselect All" : "Select All"}
+                </button>
+                {selectedOrderIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmation(true)}
+                    disabled={Boolean(updatingId)}
+                    className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Delete Selected
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+
+          {deleteConfirmation && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="farmer-delete-history-title"
+                className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+              >
+                <h2 id="farmer-delete-history-title" className="text-xl font-bold text-gray-900">
+                  {selectedOrderIds.length === 1
+                    ? "Delete this order from history?"
+                    : `Delete ${selectedOrderIds.length} selected orders?`}
+                </h2>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    disabled={Boolean(updatingId)}
+                    onClick={() => setDeleteConfirmation(false)}
+                    className="min-h-11 rounded-xl border border-gray-300 px-4 font-semibold text-gray-700 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(updatingId)}
+                    onClick={hideSelectedHistoryOrders}
+                    className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {updatingId === "archiving-history" ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </section>
+            </div>
           )}
 
           {filteredOrders.length === 0 ? (
@@ -890,7 +937,7 @@ export default function FarmerOrdersPage() {
 
               <p className="text-gray-600 text-sm mt-2">
                 {selectedFilter === "history"
-                  ? "Completed, cancelled, and rejected orders will appear here."
+                  ? "Completed and rejected orders will appear here."
                   : "Your current orders will appear here."}
               </p>
               {selectedFilter === "active" && <button
@@ -906,28 +953,46 @@ export default function FarmerOrdersPage() {
               {filteredOrders.map((order) => {
                 const status = getStatusDetails(order.status);
                 const updating = updatingId === order.id;
+                const selectable = isEligibleHistoryOrder(order);
+                const selected = selectedOrderIds.includes(order.id);
 
                 return (
                   <article
                     key={order.id}
-                    className="relative bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden"
+                    onClickCapture={(event) => {
+                      if (suppressOrderClick.current) {
+                        suppressOrderClick.current = false;
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }
+                    }}
+                    onClick={(event) => handleOrderCardClick(order, event)}
+                    onMouseDown={() => startOrderLongPress(order)}
+                    onMouseUp={stopOrderLongPress}
+                    onMouseLeave={stopOrderLongPress}
+                    onTouchStart={() => startOrderLongPress(order)}
+                    onTouchEnd={stopOrderLongPress}
+                    onTouchMove={stopOrderLongPress}
+                    onContextMenu={(event) => {
+                      if (selectedFilter === "history" && selectable) {
+                        event.preventDefault();
+                        setSelectionMode(true);
+                        setSelectedOrderIds((currentIds) =>
+                          currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
+                        );
+                      }
+                    }}
+                    className={`relative select-none touch-manipulation rounded-2xl border shadow-sm overflow-hidden transition ${
+                      selected
+                        ? "border-green-600 bg-green-50 ring-2 ring-green-300"
+                        : "border-green-100 bg-white"
+                    } ${selectable && selectedFilter === "history" ? "cursor-pointer" : ""}`}
                   >
-                    {selectedFilter === "history" && (
-                      <button
-                        type="button"
-                        aria-label={`Delete ${order.productName || "order"} from history`}
-                        title="Delete from order history"
-                        disabled={Boolean(updatingId)}
-                        onClick={() => deleteHistoryOrder(order)}
-                        className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-red-100 bg-white text-sm text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-50"
-                      >
-                        🗑️
-                      </button>
-                    )}
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h2 className="text-lg font-bold text-green-900 truncate">
+                          <h2 className="flex items-center gap-2 text-lg font-bold text-green-900 truncate">
+                            {selected && <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-700 text-sm text-white">✓</span>}
                             {order.productName || "Farm Product"}
                           </h2>
 
@@ -939,9 +1004,7 @@ export default function FarmerOrdersPage() {
                           </p>
                         </div>
 
-                        <span
-                          className={`${status.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${selectedFilter === "history" ? "mr-9" : ""}`}
-                        >
+                        <span className={`${status.className} shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold`}>
                           {status.icon} {status.label}
                         </span>
                       </div>
@@ -1039,7 +1102,6 @@ export default function FarmerOrdersPage() {
                       <div className="space-y-3 mt-4">
                         {order.dealerPhone &&
                           ![
-                            "cancelled",
                             "rejected",
                             "completed",
                           ].includes(order.status) && (
@@ -1050,19 +1112,6 @@ export default function FarmerOrdersPage() {
                               📞 Call Dealer
                             </a>
                           )}
-
-                        {order.status === "pending" && (
-                          <button
-                            type="button"
-                            disabled={updating}
-                            onClick={() =>
-                              openConfirmation("cancel", order)
-                            }
-                            className="w-full sm:w-auto px-4 py-2.5 text-sm border border-red-500 text-red-700 rounded-xl font-semibold disabled:opacity-50"
-                          >
-                            Cancel Order
-                          </button>
-                        )}
 
                         {order.status === "completed" && (
                           <div className="bg-green-50 text-green-700 px-4 py-2.5 text-sm rounded-xl font-bold flex items-center justify-center">
@@ -1076,11 +1125,6 @@ export default function FarmerOrdersPage() {
                           </div>
                         )}
 
-                        {order.status === "cancelled" && (
-                          <div className="bg-gray-100 text-gray-700 px-4 py-2.5 text-sm rounded-xl font-bold flex items-center justify-center">
-                            🚫 Order Cancelled
-                          </div>
-                        )}
                       </div>
                       </div>}
                     </div>

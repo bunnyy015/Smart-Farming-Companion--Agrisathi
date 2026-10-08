@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -88,9 +88,18 @@ function getOrderSection(order) {
     return "farmer_received";
   }
 
-  // Rejected, cancelled, and unknown statuses are intentionally hidden
+  // Rejected and unknown statuses are intentionally hidden
   // from the three primary order sections.
   return null;
+}
+
+function isEligibleHistoryOrder(order) {
+  return [
+    "completed",
+    "complete",
+    "rejected",
+    "reject",
+  ].includes(getOrderStatus(order));
 }
 
 function getOrderProductId(order) {
@@ -117,6 +126,20 @@ function getOrderDealerUid(order) {
     order?.dealer?.id ||
     ""
   );
+}
+
+function getDeletedHistoryOrderIds(uid) {
+  try {
+    const saved = localStorage.getItem(`dealerOrderHistoryDeletes_${uid}`);
+    const parsed = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDeletedHistoryOrderIds(uid, ids) {
+  localStorage.setItem(`dealerOrderHistoryDeletes_${uid}`, JSON.stringify(ids));
 }
 
 function getOrderProductName(order) {
@@ -230,6 +253,9 @@ export default function DealerOrdersPage() {
   const [orders, setOrders] =
     useState([]);
 
+  const [deletedHistoryOrderIds, setDeletedHistoryOrderIds] =
+    useState([]);
+
   const [products, setProducts] =
     useState({});
 
@@ -255,6 +281,12 @@ export default function DealerOrdersPage() {
   const [selectedCompletedOrder, setSelectedCompletedOrder] =
     useState(null);
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const longPressTimer = useRef(null);
+  const suppressOrderClick = useRef(false);
+
   const [message, setMessage] =
     useState(null);
 
@@ -269,6 +301,7 @@ export default function DealerOrdersPage() {
         async (user) => {
           if (!user) {
             setCurrentUser(null);
+            setDeletedHistoryOrderIds([]);
             setLoading(false);
 
             navigate("/login", {
@@ -279,6 +312,7 @@ export default function DealerOrdersPage() {
           }
 
           setCurrentUser(user);
+          setDeletedHistoryOrderIds(getDeletedHistoryOrderIds(user.uid));
 
           try {
             const userSnapshot =
@@ -1566,14 +1600,20 @@ export default function DealerOrdersPage() {
 
       return orders.filter(
         (order) => {
+          if (
+            role === "dealer" &&
+            statusFilter === "completed" &&
+            deletedHistoryOrderIds.includes(order.id)
+          ) {
+            return false;
+          }
+
           const status =
             getOrderStatus(
               order
             );
 
-          const isCancelledHistory = ["cancelled", "canceled"].includes(status);
-          const inSelectedSection = getOrderSection(order) === statusFilter ||
-            (statusFilter === "completed" && isCancelledHistory);
+          const inSelectedSection = getOrderSection(order) === statusFilter;
 
           if (!inSelectedSection) {
             return false;
@@ -1581,13 +1621,10 @@ export default function DealerOrdersPage() {
 
           if (statusFilter === "completed") {
             const statusMatches = historyStatusFilter === "all" ||
-              (historyStatusFilter === "completed" && status === "completed") ||
-              (historyStatusFilter === "cancelled" && isCancelledHistory);
+              (historyStatusFilter === "completed" && status === "completed");
             if (!statusMatches) return false;
 
-            const dateValue = isCancelledHistory
-              ? order.cancelledAt || order.updatedAt || order.createdAt
-              : order.completedAt || order.updatedAt || order.createdAt;
+            const dateValue = order.completedAt || order.updatedAt || order.createdAt;
             const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
             const start = historyStartDate ? new Date(`${historyStartDate}T00:00:00`).getTime() : -Infinity;
             const end = historyEndDate ? new Date(`${historyEndDate}T23:59:59.999`).getTime() : Infinity;
@@ -1627,12 +1664,146 @@ export default function DealerOrdersPage() {
       );
     }, [
       orders,
+      role,
+      deletedHistoryOrderIds,
       searchTerm,
       statusFilter,
       historyStatusFilter,
       historyStartDate,
       historyEndDate,
     ]);
+
+  useEffect(() => {
+    if (statusFilter !== "completed") {
+      clearTimeout(longPressTimer.current);
+      setSelectionMode(false);
+      setSelectedOrderIds([]);
+      setDeleteConfirmation(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => () => clearTimeout(longPressTimer.current), []);
+
+  const selectableVisibleOrderIds = filteredOrders
+    .filter(isEligibleHistoryOrder)
+    .map((order) => order.id);
+  const allVisibleOrdersSelected =
+    selectableVisibleOrderIds.length > 0 &&
+    selectableVisibleOrderIds.every((id) => selectedOrderIds.includes(id));
+
+  function toggleOrderSelection(order) {
+    if (!isEligibleHistoryOrder(order)) {
+      return;
+    }
+
+    setSelectionMode(true);
+    setSelectedOrderIds((currentIds) =>
+      currentIds.includes(order.id)
+        ? currentIds.filter((id) => id !== order.id)
+        : [...currentIds, order.id]
+    );
+  }
+
+  function startOrderLongPress(order, event) {
+    if (
+      statusFilter !== "completed" ||
+      !isEligibleHistoryOrder(order) ||
+      event.target.closest?.("button, a, input, select, textarea")
+    ) {
+      return;
+    }
+
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      suppressOrderClick.current = true;
+      setSelectionMode(true);
+      setSelectedOrderIds((currentIds) =>
+        currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
+      );
+    }, 600);
+  }
+
+  function stopOrderLongPress() {
+    clearTimeout(longPressTimer.current);
+  }
+
+  function handleOrderCardClick(order, event) {
+    if (suppressOrderClick.current) {
+      suppressOrderClick.current = false;
+      event.preventDefault();
+      return;
+    }
+
+    if (selectionMode && !event.target.closest?.("button, a, input, select, textarea")) {
+      toggleOrderSelection(order);
+    }
+  }
+
+  function cancelSelection() {
+    clearTimeout(longPressTimer.current);
+    setSelectionMode(false);
+    setSelectedOrderIds([]);
+    setDeleteConfirmation(false);
+  }
+
+  function toggleSelectAll() {
+    setSelectionMode(true);
+    setSelectedOrderIds((currentIds) => {
+      if (allVisibleOrdersSelected) {
+        return currentIds.filter((id) => !selectableVisibleOrderIds.includes(id));
+      }
+      return [...new Set([...currentIds, ...selectableVisibleOrderIds])];
+    });
+  }
+
+  async function deleteSelectedHistoryOrders() {
+    const selectedOrders = filteredOrders.filter(
+      (order) =>
+        selectedOrderIds.includes(order.id) &&
+        isEligibleHistoryOrder(order) &&
+        (role !== "dealer" || getOrderDealerUid(order) === currentUser?.uid)
+    );
+
+    if (selectedOrders.length === 0) {
+      setDeleteConfirmation(false);
+      return;
+    }
+
+    try {
+      setProcessingOrderId("deleting-history");
+      if (!currentUser || role !== "dealer") {
+        throw new Error("A signed-in dealer is required to delete these orders.");
+      }
+      const deletedIds = new Set(selectedOrders.map((order) => order.id));
+      const nextDeletedIds = [...new Set([...deletedHistoryOrderIds, ...deletedIds])];
+      saveDeletedHistoryOrderIds(currentUser.uid, nextDeletedIds);
+      setDeletedHistoryOrderIds(nextDeletedIds);
+      setOrders((currentOrders) =>
+        currentOrders.filter((order) => !deletedIds.has(order.id))
+      );
+      setSelectedCompletedOrder((currentOrder) =>
+        currentOrder && deletedIds.has(currentOrder.id) ? null : currentOrder
+      );
+      setDeleteConfirmation(false);
+      setSelectionMode(false);
+      setSelectedOrderIds([]);
+      setMessage({
+        type: "success",
+        text:
+          selectedOrders.length === 1
+            ? "Order deleted from history."
+            : "Orders deleted from history.",
+      });
+    } catch (error) {
+      console.error("Delete history orders error:", error);
+      setMessage({
+        type: "error",
+        text: "The selected orders could not be deleted from history.",
+      });
+    } finally {
+      setProcessingOrderId(null);
+    }
+  }
 
   /* =======================================================
      COUNTS
@@ -1648,6 +1819,7 @@ export default function DealerOrdersPage() {
 
       orders.forEach(
         (order) => {
+          if (role === "dealer" && deletedHistoryOrderIds.includes(order.id)) return;
           const section = getOrderSection(order);
           if (section === "completed" && getOrderStatus(order) !== "completed") return;
           if (section && Object.prototype.hasOwnProperty.call(result, section)) {
@@ -1657,7 +1829,7 @@ export default function DealerOrdersPage() {
       );
 
       return result;
-    }, [orders]);
+    }, [orders, role, deletedHistoryOrderIds]);
 
   /* =======================================================
      PRODUCT FOR DISPLAY
@@ -1839,8 +2011,6 @@ export default function DealerOrdersPage() {
       completed:
         "bg-green-50 text-green-700 border-green-200",
 
-      cancelled:
-        "bg-gray-100 text-gray-600 border-gray-200",
     };
 
     return (
@@ -2014,11 +2184,10 @@ export default function DealerOrdersPage() {
                 value={
                   searchTerm
                 }
-                onChange={(event) =>
-                  setSearchTerm(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => {
+                  cancelSelection();
+                  setSearchTerm(event.target.value);
+                }}
                 placeholder="Search order ID, farmer, email, product or product ID..."
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition"
               />
@@ -2032,20 +2201,89 @@ export default function DealerOrdersPage() {
           <section className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:grid-cols-3">
             <label className="text-sm font-semibold text-gray-700">
               History status
-              <select value={historyStatusFilter} onChange={(event) => setHistoryStatusFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
+              <select value={historyStatusFilter} onChange={(event) => { cancelSelection(); setHistoryStatusFilter(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 font-normal">
                 <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
               </select>
             </label>
             <label className="text-sm font-semibold text-gray-700">
               From date
-              <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => setHistoryStartDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+              <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => { cancelSelection(); setHistoryStartDate(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
             </label>
             <label className="text-sm font-semibold text-gray-700">
               To date
-              <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => setHistoryEndDate(event.target.value)} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
+              <input type="date" value={historyEndDate} min={historyStartDate || undefined} onChange={(event) => { cancelSelection(); setHistoryEndDate(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
             </label>
           </section>
+        )}
+
+        {statusFilter === "completed" && selectionMode && (
+          <section className="sticky top-2 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white p-3 shadow-lg">
+            <button
+              type="button"
+              onClick={cancelSelection}
+              className="min-h-11 rounded-xl px-3 font-semibold text-gray-700 hover:bg-gray-100"
+            >
+              ← Cancel
+            </button>
+            <span className="font-bold text-blue-900">
+              {selectedOrderIds.length} Selected
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                disabled={selectableVisibleOrderIds.length === 0}
+                className="min-h-11 rounded-xl border border-blue-200 px-3 font-semibold text-blue-800 disabled:opacity-50"
+              >
+                {allVisibleOrdersSelected ? "Deselect All" : "Select All"}
+              </button>
+              {selectedOrderIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmation(true)}
+                  disabled={Boolean(processingOrderId)}
+                  className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Delete Selected
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {deleteConfirmation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dealer-delete-history-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <h2 id="dealer-delete-history-title" className="text-xl font-bold text-gray-900">
+                {selectedOrderIds.length === 1
+                  ? "Delete this order from history?"
+                  : `Delete ${selectedOrderIds.length} selected orders?`}
+              </h2>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={Boolean(processingOrderId)}
+                  onClick={() => setDeleteConfirmation(false)}
+                  className="min-h-11 rounded-xl border border-gray-300 px-4 font-semibold text-gray-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(processingOrderId)}
+                  onClick={deleteSelectedHistoryOrders}
+                  className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {processingOrderId === "deleting-history" ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </section>
+          </div>
         )}
 
         {/* =================================================
@@ -2127,11 +2365,41 @@ export default function DealerOrdersPage() {
                 const busy =
                   processingOrderId ===
                   order.id;
+                const selectable = isEligibleHistoryOrder(order);
+                const selected = selectedOrderIds.includes(order.id);
                 const address = order.deliveryAddressDetails || {};
 
                 if (status === "completed") {
                   return (
-                    <article key={order.id} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <article
+                      key={order.id}
+                      onClick={(event) => handleOrderCardClick(order, event)}
+                      onMouseDown={(event) => startOrderLongPress(order, event)}
+                      onMouseUp={stopOrderLongPress}
+                      onMouseLeave={stopOrderLongPress}
+                      onTouchStart={(event) => startOrderLongPress(order, event)}
+                      onTouchEnd={stopOrderLongPress}
+                      onTouchMove={stopOrderLongPress}
+                      onContextMenu={(event) => {
+                        if (statusFilter === "completed" && selectable) {
+                          event.preventDefault();
+                          setSelectionMode(true);
+                          setSelectedOrderIds((currentIds) =>
+                            currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
+                          );
+                        }
+                      }}
+                      className={`rounded-2xl border p-4 shadow-sm transition md:p-5 flex flex-col sm:flex-row sm:items-center gap-4 select-none touch-manipulation ${
+                        selected
+                          ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
+                          : "border-blue-100 bg-white"
+                      } ${selectable && statusFilter === "completed" ? "cursor-pointer" : ""}`}
+                    >
+                      {selected && (
+                        <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-700 text-white">
+                          ✓
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-xs uppercase tracking-wide font-bold text-gray-400">Order ID</p>
                         <p className="font-mono font-semibold text-gray-800 break-all">{orderId}</p>
@@ -2154,7 +2422,27 @@ export default function DealerOrdersPage() {
                     key={
                       order.id
                     }
-                    className="bg-white rounded-3xl border border-blue-100 shadow-sm overflow-hidden hover:shadow-md transition"
+                    onClick={(event) => handleOrderCardClick(order, event)}
+                    onMouseDown={(event) => startOrderLongPress(order, event)}
+                    onMouseUp={stopOrderLongPress}
+                    onMouseLeave={stopOrderLongPress}
+                    onTouchStart={(event) => startOrderLongPress(order, event)}
+                    onTouchEnd={stopOrderLongPress}
+                    onTouchMove={stopOrderLongPress}
+                    onContextMenu={(event) => {
+                      if (statusFilter === "completed" && selectable) {
+                        event.preventDefault();
+                        setSelectionMode(true);
+                        setSelectedOrderIds((currentIds) =>
+                          currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
+                        );
+                      }
+                    }}
+                    className={`rounded-3xl border shadow-sm overflow-hidden transition ${
+                      selected
+                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
+                        : "border-blue-100 bg-white hover:shadow-md"
+                    } ${selectable && statusFilter === "completed" ? "cursor-pointer" : ""}`}
                   >
 
                     <div className="p-5 md:p-6">
@@ -2165,6 +2453,11 @@ export default function DealerOrdersPage() {
 
                           <div className="flex flex-wrap items-center gap-2">
 
+                            {selected && (
+                              <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-sm text-white">
+                                ✓
+                              </span>
+                            )}
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                               Order
                             </span>
