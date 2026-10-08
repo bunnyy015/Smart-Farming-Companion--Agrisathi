@@ -35,6 +35,7 @@ export default function FarmerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [language, setCurrentLanguage] = useState(getLanguage());
 
@@ -289,6 +290,35 @@ export default function FarmerProfilePage() {
     }
   }
 
+  async function setWhatsAppNotifications(enabled) {
+    const currentUser = auth.currentUser;
+    if (!currentUser || !farmer) return;
+    if (enabled && !/^[6-9]\d{9}$/.test(String(farmer.phone || farmer.mobile || farmer.phoneNumber || "").trim())) {
+      showMessage("warning", "Add a valid 10-digit mobile number to your profile first.");
+      return;
+    }
+    setWhatsappSaving(true);
+    try {
+      const updates = {
+        whatsappNotificationsEnabled: enabled,
+        whatsappConsentAt: enabled ? new Date().toISOString() : null,
+      };
+      await update(ref(database), {
+        [`users/${currentUser.uid}/whatsappNotificationsEnabled`]: updates.whatsappNotificationsEnabled,
+        [`users/${currentUser.uid}/whatsappConsentAt`]: updates.whatsappConsentAt,
+        [`farmers/${currentUser.uid}/whatsappNotificationsEnabled`]: updates.whatsappNotificationsEnabled,
+        [`farmers/${currentUser.uid}/whatsappConsentAt`]: updates.whatsappConsentAt,
+      });
+      setFarmer((current) => ({ ...current, ...updates }));
+      showMessage("success", enabled ? "WhatsApp order updates enabled." : "WhatsApp order updates disabled.");
+    } catch (error) {
+      console.error("WhatsApp preference update error:", error);
+      showMessage("error", "WhatsApp preference could not be updated.");
+    } finally {
+      setWhatsappSaving(false);
+    }
+  }
+
   function getProfileValue(...values) {
     const value = values.find((item) => String(item || "").trim());
     return value || "Not added";
@@ -400,6 +430,19 @@ export default function FarmerProfilePage() {
                 Add complete farm details for better weather, crop and product recommendations.
               </p>
             )}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-green-900">WhatsApp order updates</h2>
+              <p className="text-sm text-gray-600 mt-1">Receive important reservation status updates on your registered mobile number. You can turn this off at any time.</p>
+              <p className="text-xs text-gray-500 mt-2">Messages are sent only for important order events and use WhatsApp approved templates.</p>
+            </div>
+            <button type="button" role="switch" aria-checked={farmer.whatsappNotificationsEnabled === true} disabled={whatsappSaving} onClick={() => setWhatsAppNotifications(farmer.whatsappNotificationsEnabled !== true)} className={`shrink-0 rounded-xl px-4 py-2 font-semibold disabled:opacity-50 ${farmer.whatsappNotificationsEnabled === true ? "bg-green-700 text-white" : "bg-gray-100 text-gray-700"}`}>
+              {whatsappSaving ? "Saving…" : farmer.whatsappNotificationsEnabled === true ? "On" : "Off"}
+            </button>
           </div>
         </section>
 

@@ -1160,22 +1160,6 @@ export default function ReportsStatisticsPage() {
     [orders]
   );
 
-  const cancelledOrders = useMemo(
-    () =>
-      orders.filter((order) => {
-        const status =
-          getOrderStatus(order);
-
-        return [
-          "cancelled",
-          "canceled",
-          "rejected",
-          "failed",
-        ].includes(status);
-      }),
-    [orders]
-  );
-
   const totalOrderValue = useMemo(
     () =>
       orders.reduce(
@@ -1286,20 +1270,6 @@ export default function ReportsStatisticsPage() {
               !isCompletedOrder(
                 order
               )
-            ) {
-              return false;
-            }
-          } else if (
-            orderFilter ===
-            "cancelled"
-          ) {
-            if (
-              ![
-                "cancelled",
-                "canceled",
-                "rejected",
-                "failed",
-              ].includes(status)
             ) {
               return false;
             }
@@ -1901,15 +1871,6 @@ export default function ReportsStatisticsPage() {
               }
               icon={Truck}
               className="bg-blue-50 border-blue-100 text-blue-800"
-            />
-
-            <OrderSummaryCard
-              title="Cancelled"
-              value={
-                cancelledOrders.length
-              }
-              icon={X}
-              className="bg-red-50 border-red-100 text-red-800"
             />
 
           </div>
@@ -2799,9 +2760,6 @@ function OrdersModal({
                         Delivered
                       </option>
 
-                      <option value="cancelled">
-                        Cancelled
-                      </option>
                     </select>
 
                     <ChevronDown
@@ -3176,8 +3134,6 @@ function StatusBadge({
       "bg-emerald-50 text-emerald-700 border-emerald-100";
   } else if (
     [
-      "cancelled",
-      "canceled",
       "rejected",
       "failed",
     ].includes(normalized)

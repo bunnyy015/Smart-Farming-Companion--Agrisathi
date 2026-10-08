@@ -11,7 +11,6 @@ const STATUS_OPTIONS = [
   "completed",
   "successful",
   "rejected",
-  "cancelled",
 ];
 
 function normalize(value) {
@@ -65,18 +64,6 @@ function getStatusCategory(order) {
     ].includes(status)
   ) {
     return "rejected";
-  }
-
-  if (
-    [
-      "cancelled",
-      "canceled",
-      "cancel",
-      "customer cancelled",
-      "order cancelled",
-    ].includes(status)
-  ) {
-    return "cancelled";
   }
 
   if (
@@ -318,9 +305,6 @@ function getStatusLabel(category) {
     case "rejected":
       return "Rejected";
 
-    case "cancelled":
-      return "Cancelled";
-
     case "pending":
     default:
       return "Pending";
@@ -348,13 +332,6 @@ function getStatusClasses(category) {
         badge:
           "bg-red-100 text-red-800 border-red-200",
         dot: "bg-red-500",
-      };
-
-    case "cancelled":
-      return {
-        badge:
-          "bg-gray-100 text-gray-700 border-gray-200",
-        dot: "bg-gray-500",
       };
 
     case "pending":
@@ -568,7 +545,6 @@ export default function OrderManagementPage() {
     let completed = 0;
     let successful = 0;
     let rejected = 0;
-    let cancelled = 0;
 
     let ratingTotal = 0;
     let ratingCount = 0;
@@ -597,10 +573,6 @@ export default function OrderManagementPage() {
         rejected++;
       }
 
-      if (category === "cancelled") {
-        cancelled++;
-      }
-
       const rating = getRating(order);
 
       if (rating > 0) {
@@ -620,7 +592,6 @@ export default function OrderManagementPage() {
       completed,
       successful,
       rejected,
-      cancelled,
       ratingCount,
       averageRating,
       totalSales,
@@ -865,18 +836,6 @@ export default function OrderManagementPage() {
           />
 
           <StatCard
-            title="Cancelled"
-            value={
-              loading
-                ? "..."
-                : statistics.cancelled
-            }
-            icon="🚫"
-            description="Cancelled orders"
-            className="bg-gray-50 border-gray-200"
-          />
-
-          <StatCard
             title="Average Rating"
             value={
               loading
@@ -962,13 +921,6 @@ export default function OrderManagementPage() {
                   statistics.rejected,
                 color:
                   "bg-red-50 text-red-800 border-red-100",
-              },
-              {
-                label: "Cancelled",
-                value:
-                  statistics.cancelled,
-                color:
-                  "bg-gray-50 text-gray-800 border-gray-200",
               },
             ].map((item) => (
               <button

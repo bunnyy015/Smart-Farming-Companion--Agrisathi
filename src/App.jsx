@@ -10,11 +10,11 @@ import {
 // Authentication
 // ==============================
 import SplashPage from "./modules/splash/SplashPage";
-import LoginPage from "./modules/auth/LoginPage";
-import RegisterPage from "./modules/auth/RegisterPage";
-import RoleSelectionPage from "./modules/auth/RoleSelectionPage";
-import ForgotPasswordPage from "./modules/auth/ForgotPasswordPage";
-import DealerAccessGuard from "./components/DealerAccessGuard";
+const LoginPage = lazy(() => import("./modules/auth/LoginPage"));
+const RegisterPage = lazy(() => import("./modules/auth/RegisterPage"));
+const RoleSelectionPage = lazy(() => import("./modules/auth/RoleSelectionPage"));
+const ForgotPasswordPage = lazy(() => import("./modules/auth/ForgotPasswordPage"));
+const DealerAccessGuard = lazy(() => import("./components/DealerAccessGuard"));
 
 // ==============================
 // Farmer
@@ -31,31 +31,32 @@ const FarmerProductDetailsPage = lazy(() => import("./modules/farmer/FarmerProdu
 const FarmerOrdersPage = lazy(() => import("./modules/farmer/FarmerOrdersPage"));
 const FarmerNotificationsPage = lazy(() => import("./modules/farmer/FarmerNotificationsPage"));
 const CommunityPage = lazy(() => import("./modules/community/CommunityPage"));
+const NearbyServicesPage = lazy(() => import("./modules/farmer/NearbyServicesPage"));
 
 // ==============================
 // Admin
 // ==============================
-import AdminDashboard from "./modules/admin/AdminDashboard";
-import FarmersListPage from "./modules/admin/FarmersListPage";
-import DealerRequestsPage from "./modules/admin/DealerRequestsPage";
-import MarketPricesManagementPage from "./modules/admin/MarketPricesManagementPage";
-import DealerManagementPage from "./modules/admin/DealerManagementPage";
-import ReportsStatisticsPage from "./modules/admin/ReportsStatisticsPage";
-import AdminProductsPage from "./modules/admin/AdminProductsPage";
-import AdminOrderManagementPage from "./modules/admin/AdminOrderManagementPage";
-import AdminGovernmentSchemesPage from "./modules/admin/AdminGovernmentSchemesPage";
+const AdminDashboard = lazy(() => import("./modules/admin/AdminDashboard"));
+const FarmersListPage = lazy(() => import("./modules/admin/FarmersListPage"));
+const DealerRequestsPage = lazy(() => import("./modules/admin/DealerRequestsPage"));
+const MarketPricesManagementPage = lazy(() => import("./modules/admin/MarketPricesManagementPage"));
+const DealerManagementPage = lazy(() => import("./modules/admin/DealerManagementPage"));
+const ReportsStatisticsPage = lazy(() => import("./modules/admin/ReportsStatisticsPage"));
+const AdminProductsPage = lazy(() => import("./modules/admin/AdminProductsPage"));
+const AdminOrderManagementPage = lazy(() => import("./modules/admin/AdminOrderManagementPage"));
+const AdminGovernmentSchemesPage = lazy(() => import("./modules/admin/AdminGovernmentSchemesPage"));
 
 // ==============================
 // Dealer
 // ==============================
-import DealerDashboard from "./modules/dealer/DealerDashboard";
-import DealerRegistrationPage from "./modules/dealer/DealerRegistrationPage";
-import DealerProductsPage from "./modules/dealer/DealerProductsPage";
-import DealerStockPage from "./modules/dealer/DealerStockPage";
-import DealerOrdersPage from "./modules/dealer/DealerOrdersPage";
-import DealerSalesPage from "./modules/dealer/DealerSalesPage";
-import DealerNotificationsPage from "./modules/dealer/DealerNotificationsPage";
-import DealerProfilePage from "./modules/dealer/DealerProfilePage";
+const DealerDashboard = lazy(() => import("./modules/dealer/DealerDashboard"));
+const DealerRegistrationPage = lazy(() => import("./modules/dealer/DealerRegistrationPage"));
+const DealerProductsPage = lazy(() => import("./modules/dealer/DealerProductsPage"));
+const DealerStockPage = lazy(() => import("./modules/dealer/DealerStockPage"));
+const DealerOrdersPage = lazy(() => import("./modules/dealer/DealerOrdersPage"));
+const DealerSalesPage = lazy(() => import("./modules/dealer/DealerSalesPage"));
+const DealerNotificationsPage = lazy(() => import("./modules/dealer/DealerNotificationsPage"));
+const DealerProfilePage = lazy(() => import("./modules/dealer/DealerProfilePage"));
 
 function App() {
   return (
@@ -141,6 +142,11 @@ function App() {
         <Route
           path="/farmer/notifications"
           element={<FarmerNotificationsPage />}
+        />
+
+        <Route
+          path="/farmer/nearby-services"
+          element={<NearbyServicesPage />}
         />
 
         <Route

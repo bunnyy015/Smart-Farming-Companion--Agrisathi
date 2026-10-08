@@ -314,8 +314,6 @@ export default function DealerDashboard() {
       const notificationIds = [];
       const notificationStatuses = new Set([
         "pending",
-        "cancelled",
-        "canceled",
         "received_by_farmer",
         "payment_received",
         "completed",

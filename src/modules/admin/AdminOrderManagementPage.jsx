@@ -29,13 +29,11 @@ function getOrderStatus(order) {
   // No status → Pending
   if (!status) return "pending";
 
-  // Rejected → Cancelled
   if (
     status === "rejected" ||
-    status === "reject" ||
-    status === "cancel"
+    status === "reject"
   ) {
-    return "cancelled";
+    return "rejected";
   }
 
   // Delivered
@@ -199,11 +197,6 @@ export default function AdminOrderManagementPage() {
       getOrderStatus(order) === "delivered"
   ).length;
 
-  const cancelledOrders = orders.filter(
-    (order) =>
-      getOrderStatus(order) === "cancelled"
-  ).length;
-
   // Search + filter
   const filteredOrders = useMemo(() => {
     const searchText = normalize(search);
@@ -235,9 +228,7 @@ export default function AdminOrderManagementPage() {
         !searchText ||
         searchableText.includes(searchText);
 
-      const dateValue = status === "cancelled"
-        ? order.cancelledAt || order.updatedAt || order.createdAt
-        : status === "delivered"
+      const dateValue = status === "delivered"
           ? order.completedAt || order.updatedAt || order.createdAt
           : order.createdAt || order.updatedAt;
       const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
@@ -335,9 +326,6 @@ export default function AdminOrderManagementPage() {
 
       case "delivered":
         return "status delivered";
-
-      case "cancelled":
-        return "status cancelled";
 
       default:
         return "status";
@@ -558,11 +546,6 @@ export default function AdminOrderManagementPage() {
           color: #047857;
         }
 
-        .status.cancelled {
-          background: #fef2f2;
-          color: #dc2626;
-        }
-
         .status-select {
           padding: 7px 9px;
           border: 1px solid #d1d5db;
@@ -682,14 +665,6 @@ export default function AdminOrderManagementPage() {
             </div>
           </div>
 
-          <div className="stat-card">
-            <h3>Cancelled</h3>
-
-            <div className="stat-number">
-              {cancelledOrders}
-            </div>
-          </div>
-
         </div>
 
         {/* Search & Filter */}
@@ -732,9 +707,6 @@ export default function AdminOrderManagementPage() {
               Completed
             </option>
 
-            <option value="cancelled">
-              Cancelled
-            </option>
           </select>
 
           <label className="filter-select">
@@ -913,9 +885,6 @@ export default function AdminOrderManagementPage() {
                               Delivered
                             </option>
 
-                            <option value="cancelled">
-                              Cancelled
-                            </option>
                           </select>
                         </td>
 
