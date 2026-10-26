@@ -16,6 +16,7 @@ import MarketplaceProductCard from "../../components/marketplace/MarketplaceProd
 import MarketplaceEmptyState from "../../components/marketplace/MarketplaceEmptyState";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
+import { createOrderAcceptanceFields } from "../../utils/orderAcceptanceTimer";
 
 export default function FarmerDealerProductsPage() {
   const navigate = useNavigate();
@@ -286,6 +287,9 @@ export default function FarmerDealerProductsPage() {
                 dealer.name ||
                 "Local Dealer",
 
+              dealerShopName:
+                dealer.shopName || dealer.businessName || "",
+
               dealerPhone:
                 dealer.phone ||
                 dealer.mobile ||
@@ -446,7 +450,7 @@ export default function FarmerDealerProductsPage() {
         ref(database, "dealerOrders")
       );
 
-      const now = new Date().toISOString();
+      const acceptanceFields = await createOrderAcceptanceFields(database);
       const deliveryAddressDetails = {
         name: farmer.fullName || farmer.farmerName || farmer.name || "Farmer",
         phone: farmer.phone || farmer.mobile || farmer.phoneNumber || "",
@@ -494,6 +498,8 @@ export default function FarmerDealerProductsPage() {
         dealerName: product.dealerName,
         dealerPhone:
           product.dealerPhone || "",
+        dealerShopName: product.dealerShopName || "",
+        dealerAddress: product.dealerAddress || "",
 
         productId: product.id,
         productName: product.productName,
@@ -517,8 +523,7 @@ export default function FarmerDealerProductsPage() {
           ? "voice_marketplace"
           : "farmer_marketplace",
 
-        createdAt: now,
-        updatedAt: now,
+        ...acceptanceFields,
       });
 
       updateQuantity(product, 1);

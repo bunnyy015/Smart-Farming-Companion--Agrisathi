@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { onValue, ref, remove, update } from "firebase/database";
 import { database } from "../../firebase";
+import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -117,17 +118,7 @@ export default function AdminOrderManagementPage() {
         );
       }
 
-      orderList.sort((a, b) => {
-        const dateA = new Date(
-          a.createdAt || 0
-        ).getTime();
-
-        const dateB = new Date(
-          b.createdAt || 0
-        ).getTime();
-
-        return dateB - dateA;
-      });
+      orderList = sortOrdersNewestFirst(orderList);
 
       setOrders(orderList);
       setLoading(false);
@@ -201,7 +192,7 @@ export default function AdminOrderManagementPage() {
   const filteredOrders = useMemo(() => {
     const searchText = normalize(search);
 
-    return orders.filter((order) => {
+    return sortOrdersNewestFirst(orders.filter((order) => {
       const status = getOrderStatus(order);
 
       const matchesStatus =
@@ -239,7 +230,7 @@ export default function AdminOrderManagementPage() {
         : Number.isFinite(timestamp) && timestamp >= start && timestamp <= end;
 
       return matchesStatus && matchesSearch && matchesDate;
-    });
+    }));
   }, [orders, search, statusFilter, historyStartDate, historyEndDate]);
 
   // Update order status

@@ -99,26 +99,11 @@ export default function RoleSelectionPage() {
       >
         {/* Header */}
         <header className="text-center mb-8 sm:mb-10">
-          {/* Logo */}
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-green-400/30 rounded-3xl blur-xl animate-pulse" />
-
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-3xl shadow-xl border border-green-100 flex items-center justify-center transform hover:rotate-3 hover:scale-105 transition-all duration-300">
-                <span className="text-5xl sm:text-6xl">
-                  🌾
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-green-800">
-            AgriSaathi
-          </h1>
-
-          <p className="text-gray-600 mt-2 text-sm sm:text-base">
-            {t("roleSelectionSubtitle", {}, language)}
-          </p>
+          <img
+            src="/agrisathi-logo.png"
+            alt="AgriSaathi — Smart Farming Companion"
+            className="mx-auto mb-4 block w-[min(260px,75vw)] sm:w-[300px] h-auto object-contain"
+          />
 
           <label className="inline-flex items-center gap-3 mt-5 rounded-2xl border border-green-200 bg-white px-4 py-3 shadow-sm">
             <span className="font-semibold text-gray-700">🌐 {t("selectLanguage", {}, language)}</span>
@@ -139,13 +124,9 @@ export default function RoleSelectionPage() {
             </select>
           </label>
 
-          <div className="mt-5 inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-green-100 rounded-full px-4 py-2 shadow-sm">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-
-            <span className="text-sm font-medium text-gray-600">
-              {t("selectRoleToContinue", {}, language)}
-            </span>
-          </div>
+          <p className="mt-4 text-sm sm:text-base font-semibold text-green-800">
+            {t("selectRoleToContinue", {}, language)}
+          </p>
         </header>
 
         {/* Role cards */}
