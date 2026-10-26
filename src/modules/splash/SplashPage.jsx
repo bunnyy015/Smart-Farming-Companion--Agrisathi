@@ -13,18 +13,12 @@ export default function SplashPage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-green-700 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-6xl mb-4">🌾</div>
-
-        <h1 className="text-4xl font-bold text-white">
-          AgriSathi
-        </h1>
-
-        <p className="text-green-100 mt-2">
-          Smart Farming Companion
-        </p>
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <img
+        src="/agrisathi-logo.png"
+        alt="AgriSaathi — Smart Farming Companion"
+        className="block w-full max-w-sm sm:max-w-md h-auto object-contain"
+      />
     </div>
   );
 }

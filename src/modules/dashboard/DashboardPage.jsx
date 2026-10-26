@@ -25,6 +25,7 @@ import {
   reverseGeocodeCoordinates,
 } from "../../services/currentLocationService";
 import { clearWeatherContext } from "../../utils/weatherContext";
+import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 
 // Order statuses that trigger notifications
 const SUPPORTED_ORDER_STATUSES = [
@@ -216,16 +217,10 @@ export default function DashboardPage() {
         return;
       }
 
-      const orders = Object.entries(snapshot.val())
-        .map(([id, value]) => ({
-          id,
-          ...value,
-        }))
-        .sort(
-          (first, second) =>
-            new Date(second.updatedAt || second.createdAt || 0) -
-            new Date(first.updatedAt || first.createdAt || 0)
-        );
+      const orders = sortOrdersNewestFirst(Object.entries(snapshot.val()).map(([id, value]) => ({
+        id,
+        ...value,
+      })));
 
       let deletedNotificationIds = [];
       try {

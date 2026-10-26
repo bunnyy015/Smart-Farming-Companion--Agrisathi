@@ -5,6 +5,7 @@ import {
   equalTo,
   get,
   orderByChild,
+  onValue,
   query,
   ref,
   update,
@@ -12,6 +13,9 @@ import {
 
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import OrderAcceptanceTimer from "../../components/OrderAcceptanceTimer";
+import { expirePendingOrders, getOrderAcceptanceDeadline } from "../../utils/orderAcceptanceTimer";
+import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 
 /* =========================================================
    HELPERS
@@ -73,10 +77,28 @@ function getOrderStatus(order) {
   );
 }
 
+function isCancelledStatus(order) {
+  return ["cancelled", "canceled"].includes(getOrderStatus(order));
+}
+
+function isAcceptedReservation(order) {
+  return [
+    "accepted",
+    "delivered_by_dealer",
+    "received_by_farmer",
+    "payment_pending",
+    "payment_received",
+    "completed",
+    "complete",
+  ].includes(getOrderStatus(order));
+}
+
 function getOrderSection(order) {
   const status = getOrderStatus(order);
 
   if (status === "pending") return "pending";
+  if (["cancelled", "canceled", "rejected", "reject"].includes(status)) return "cancelled";
+  if (status === "expired") return "cancelled";
   if (status === "completed") return "completed";
   if ([
     "accepted",
@@ -99,6 +121,7 @@ function isEligibleHistoryOrder(order) {
     "complete",
     "rejected",
     "reject",
+    "cancelled",
   ].includes(getOrderStatus(order));
 }
 
@@ -387,6 +410,33 @@ export default function DealerOrdersPage() {
     loadOrders();
   }, [currentUser, role]);
 
+  useEffect(() => {
+    if (!currentUser || !role) return undefined;
+    const ordersQuery = role === "dealer"
+      ? query(ref(database, "dealerOrders"), orderByChild("dealerUid"), equalTo(currentUser.uid))
+      : ref(database, "dealerOrders");
+
+    return onValue(ordersQuery, async (snapshot) => {
+      const liveOrders = snapshot.exists()
+        ? Object.entries(snapshot.val()).filter(([, value]) => isObject(value)).map(([id, value]) => ({ id, ...value }))
+        : [];
+      const visibleOrders = role === "dealer"
+        ? liveOrders.filter((order) => getOrderDealerUid(order) === currentUser.uid)
+        : liveOrders;
+      setOrders(sortOrdersNewestFirst(visibleOrders));
+      await expirePendingOrders(database, visibleOrders);
+    }, (error) => {
+      console.error("Dealer order updates error:", error);
+    });
+  }, [currentUser, role]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      expirePendingOrders(database, orders);
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [orders]);
+
   async function loadOrders(
     showRefreshing = false
   ) {
@@ -462,22 +512,16 @@ export default function DealerOrdersPage() {
         );
       }
 
-      loadedOrders.sort(
-        (a, b) =>
-          Number(
-            b.createdAt || 0
-          ) -
-          Number(
-            a.createdAt || 0
-          )
-      );
+      await expirePendingOrders(database, loadedOrders);
+
+      const sortedOrders = sortOrdersNewestFirst(loadedOrders);
 
       setOrders(
-        loadedOrders
+        sortedOrders
       );
 
       await loadProducts(
-        loadedOrders
+        sortedOrders
       );
 
       if (showRefreshing) {
@@ -986,6 +1030,13 @@ export default function DealerOrdersPage() {
       return;
     }
 
+    const acceptanceDeadline = getOrderAcceptanceDeadline(order);
+    if (acceptanceDeadline && acceptanceDeadline <= Date.now()) {
+      await expirePendingOrders(database, [order]);
+      setMessage({ type: "error", text: "This order has expired and can no longer be accepted." });
+      return;
+    }
+
     const quantity =
       getOrderQuantity(
         order
@@ -1200,6 +1251,12 @@ export default function DealerOrdersPage() {
       const now =
         new Date().toISOString();
 
+      if (acceptanceDeadline && acceptanceDeadline <= Date.now()) {
+        await expirePendingOrders(database, [order]);
+        setMessage({ type: "error", text: "This order expired before it could be accepted." });
+        return;
+      }
+
       const updates = {};
 
       updates[
@@ -1382,6 +1439,13 @@ export default function DealerOrdersPage() {
       getOrderStatus(order) !==
       "pending"
     ) {
+      return;
+    }
+
+    const acceptanceDeadline = getOrderAcceptanceDeadline(order);
+    if (acceptanceDeadline && acceptanceDeadline <= Date.now()) {
+      await expirePendingOrders(database, [order]);
+      setMessage({ type: "error", text: "This order has expired; its status is being updated." });
       return;
     }
 
@@ -1598,7 +1662,7 @@ export default function DealerOrdersPage() {
           searchTerm
         );
 
-      return orders.filter(
+      return sortOrdersNewestFirst(orders.filter(
         (order) => {
           if (
             role === "dealer" &&
@@ -1661,7 +1725,7 @@ export default function DealerOrdersPage() {
             search
           );
         }
-      );
+      ));
     }, [
       orders,
       role,
@@ -1734,8 +1798,13 @@ export default function DealerOrdersPage() {
       return;
     }
 
-    if (selectionMode && !event.target.closest?.("button, a, input, select, textarea")) {
+    if (selectionMode && statusFilter === "completed" && !event.target.closest?.("button, a, input, select, textarea")) {
       toggleOrderSelection(order);
+      return;
+    }
+
+    if (!event.target.closest?.("button, a, input, select, textarea")) {
+      setSelectedCompletedOrder(order);
     }
   }
 
@@ -1815,6 +1884,7 @@ export default function DealerOrdersPage() {
         pending: 0,
         farmer_received: 0,
         completed: 0,
+        cancelled: 0,
       };
 
       orders.forEach(
@@ -1926,11 +1996,13 @@ export default function DealerOrdersPage() {
       status ===
       "pending"
     ) {
+      const deadline = getOrderAcceptanceDeadline(order);
+      const expired = deadline && deadline <= Date.now();
       return (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || expired}
             onClick={() =>
               acceptOrder(order)
             }
@@ -1938,12 +2010,12 @@ export default function DealerOrdersPage() {
           >
             {busy
               ? "Processing..."
-              : "Accept Order"}
+              : expired ? "Deadline Passed" : "Accept Order"}
           </button>
 
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || expired}
             onClick={() =>
               rejectOrder(order)
             }
@@ -1987,8 +2059,10 @@ export default function DealerOrdersPage() {
   ======================================================= */
 
   function renderStatus(
-    status
+    status,
+    order
   ) {
+    const normalizedStatus = status === "canceled" ? "cancelled" : status;
     const styles = {
       pending:
         "bg-amber-50 text-amber-700 border-amber-200",
@@ -2001,6 +2075,12 @@ export default function DealerOrdersPage() {
 
       rejected:
         "bg-red-50 text-red-700 border-red-200",
+
+      cancelled:
+        "bg-gray-100 text-gray-700 border-gray-300",
+
+      expired:
+        "bg-gray-100 text-gray-700 border-gray-300",
 
       delivered_by_dealer:
         "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -2016,22 +2096,19 @@ export default function DealerOrdersPage() {
     return (
       <span
         className={`inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-bold ${
-          styles[
-            status
-          ] ||
+          styles[normalizedStatus] ||
           "bg-gray-100 text-gray-600 border-gray-200"
         }`}
       >
-        {status
-          .replaceAll(
-            "_",
-            " "
-          )
-          .replace(
-            /^\w/,
-            (character) =>
-              character.toUpperCase()
-          )}
+        {normalizedStatus === "cancelled" && order?.cancelledBy === "farmer"
+          ? "Cancelled by Farmer"
+          : normalizedStatus === "cancelled" && order?.cancellationReason === "dealer_acceptance_timeout"
+            ? "Expired · Dealer timeout"
+            : normalizedStatus === "cancelled" && order?.cancelledBy === "dealer"
+              ? "Cancelled by Dealer"
+              : normalizedStatus
+                .replaceAll("_", " ")
+                .replace(/^\w/, (character) => character.toUpperCase())}
       </span>
     );
   }
@@ -2156,10 +2233,11 @@ export default function DealerOrdersPage() {
             SUMMARY
         ================================================== */}
 
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6" aria-label="Order sections">
+        <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6" aria-label="Order sections">
           <SummaryCard label="Pending Orders" value={counts.pending} active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
           <SummaryCard label="Farmer Received" value={counts.farmer_received} active={statusFilter === "farmer_received"} onClick={() => setStatusFilter("farmer_received")} />
           <SummaryCard label="Completed" value={counts.completed} active={statusFilter === "completed"} onClick={() => setStatusFilter("completed")} />
+          <SummaryCard label="Cancelled Orders" value={counts.cancelled} active={statusFilter === "cancelled"} onClick={() => setStatusFilter("cancelled")} />
         </section>
 
         {/* =================================================
@@ -2306,394 +2384,69 @@ export default function DealerOrdersPage() {
               {statusFilter ===
               "pending"
                 ? "There are no pending farmer orders right now."
-                : "No orders match the selected filter."}
+                : statusFilter === "cancelled"
+                  ? "There are no cancelled or rejected orders."
+                  : "No orders match the selected filter."}
             </p>
 
           </section>
         ) : (
           <section className="space-y-4">
 
-            {filteredOrders.map(
-              (order) => {
-                const status =
-                  getOrderStatus(
-                    order
-                  );
+            {filteredOrders.map((order) => {
+              const status = getOrderStatus(order);
+              const quantity = getOrderQuantity(order);
+              const product = getProductForOrder(order);
+              const productName = getOrderProductName(order) || product?.productName || product?.name || "Unknown Product";
+              const farmerName = order.farmerName || order.customerName || "Farmer";
+              const price = Number(order.price ?? product?.price ?? 0);
+              const totalAmount = Number(order.totalAmount ?? price * quantity);
+              const selected = selectedOrderIds.includes(order.id);
 
-                const quantity =
-                  getOrderQuantity(
-                    order
-                  );
-
-                const product =
-                  getProductForOrder(
-                    order
-                  );
-
-                const productName =
-                  getOrderProductName(
-                    order
-                  ) ||
-                  product?.productName ||
-                  product?.name ||
-                  "Unknown Product";
-
-                const orderId =
-                  order.id ||
-                  order.orderId ||
-                  "Unknown";
-
-                const farmerName =
-                  order.farmerName ||
-                  order.customerName ||
-                  "Farmer";
-
-                const price =
-                  Number(
-                    order.price ||
-                      product?.price ||
-                      0
-                  );
-
-                const totalAmount =
-                  Number(
-                    order.totalAmount ??
-                      price *
-                        quantity
-                  );
-
-                const busy =
-                  processingOrderId ===
-                  order.id;
-                const selectable = isEligibleHistoryOrder(order);
-                const selected = selectedOrderIds.includes(order.id);
-                const address = order.deliveryAddressDetails || {};
-
-                if (status === "completed") {
-                  return (
-                    <article
-                      key={order.id}
-                      onClick={(event) => handleOrderCardClick(order, event)}
-                      onMouseDown={(event) => startOrderLongPress(order, event)}
-                      onMouseUp={stopOrderLongPress}
-                      onMouseLeave={stopOrderLongPress}
-                      onTouchStart={(event) => startOrderLongPress(order, event)}
-                      onTouchEnd={stopOrderLongPress}
-                      onTouchMove={stopOrderLongPress}
-                      onContextMenu={(event) => {
-                        if (statusFilter === "completed" && selectable) {
-                          event.preventDefault();
-                          setSelectionMode(true);
-                          setSelectedOrderIds((currentIds) =>
-                            currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
-                          );
-                        }
-                      }}
-                      className={`rounded-2xl border p-4 shadow-sm transition md:p-5 flex flex-col sm:flex-row sm:items-center gap-4 select-none touch-manipulation ${
-                        selected
-                          ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
-                          : "border-blue-100 bg-white"
-                      } ${selectable && statusFilter === "completed" ? "cursor-pointer" : ""}`}
-                    >
-                      {selected && (
-                        <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-700 text-white">
-                          ✓
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs uppercase tracking-wide font-bold text-gray-400">Order ID</p>
-                        <p className="font-mono font-semibold text-gray-800 break-all">{orderId}</p>
-                        <p className="mt-2 font-semibold text-gray-900 truncate">{farmerName} · {productName}</p>
-                        <p className="text-sm text-gray-600">Quantity: {quantity} {order.unit || product?.unit || ""}</p>
-                      </div>
-                      <div className="text-sm sm:text-right text-gray-600">
-                        <p><span className="font-semibold">Ordered:</span> {formatDate(order.createdAt)}</p>
-                        <p className="mt-1"><span className="font-semibold">Completed:</span> {formatDate(order.completedAt)}</p>
-                      </div>
-                      <button type="button" onClick={() => setSelectedCompletedOrder(order)} className="shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white hover:from-blue-700 hover:to-cyan-600 transition">
-                        View Details →
-                      </button>
-                    </article>
-                  );
-                }
-
-                return (
-                  <article
-                    key={
-                      order.id
+              return (
+                <article
+                  key={order.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => handleOrderCardClick(order, event)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleOrderCardClick(order, event);
                     }
-                    onClick={(event) => handleOrderCardClick(order, event)}
-                    onMouseDown={(event) => startOrderLongPress(order, event)}
-                    onMouseUp={stopOrderLongPress}
-                    onMouseLeave={stopOrderLongPress}
-                    onTouchStart={(event) => startOrderLongPress(order, event)}
-                    onTouchEnd={stopOrderLongPress}
-                    onTouchMove={stopOrderLongPress}
-                    onContextMenu={(event) => {
-                      if (statusFilter === "completed" && selectable) {
-                        event.preventDefault();
-                        setSelectionMode(true);
-                        setSelectedOrderIds((currentIds) =>
-                          currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]
-                        );
-                      }
-                    }}
-                    className={`rounded-3xl border shadow-sm overflow-hidden transition ${
-                      selected
-                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
-                        : "border-blue-100 bg-white hover:shadow-md"
-                    } ${selectable && statusFilter === "completed" ? "cursor-pointer" : ""}`}
-                  >
-
-                    <div className="p-5 md:p-6">
-
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-
-                        <div className="flex-1">
-
-                          <div className="flex flex-wrap items-center gap-2">
-
-                            {selected && (
-                              <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-sm text-white">
-                                ✓
-                              </span>
-                            )}
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                              Order
-                            </span>
-
-                            <span className="text-xs font-mono font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded-lg">
-                              {orderId}
-                            </span>
-
-                            {renderStatus(
-                              status
-                            )}
-
-                          </div>
-
-                          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mt-3">
-                            {productName}
-                          </h2>
-
-                          <p className="text-gray-500 mt-1">
-                            Farmer:{" "}
-                            <span className="font-semibold text-gray-700">
-                              {farmerName}
-                            </span>
-                          </p>
-
-                        </div>
-
-                        <div className="text-left lg:text-right">
-
-                          <p className="text-xs text-gray-400">
-                            Order Date
-                          </p>
-
-                          <p className="font-semibold text-gray-700 mt-1">
-                            {formatDate(
-                              order.createdAt
-                            )}
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                      {/* DETAILS */}
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-
-                        <InfoCard
-                          label="Quantity"
-                          value={`${quantity} ${
-                            order.unit ||
-                            product?.unit ||
-                            ""
-                          }`}
-                        />
-
-                        <InfoCard
-                          label="Product / Subtotal"
-                          value={formatCurrency(order.subtotalAmount ?? price * quantity)}
-                        />
-
-                        <InfoCard
-                          label="Delivery Charges"
-                          value={order.deliveryCharge !== undefined ? formatCurrency(order.deliveryCharge) : "Not set"}
-                        />
-
-                        <InfoCard
-                          label="Total Amount"
-                          value={formatCurrency(
-                            totalAmount
-                          )}
-                        />
-
-                        <InfoCard
-                          label="Product ID"
-                          value={
-                            getOrderProductId(
-                              order
-                            ) ||
-                            product?.id ||
-                            "Not stored"
-                          }
-                        />
-
-                      </div>
-
-                      <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-                        <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">
-                          Delivery Address
-                        </h3>
-                        <div className="mt-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-1 text-sm text-gray-700">
-                          <p><span className="font-semibold">Farmer:</span> {address.name || farmerName}</p>
-                          {address.address && <p><span className="font-semibold">Address:</span> {address.address}</p>}
-                          <p><span className="font-semibold">Village:</span> {address.village || order.farmerVillage || "Not provided"}</p>
-                          <p><span className="font-semibold">Mandal:</span> {address.mandal || order.farmerMandal || "Not provided"}</p>
-                          <p><span className="font-semibold">District:</span> {address.district || order.farmerDistrict || "Not provided"}</p>
-                          <p><span className="font-semibold">State:</span> {address.state || order.farmerState || "Not provided"}</p>
-                          <p><span className="font-semibold">PIN:</span> {address.pincode || "Not provided"}</p>
-                          <p><span className="font-semibold">Phone:</span> {address.phone || order.farmerPhone || "Not provided"}</p>
-                        </div>
-                        {!address.name && !address.address && !address.village && order.deliveryAddress && (
-                          <p className="mt-2 text-sm text-gray-700"><span className="font-semibold">Saved address:</span> {order.deliveryAddress}</p>
-                        )}
-                      </div>
-
-                      {/* PRODUCT STOCK */}
-
-                      {product && (
-                        <div className="mt-5 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-2xl p-4">
-
-                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                                Current Product Stock
-                              </p>
-
-                              <p className="text-sm text-blue-900 mt-1">
-                                {product.productName ||
-                                  product.name ||
-                                  productName}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-4 text-sm">
-
-                              <div>
-                                <span className="text-blue-600">
-                                  Available:
-                                </span>{" "}
-                                <strong>
-                                  {getProductQuantity(
-                                    product
-                                  )}
-                                </strong>
-                              </div>
-
-                              <div>
-                                <span className="text-blue-600">
-                                  Reserved:
-                                </span>{" "}
-                                <strong>
-                                  {getReservedQuantity(
-                                    product
-                                  )}
-                                </strong>
-                              </div>
-
-                              <div>
-                                <span className="text-blue-600">
-                                  Sold:
-                                </span>{" "}
-                                <strong>
-                                  {getSoldQuantity(
-                                    product
-                                  )}
-                                </strong>
-                              </div>
-
-                            </div>
-
-                          </div>
-
-                        </div>
-                      )}
-
-                      {!product &&
-                        status ===
-                          "pending" && (
-                          <div className="mt-5 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-
-                            <p className="font-semibold text-amber-900">
-                              Product reference needs verification
-                            </p>
-
-                            <p className="text-sm text-amber-800 mt-1">
-                              The order is visible, but the
-                              matching product is not currently
-                              available in the local product list.
-                              The system will perform a fresh
-                              database lookup when you accept it.
-                            </p>
-
-                          </div>
-                        )}
-
-                      {/* ACTIONS */}
-
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-5 border-t border-gray-100">
-
-                        <div className="text-sm text-gray-500">
-
-                          {order.farmerEmail && (
-                            <div>
-                              Email:{" "}
-                              <span className="font-medium text-gray-700">
-                                {
-                                  order.farmerEmail
-                                }
-                              </span>
-                            </div>
-                          )}
-
-                          {order.farmerUid && (
-                            <div className="mt-1">
-                              Farmer UID:{" "}
-                              <span className="font-mono text-xs text-gray-600">
-                                {
-                                  order.farmerUid
-                                }
-                              </span>
-                            </div>
-                          )}
-
-                        </div>
-
-                        <div className="flex justify-end">
-                          {renderActions(
-                            order
-                          )}
-                        </div>
-
-                      </div>
-
-                      {busy && (
-                        <div className="mt-4 text-center text-sm text-blue-700 font-semibold">
-                          Updating order...
-                        </div>
-                      )}
-
-                    </div>
-
-                  </article>
-                );
-              }
-            )}
+                  }}
+                  onMouseDown={(event) => startOrderLongPress(order, event)}
+                  onMouseUp={stopOrderLongPress}
+                  onMouseLeave={stopOrderLongPress}
+                  onTouchStart={(event) => startOrderLongPress(order, event)}
+                  onTouchEnd={stopOrderLongPress}
+                  onTouchMove={stopOrderLongPress}
+                  onContextMenu={(event) => {
+                    if (statusFilter === "completed" && isEligibleHistoryOrder(order)) {
+                      event.preventDefault();
+                      setSelectionMode(true);
+                      setSelectedOrderIds((currentIds) => currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]);
+                    }
+                  }}
+                  className={`cursor-pointer rounded-xl border bg-white px-3 py-3 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 ${selected ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300" : "border-blue-100"}`}
+                >
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {selected && <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-700 text-sm text-white">✓</span>}
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">{farmerName} · {productName}</span>
+                    <span className="text-xs text-gray-600">{quantity} {order.unit || product?.unit || "units"}</span>
+                    <span className="text-xs font-semibold text-gray-700">{formatCurrency(totalAmount)}</span>
+                    {renderStatus(status, order)}
+                    {isCancelledStatus(order) && order.cancelledBy === "farmer" && (
+                      <span className="w-full text-xs text-gray-600">
+                        Cancellation reason: {order.cancellationReason || "No cancellation reason provided."}
+                      </span>
+                    )}
+                    <span className="w-full text-xs text-gray-500 sm:w-auto">{formatDate(order.createdAt)}</span>
+                  </div>
+                  {status === "pending" && <div className="pointer-events-none mt-2"><OrderAcceptanceTimer order={order} /></div>}
+                </article>
+              );
+            })}
 
           </section>
         )}
@@ -2709,20 +2462,47 @@ export default function DealerOrdersPage() {
             <section role="dialog" aria-modal="true" aria-labelledby="completed-order-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
               <header className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-3xl bg-gradient-to-r from-blue-700 to-cyan-500 p-5 text-white sm:p-6">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">Completed order</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">Order details</p>
                   <h2 id="completed-order-title" className="mt-1 break-all text-xl font-bold sm:text-2xl">{selectedCompletedOrder.orderId || selectedCompletedOrder.id}</h2>
                 </div>
                 <button type="button" autoFocus onClick={() => setSelectedCompletedOrder(null)} aria-label="Close order details" className="shrink-0 rounded-xl bg-white/15 px-3 py-2 font-semibold hover:bg-white/25">Close ✕</button>
               </header>
 
               <div className="space-y-5 p-5 sm:p-6">
+                {getOrderStatus(selectedCompletedOrder) === "pending" && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <OrderAcceptanceTimer order={selectedCompletedOrder} />
+                  </div>
+                )}
                 <div>
                   <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Order and farmer</h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <InfoCard label="Order ID" value={selectedCompletedOrder.orderId || selectedCompletedOrder.id || "Not available"} />
                     <InfoCard label="Current status" value={getOrderStatus(selectedCompletedOrder)} />
+                    {isCancelledStatus(selectedCompletedOrder) && (
+                      <InfoCard
+                        label="Cancellation source"
+                        value={selectedCompletedOrder.cancelledBy === "farmer"
+                          ? "Cancelled by Farmer"
+                          : selectedCompletedOrder.cancelledBy === "dealer"
+                            ? "Cancelled by Dealer"
+                            : selectedCompletedOrder.cancellationReason === "dealer_acceptance_timeout"
+                              ? "Dealer acceptance timeout"
+                              : "Cancellation source not recorded"}
+                      />
+                    )}
+                    {isCancelledStatus(selectedCompletedOrder) && (
+                      <InfoCard
+                        label="Cancellation reason"
+                        value={selectedCompletedOrder.cancellationReason === "dealer_acceptance_timeout"
+                          ? "Dealer did not accept within 24 hours."
+                          : selectedCompletedOrder.cancellationReason || "No cancellation reason provided."}
+                      />
+                    )}
                     <InfoCard label="Farmer name" value={selectedCompletedOrder.farmerName || selectedCompletedOrder.customerName || completedOrderAddress.name || "Not available"} />
-                    <InfoCard label="Farmer email" value={selectedCompletedOrder.farmerEmail || "Not available"} />
+                    {role === "dealer" && currentUser?.uid === getOrderDealerUid(selectedCompletedOrder) && isAcceptedReservation(selectedCompletedOrder) && (
+                      <InfoCard label="Farmer email" value={selectedCompletedOrder.farmerEmail || "Not available"} />
+                    )}
                     <InfoCard label="Farmer UID" value={selectedCompletedOrder.farmerUid || "Not available"} />
                   </div>
                 </div>
@@ -2750,9 +2530,15 @@ export default function DealerOrdersPage() {
                     <p><span className="font-semibold">District:</span> {completedOrderAddress.district || selectedCompletedOrder.farmerDistrict || "Not provided"}</p>
                     <p><span className="font-semibold">State:</span> {completedOrderAddress.state || selectedCompletedOrder.farmerState || "Not provided"}</p>
                     <p><span className="font-semibold">PIN:</span> {completedOrderAddress.pincode || "Not provided"}</p>
-                    <p><span className="font-semibold">Phone:</span> {completedOrderAddress.phone || selectedCompletedOrder.farmerPhone || "Not provided"}</p>
+                    {role === "dealer" && currentUser?.uid === getOrderDealerUid(selectedCompletedOrder) && isAcceptedReservation(selectedCompletedOrder) && (
+                      <p><span className="font-semibold">Phone:</span> {completedOrderAddress.phone || selectedCompletedOrder.farmerPhone || "Not provided"}</p>
+                    )}
                   </div>
                 </div>
+
+                {getOrderStatus(selectedCompletedOrder) === "pending" && (
+                  <div className="flex justify-end border-t border-gray-100 pt-4">{renderActions(selectedCompletedOrder)}</div>
+                )}
 
                 <div>
                   <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Order timeline</h3>
@@ -2763,6 +2549,7 @@ export default function DealerOrdersPage() {
                     <InfoCard label="Farmer received date" value={formatDate(selectedCompletedOrder.farmerReceivedAt || selectedCompletedOrder.receivedAt)} />
                     <InfoCard label="Payment received date" value={formatDate(selectedCompletedOrder.paymentReceivedAt || selectedCompletedOrder.dealerPaymentReceivedAt)} />
                     <InfoCard label="Completed date" value={formatDate(selectedCompletedOrder.completedAt)} />
+                    <InfoCard label="Cancellation date" value={formatDate(selectedCompletedOrder.cancelledAt)} />
                   </div>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import StatusMessage from "../../components/StatusMessage";
 import QuantitySelector from "../../components/marketplace/QuantitySelector";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
+import { createOrderAcceptanceFields } from "../../utils/orderAcceptanceTimer";
 
 function getCategoryIcon(category) {
   const icons = {
@@ -179,7 +180,7 @@ export default function FarmerProductDetailsPage() {
         ref(database, "dealerOrders")
       );
 
-      const now = new Date().toISOString();
+      const acceptanceFields = await createOrderAcceptanceFields(database);
       const deliveryAddressDetails = {
         name: farmer.fullName || farmer.farmerName || farmer.name || "Farmer",
         phone: farmer.phone || farmer.mobile || farmer.phoneNumber || "",
@@ -233,6 +234,9 @@ export default function FarmerProductDetailsPage() {
           dealer?.mobile ||
           dealer?.phoneNumber ||
           "",
+        dealerShopName: dealer?.shopName || dealer?.businessName || "",
+        dealerAddress:
+          dealer?.address || dealer?.shopAddress || dealer?.businessAddress || "",
 
         productId,
         productName: product.productName,
@@ -254,8 +258,7 @@ export default function FarmerProductDetailsPage() {
 
         source: "product_details",
 
-        createdAt: now,
-        updatedAt: now,
+        ...acceptanceFields,
       });
 
       setQuantity(1);

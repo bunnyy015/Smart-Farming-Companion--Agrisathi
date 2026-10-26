@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
 import {
-  ArrowDownUp,
   ArrowLeft,
   BarChart3,
   CalendarDays,
@@ -34,6 +33,7 @@ import {
 import { auth, database } from "../../firebase";
 import { signOut } from "firebase/auth";
 import StatusMessage from "../../components/StatusMessage";
+import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 
 /*
 |--------------------------------------------------------------------------
@@ -739,9 +739,6 @@ export default function ReportsStatisticsPage() {
   const [orderFilter, setOrderFilter] =
     useState("all");
 
-  const [orderSort, setOrderSort] =
-    useState("newest");
-
   useEffect(() => {
     loadReports();
   }, []);
@@ -1316,60 +1313,11 @@ export default function ReportsStatisticsPage() {
       /*
        * Sorting.
        */
-      return [...filtered].sort(
-        (a, b) => {
-          if (
-            orderSort === "newest"
-          ) {
-            return (
-              getDateValue(
-                getOrderDate(b)
-              ) -
-              getDateValue(
-                getOrderDate(a)
-              )
-            );
-          }
-
-          if (
-            orderSort === "oldest"
-          ) {
-            return (
-              getDateValue(
-                getOrderDate(a)
-              ) -
-              getDateValue(
-                getOrderDate(b)
-              )
-            );
-          }
-
-          if (
-            orderSort === "amount-high"
-          ) {
-            return (
-              getOrderAmount(b) -
-              getOrderAmount(a)
-            );
-          }
-
-          if (
-            orderSort === "amount-low"
-          ) {
-            return (
-              getOrderAmount(a) -
-              getOrderAmount(b)
-            );
-          }
-
-          return 0;
-        }
-      );
+      return sortOrdersNewestFirst(filtered);
     }, [
       orders,
       orderSearch,
       orderFilter,
-      orderSort,
     ]);
 
   /*
@@ -1383,7 +1331,6 @@ export default function ReportsStatisticsPage() {
     setSelectedOrder(null);
     setOrderSearch("");
     setOrderFilter("all");
-    setOrderSort("newest");
   }
 
   function closeOrdersModal() {
@@ -2291,8 +2238,6 @@ export default function ReportsStatisticsPage() {
           setFilter={
             setOrderFilter
           }
-          sort={orderSort}
-          setSort={setOrderSort}
           selectedOrder={
             selectedOrder
           }
@@ -2594,8 +2539,6 @@ function OrdersModal({
   setSearch,
   filter,
   setFilter,
-  sort,
-  setSort,
   selectedOrder,
   setSelectedOrder,
   onClose,
@@ -2769,49 +2712,6 @@ function OrdersModal({
 
                   </div>
 
-                  {/* SORT */}
-
-                  <div className="relative">
-
-                    <ArrowDownUp
-                      size={17}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-
-                    <select
-                      value={sort}
-                      onChange={(event) =>
-                        setSort(
-                          event.target
-                            .value
-                        )
-                      }
-                      className="appearance-none border border-slate-300 rounded-xl pl-10 pr-10 py-3 bg-white min-w-[190px] outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="newest">
-                        Newest First
-                      </option>
-
-                      <option value="oldest">
-                        Oldest First
-                      </option>
-
-                      <option value="amount-high">
-                        Amount: High to Low
-                      </option>
-
-                      <option value="amount-low">
-                        Amount: Low to High
-                      </option>
-                    </select>
-
-                    <ChevronDown
-                      size={16}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-
-                  </div>
-
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-sm">
@@ -2826,11 +2726,7 @@ function OrdersModal({
                     matching orders
                   </p>
 
-                  {(search ||
-                    filter !==
-                      "all" ||
-                    sort !==
-                      "newest") && (
+                  {(search || filter !== "all") && (
                     <button
                       type="button"
                       onClick={() => {
@@ -2839,9 +2735,6 @@ function OrdersModal({
                         );
                         setFilter(
                           "all"
-                        );
-                        setSort(
-                          "newest"
                         );
                       }}
                       className="inline-flex items-center gap-1.5 text-indigo-700 font-semibold hover:text-indigo-900"
