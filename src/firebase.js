@@ -5,6 +5,7 @@ import {
 } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBCjxr0RhcoiD8DPo7aamj87Lsq_ekkmBg",
@@ -38,3 +39,32 @@ export async function getAuthUser() {
 
 export const database = getDatabase(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app, "asia-southeast1");
+
+// A VAPID public key is safe to expose in a web app. Keep the project's
+// existing Firebase Console key here; it is not an Admin/server credential.
+export const firebaseVapidKey =
+  "BIMJJwRfsdTrVrXFaMF_ZqlDXxWPEcqHlIjoGf2xAWeAvndag5RYabdmBKiFfKoWrr21NBhkCT3fEroD92BLbSo";
+
+// Firebase Messaging support is asynchronous and depends on browser APIs.
+// Resolve it only when requested so importing this module remains SSR-safe.
+let messagingPromise;
+export function getMessagingInstance() {
+  if (!messagingPromise) {
+    messagingPromise = (async () => {
+      if (typeof window === "undefined" || typeof navigator === "undefined") {
+        return null;
+      }
+
+      try {
+        const { getMessaging, isSupported } = await import("firebase/messaging");
+        if (!(await isSupported())) return null;
+        return getMessaging(app);
+      } catch (error) {
+        console.warn("Firebase Messaging could not be initialized.", error?.code || error?.message || "unknown error");
+        throw error;
+      }
+    })();
+  }
+  return messagingPromise;
+}

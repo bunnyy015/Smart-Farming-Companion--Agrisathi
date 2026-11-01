@@ -1,0 +1,111 @@
+﻿C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:26: reverseGeocodeCoordinates,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:298: const { latitude, longitude } = await getCurrentLocation();
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:301: latitude: String(latitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:302: longitude: String(longitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:317: reverseGeocodeCoordinates({ latitude, longitude })
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\dashboard\DashboardPage.jsx:331: ].filter(Boolean).join(", ") || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:26: function queryForLocation({ latitude, longitude }) {
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:27: const around = `(around:${SEARCH_RADIUS_METERS},${latitude},${longitude})`;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:40: const latDelta = radians(to.latitude - from.latitude);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:41: const lonDelta = radians(to.longitude - from.longitude);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:43: Math.cos(radians(from.latitude)) * Math.cos(radians(to.latitude)) *
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:86: const latitude = Number(element.lat ?? element.center?.lat);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:87: const longitude = Number(element.lon ?? element.center?.lon);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:88: if (!name || !category || !Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:89: const distance = distanceInKm(origin, { latitude, longitude });
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:96: latitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:97: longitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:108: return `${location.latitude.toFixed(5)},${location.longitude.toFixed(5)}`;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\farmer\NearbyServicesPage.jsx:264: <a href={`https://www.google.com/maps/dir/?api=1&destination=${service.latitude},${service.longitude}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800">Get Directions</a>
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:15: reverseGeocodeCoordinates,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:338: firstLatitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:339: firstLongitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:340: secondLatitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:341: secondLongitude
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:345: const latitudeDifference =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:346: ((secondLatitude - firstLatitude) * Math.PI) / 180;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:348: const longitudeDifference =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:349: ((secondLongitude - firstLongitude) * Math.PI) / 180;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:351: const firstLatitudeRadians =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:352: (firstLatitude * Math.PI) / 180;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:354: const secondLatitudeRadians =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:355: (secondLatitude * Math.PI) / 180;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:358: Math.sin(latitudeDifference / 2) ** 2 +
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:359: Math.cos(firstLatitudeRadians) *
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:360: Math.cos(secondLatitudeRadians) *
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:361: Math.sin(longitudeDifference / 2) ** 2;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1100: !Number.isFinite(currentLocation.latitude) ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1101: !Number.isFinite(currentLocation.longitude) ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1102: currentLocation.latitude < -90 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1103: currentLocation.latitude > 90 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1104: currentLocation.longitude < -180 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1105: currentLocation.longitude > 180
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1114: const place = await reverseGeocodeLocation(currentLocation);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1145: async function reverseGeocodeLocation({
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1146: latitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1147: longitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1149: const result = await reverseGeocodeCoordinates({ latitude, longitude });
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1375: const { latitude, longitude } =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1381: node["amenity"="marketplace"](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1382: way["amenity"="marketplace"](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1383: relation["amenity"="marketplace"](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1385: node["name"~"mandi|market yard|agriculture market|agricultural market|rythu bazar|farmer market",i](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1386: way["name"~"mandi|market yard|agriculture market|agricultural market|rythu bazar|farmer market",i](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1387: relation["name"~"mandi|market yard|agriculture market|agricultural market|rythu bazar|farmer market",i](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1389: node["industrial"="rice_mill"](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1390: way["industrial"="rice_mill"](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1392: node["name"~"rice mill|flour mill|oil mill|cotton mill|dal mill|seed market",i](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1393: way["name"~"rice mill|flour mill|oil mill|cotton mill|dal mill|seed market",i](around:${SELLING_POINT_RADIUS},${latitude},${longitude});
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1422: const pointLatitude =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1426: const pointLongitude =
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1430: if (!pointLatitude || !pointLongitude) {
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1441: latitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1442: longitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1443: pointLatitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1444: pointLongitude
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1491: latitude: pointLatitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1492: longitude: pointLongitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\market\MarketPricesPage.jsx:1537: `https://www.google.com/maps/dir/?api=1&destination=${point.latitude},${point.longitude}`,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:15: reverseGeocodeCoordinates,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:285: const { latitude, longitude } = deviceLocation;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:289: console.error("Geolocation/weather error:", error);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:306: const { latitude, longitude } = deviceLocation;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:309: latitude: String(latitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:310: longitude: String(longitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:359: reverseGeocodeCoordinates({ latitude, longitude })
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:372: console.warn("Unable to reverse-geocode current device coordinates:", placeResult.error);
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:426: const { latitude, longitude, accuracy, timestamp, source } = deviceLocation;
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:446: latitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:447: longitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:461: latitude: Number(latitude).toFixed(4),
+C:\project\Smart-Farming-Companion--Agrisathi\src\modules\weather\WeatherPage.jsx:462: longitude: Number(longitude).toFixed(4),
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:1: const DEFAULT_GEOLOCATION_OPTIONS = {
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:30: !navigator.geolocation
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:33: createLocationError("Geolocation is not supported.", "UNSUPPORTED")
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:38: navigator.geolocation.getCurrentPosition(
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:40: const latitude = Number(position?.coords?.latitude);
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:41: const longitude = Number(position?.coords?.longitude);
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:46: !Number.isFinite(latitude) ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:47: !Number.isFinite(longitude) ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:48: latitude < -90 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:49: latitude > 90 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:50: longitude < -180 ||
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:51: longitude > 180
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:85: latitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:86: longitude,
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:101: ...DEFAULT_GEOLOCATION_OPTIONS,
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:120: /** Reverse-geocode only coordinates provided by the device. */
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:121: export async function reverseGeocodeCoordinates(
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:122: { latitude, longitude },
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:126: latitude: String(latitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:127: longitude: String(longitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:141: `https://api.bigdatacloud.net/data/reverse-geocode-client?${parameters.toString()}`,
+C:\project\Smart-Farming-Companion--Agrisathi\src\services\currentLocationService.js:146: throw new Error(`Reverse geocoding failed (${response.status}).`);
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\language.js:177: coordinatesLocationLabel: "GPS {{latitude}}, {{longitude}}",
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\language.js:667: coordinatesLocationLabel: "GPS {{latitude}}, {{longitude}}",
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\language.js:1157: coordinatesLocationLabel: "GPS {{latitude}}, {{longitude}}",
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\weatherContext.js:50: latitude: Number(location?.latitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\weatherContext.js:51: longitude: Number(location?.longitude),
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\weatherContext.js:154: Number.isFinite(Number(weatherContext.location?.latitude)) &&
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\weatherContext.js:155: Number.isFinite(Number(weatherContext.location?.longitude)) &&
+C:\project\Smart-Farming-Companion--Agrisathi\src\utils\weatherContext.js:203: `${weather.location.latitude.toFixed(4)}, ${weather.location.longitude.toFixed(4)}`;

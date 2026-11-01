@@ -1,3 +1,7 @@
+import { Capacitor } from "@capacitor/core";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebase";
+
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
 const MAX_ATTEMPTS = 3;
@@ -11,7 +15,7 @@ const requestsInFlight = new Map();
 export function getGovernmentMarketPriceErrorMessage(error) {
   const code = String(error?.message || "");
   if (code === "MISSING_DATA_GOV_API_KEY") {
-    return "VITE_DATA_GOV_API_KEY is missing. Add it to .env.local, then fully restart the Vite server.";
+    return "The market-price API key is missing. Configure DATA_GOV_API_KEY as a Firebase Functions secret for Android, or VITE_DATA_GOV_API_KEY for web development.";
   }
 
   const status = code.match(/^MARKET_API_HTTP_(\d{3})$/)?.[1];
@@ -103,9 +107,44 @@ async function fetchPage(parameters, callerSignal) {
         attempt: attempt + 1,
         parameters: Object.fromEntries(parameters.entries()),
       });
-      const response = await fetch(`/api/market-prices?${parameters}`, {
-        signal: controller.signal,
-      });
+      let response;
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const fetchMarketPricePage = httpsCallable(
+            functions,
+            "fetchMarketPricePage",
+            { timeout: 20000 }
+          );
+          const callableResult = await fetchMarketPricePage({
+            parameters: Object.fromEntries(parameters.entries()),
+          });
+          response = {
+            ok: true,
+            status: 200,
+            json: async () => callableResult.data,
+          };
+        } catch (error) {
+          const callableCode = String(error?.code || "");
+          const message = String(error?.message || "");
+          const statusCode = message.match(/MARKET_API_HTTP_(\d{3})/)?.[1];
+          const mappedCode = message === "MISSING_DATA_GOV_API_KEY"
+            ? message
+            : statusCode
+              ? `MARKET_API_HTTP_${statusCode}`
+              : callableCode.includes("unauthenticated")
+                ? "MARKET_API_HTTP_401"
+                : callableCode.includes("resource-exhausted")
+                  ? "MARKET_API_HTTP_429"
+                  : callableCode.includes("deadline-exceeded")
+                    ? "MARKET_API_TIMEOUT"
+                    : "MARKET_API_NETWORK_ERROR";
+          throw new Error(mappedCode, { cause: error });
+        }
+      } else {
+        response = await fetch(`/api/market-prices?${parameters}`, {
+          signal: controller.signal,
+        });
+      }
       logDevelopment("response", { status: response.status });
 
       if (!response.ok) {

@@ -3,28 +3,12 @@ const COMMANDS = [
     action: "weather",
     route: "/weather",
     keywords: [
-      "open weather",
-      "show weather",
-      "weather page",
-      "today weather",
-      "weather",
-      "వాతావరణం",
-      "వాతావరణం చూపించు",
-      "వాతావరణం తెరువు",
-      "मौसम",
-      "मौसम दिखाओ",
-      "வானிலை",
-      "ಹವಾಮಾನ",
-      "കാലാവസ്ഥ",
-      "हवामान",
-      "আবহাওয়া",
-      "હવામાન",
-      "ਮੌਸਮ",
-      "موسم",
-      "ପାଣିପାଗ",
+      "open weather", "show weather", "weather page", "today weather", "weather",
+      "వాతావరణం", "వాతావరణం చూపించు", "वातावरण", "मौसम", "வானிலை",
+      "ಹವಾಮಾನ", "കാലാവസ്ഥ", "हवामान", "আবহাওয়া", "હવામાન", "ਮੌਸਮ",
+      "موسم", "ପାଣିପାଗ",
     ],
   },
-
   {
     action: "market_prices",
     route: "/market-prices",
@@ -369,11 +353,10 @@ export function getVoiceActionRoute(action, searchQuery = "") {
 
 const RESPONSES = {
   weather: {
-    en: "Opening weather.",
-    te: "వాతావరణం తెరుస్తున్నాను.",
-    hi: "मौसम खोल रहा हूँ।",
+    en: "Opening the local weather forecast.",
+    te: "స్థానిక వాతావరణ సూచనను తెరుస్తున్నాను.",
+    hi: "स्थानीय मौसम पूर्वानुमान खोल रहा हूँ।",
   },
-
   market_prices: {
     en: "Opening market prices.",
     te: "మార్కెట్ ధరలు తెరుస్తున్నాను.",

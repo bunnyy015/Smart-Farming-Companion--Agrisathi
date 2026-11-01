@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 420" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#064b32"/><stop offset=".48" stop-color="#08764a"/><stop offset="1" stop-color="#becb68"/></linearGradient>
+    <linearGradient id="field" x1=".5" y1="0" x2=".5" y2="1"><stop stop-color="#7fb94b"/><stop offset="1" stop-color="#0d6b3c"/></linearGradient>
+    <radialGradient id="sun"><stop stop-color="#fff6b0" stop-opacity=".95"/><stop offset="1" stop-color="#fff6b0" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1800v420H0z"/>
+  <circle cx="1305" cy="128" r="150" fill="url(#sun)"/><circle cx="1305" cy="128" r="43" fill="#ffe89a" fill-opacity=".75"/>
+  <path fill="#163f32" fill-opacity=".45" d="m0 258 160-62 120 54 130-78 150 91 130-67 145 63 180-112 123 92 153-89 159 75 150-66v261H0z"/>
+  <path fill="#4f9a4c" fill-opacity=".75" d="m0 292 184-53 164 52 178-70 153 79 160-63 180 51 185-84 171 70 166-66 259 70v142H0z"/>
+  <path fill="url(#field)" d="M0 322c212-55 418-54 630-5s413 44 610-12 369-31 560 17v98H0z"/>
+  <g stroke="#b5d66a" stroke-opacity=".55" stroke-width="4">
+    <path d="M270 420c154-80 355-92 593-82 254 10 419 34 665 82"/><path d="M430 420c134-54 293-64 473-57 210 8 365 25 520 57"/><path d="M630 420c111-30 217-34 351-30 132 4 259 13 368 30"/>
+  </g>
+  <g fill="#b3d75b" fill-opacity=".8"><path d="M75 346c-30-54-24-90 18-116 16 47 9 85-18 116Zm20 4c7-56 33-87 79-92-8 50-34 81-79 92Zm-7 3c-40-42-51-79-30-114 31 39 41 77 30 114Z"/><path d="M1664 358c-23-44-18-74 15-96 13 38 8 68-15 96Zm16 3c6-44 26-68 61-73-6 39-27 64-61 73Z"/></g>
+</svg>

@@ -55,6 +55,32 @@ function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+const DEFAULT_SCHEMES_VERSION = 2;
+
+function defaultSchemeTitle(scheme) {
+  return scheme.title || scheme.schemeName || t(scheme.titleKey, {}, "en") || "";
+}
+
+function toStoredDefaultScheme(scheme) {
+  const title = defaultSchemeTitle(scheme);
+  const category = scheme.category || t(scheme.categoryKey, {}, "en");
+  const benefits = scheme.benefits || scheme.benefit || t(scheme.benefitKey, {}, "en");
+  const eligibility = scheme.eligibility || t(scheme.eligibilityKey, {}, "en");
+  const requiredDocuments = scheme.requiredDocuments || t(scheme.documentsKey, {}, "en");
+  return {
+    ...scheme,
+    title,
+    category,
+    benefits,
+    eligibility,
+    requiredDocuments,
+    description: scheme.description || scheme.applicationNote || benefits,
+    applicationProcess: scheme.applicationProcess || scheme.registrationSteps || [],
+    defaultValues: { title, category, benefits, eligibility, requiredDocuments },
+    migratedFromFarmerDefaults: true,
+  };
+}
+
 export default function AdminGovernmentSchemesPage() {
   const navigate = useNavigate();
   const language = useLanguage();
@@ -109,35 +135,36 @@ export default function AdminGovernmentSchemesPage() {
       const path = await resolveGovernmentSchemesPath();
       const snapshot = await get(ref(database, path));
       const stored = snapshot.val() || {};
-      const existingEntries = Object.entries(stored).filter(([id, value]) => id !== "_initialized" && value && typeof value === "object");
+      const existingEntries = Object.entries(stored).filter(([id, value]) => !id.startsWith("_") && value && typeof value === "object");
       if (existingEntries.length === 0 && stored._initialized !== true && path === "governmentSchemes") {
         const migrated = Object.fromEntries(DEFAULT_SCHEMES.map((scheme, index) => [
           `legacy-${index + 1}`,
-          {
-            ...scheme,
-            title: t(scheme.titleKey, {}, "en"),
-            category: t(scheme.categoryKey, {}, "en"),
-            benefits: t(scheme.benefitKey, {}, "en"),
-            eligibility: t(scheme.eligibilityKey, {}, "en"),
-            requiredDocuments: t(scheme.documentsKey, {}, "en"),
-            description: scheme.applicationNote || t(scheme.benefitKey, {}, "en"),
-            applicationProcess: scheme.registrationSteps,
-            defaultValues: {
-              title: t(scheme.titleKey, {}, "en"),
-              category: t(scheme.categoryKey, {}, "en"),
-              benefits: t(scheme.benefitKey, {}, "en"),
-              eligibility: t(scheme.eligibilityKey, {}, "en"),
-              requiredDocuments: t(scheme.documentsKey, {}, "en"),
-            },
-            migratedFromFarmerDefaults: true,
-          },
+          toStoredDefaultScheme(scheme),
         ]));
         migrated._initialized = true;
+        migrated._defaultsVersion = DEFAULT_SCHEMES_VERSION;
         await update(ref(database, path), migrated);
-        setSchemes(Object.entries(migrated).filter(([id]) => id !== "_initialized").map(([id, scheme]) => ({ id, ...scheme })));
+        setSchemes(Object.entries(migrated).filter(([id]) => !id.startsWith("_")).map(([id, scheme]) => ({ id, ...scheme })));
       } else {
-        if (stored._initialized !== true) await update(ref(database, path), { _initialized: true });
-        setSchemes(existingEntries.map(([id, scheme]) => ({ id, ...scheme })));
+        let entries = existingEntries;
+        if (Number(stored._defaultsVersion || 0) < DEFAULT_SCHEMES_VERSION) {
+          const existingTitles = new Set(existingEntries.map(([, scheme]) => normalize(defaultSchemeTitle(scheme))));
+          const missingDefaults = DEFAULT_SCHEMES.filter((scheme) =>
+            scheme.adminSeedVersion === DEFAULT_SCHEMES_VERSION
+            && !existingTitles.has(normalize(defaultSchemeTitle(scheme)))
+          );
+          const additions = missingDefaults.map((scheme) => [
+            `default-${scheme.id}`,
+            toStoredDefaultScheme(scheme),
+          ]);
+          const metadata = { _initialized: true, _defaultsVersion: DEFAULT_SCHEMES_VERSION };
+          for (const [id, scheme] of additions) metadata[id] = scheme;
+          await update(ref(database, path), metadata);
+          entries = [...existingEntries, ...additions];
+        } else if (stored._initialized !== true) {
+          await update(ref(database, path), { _initialized: true });
+        }
+        setSchemes(entries.map(([id, scheme]) => ({ id, ...scheme })));
       }
       setSchemesPath(path);
       setMessage(null);

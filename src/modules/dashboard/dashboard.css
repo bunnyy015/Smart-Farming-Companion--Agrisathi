@@ -1,0 +1,69 @@
+:root {
+  --agri-forest: #075b37;
+  --agri-green: #078542;
+  --agri-leaf: #63b83f;
+  --agri-page: #f2f8f1;
+  --agri-card: #fbfefb;
+  --agri-border: #d8ebdd;
+  --agri-text: #123c2d;
+  --agri-muted: #5c7167;
+}
+
+.dashboard-shell {
+  background: var(--agri-page);
+  color: var(--agri-text);
+}
+
+.dashboard-hero {
+  background-color: var(--agri-forest);
+  background-image: linear-gradient(90deg, rgb(4 69 44 / 96%) 0%, rgb(4 78 48 / 89%) 37%, rgb(4 83 49 / 44%) 75%, rgb(4 74 43 / 28%) 100%), url("/images/dashboard-fields.svg");
+  background-position: center, center 56%;
+  background-size: cover;
+}
+
+.dashboard-feature-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-voice-card {
+  background: linear-gradient(135deg, #fff 0%, #f8fdf7 64%, #edf8e9 100%);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / 98%) 0%, rgb(248 253 247 / 95%) 53%, rgb(248 253 247 / 16%) 100%), url("/images/voice-assistant.svg"), linear-gradient(135deg, #fff 0%, #f8fdf7 64%, #edf8e9 100%);
+  background-position: right bottom, center;
+  background-repeat: no-repeat;
+  background-size: auto 100%, cover;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .dashboard-feature-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dashboard-voice-card {
+    background-size: auto 82%, cover;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-feature-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-voice-card {
+    background-size: auto 90%, cover;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell *, .dashboard-shell *::before, .dashboard-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

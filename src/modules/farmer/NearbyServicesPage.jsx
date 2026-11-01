@@ -159,11 +159,13 @@ export default function NearbyServicesPage() {
   const [status, setStatus] = useState("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function loadServices() {
+  async function loadServices(options = {}) {
     setStatus("loading");
     setErrorMessage("");
     try {
-      const currentLocation = await getCurrentLocation();
+      const currentLocation = await getCurrentLocation({
+        forceRefresh: options.forceRefresh === true,
+      });
       setLocation(currentLocation);
       const results = await searchNearbyServices(currentLocation);
       setServices(results);
@@ -215,7 +217,7 @@ export default function NearbyServicesPage() {
             <h2 className="text-lg font-bold text-amber-900">Location needed to find nearby services</h2>
             <p className="mt-2 text-sm leading-6 text-slate-700">{errorMessage}</p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <button type="button" onClick={loadServices} className="min-h-11 rounded-xl bg-green-700 px-4 py-2.5 font-semibold text-white hover:bg-green-800">Enable location and retry</button>
+              <button type="button" onClick={() => loadServices({ forceRefresh: true })} className="min-h-11 rounded-xl bg-green-700 px-4 py-2.5 font-semibold text-white hover:bg-green-800">Enable location and retry</button>
             </div>
             <div className="mt-5 border-t border-slate-100 pt-5">
               <label htmlFor="manual-service-place" className="block text-sm font-semibold text-slate-800">Or search Maps by town / village</label>
