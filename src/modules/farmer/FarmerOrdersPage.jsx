@@ -47,8 +47,11 @@ function isPaidOrder(order) {
     .toLowerCase()
     .replaceAll(" ", "_");
 
+  const completedByFarmer = order.completedBy === "farmer" && order.farmerReceived === true;
+
   return (
-    ["completed", "complete", "paid", "payment_completed"].includes(status) ||
+    (["completed", "complete"].includes(status) && !completedByFarmer) ||
+    ["paid", "payment_completed"].includes(status) ||
     order.dealerPaymentReceived === true ||
     order.paymentStatus === "paid" ||
     order.paymentStatus === "completed"
@@ -117,6 +120,7 @@ function getHistoryStatus(order) {
   if (order.cancellationReason === "dealer_acceptance_timeout" || status === "expired") return "expired";
   if (["cancelled", "canceled"].includes(status)) return "cancelled";
   if (["rejected", "reject"].includes(status)) return "rejected";
+  if (["completed", "complete"].includes(status)) return "completed";
   if (isPaidOrder(order)) return "completed";
   return "";
 }
@@ -284,6 +288,7 @@ export default function FarmerOrdersPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [receiptConfirmation, setReceiptConfirmation] = useState(null);
   const [cancellationOrder, setCancellationOrder] = useState(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancellationNote, setCancellationNote] = useState("");
@@ -415,6 +420,7 @@ export default function FarmerOrdersPage() {
               historyOnlyStatuses.includes(
                 String(order.status || order.orderStatus || "").trim().toLowerCase().replaceAll(" ", "_")
               ) &&
+              !(order.completedBy === "farmer" && order.farmerReceived === true) &&
               !knownHistoryOrderIds.current.has(order.id)
           );
 
@@ -870,13 +876,22 @@ export default function FarmerOrdersPage() {
   }
 
   async function confirmProductReceived(order) {
-    if (!["accepted", "delivered_by_dealer"].includes(order.status) || order.farmerReceived) {
+    const user = auth.currentUser;
+    const eligibleStatuses = ["accepted", "delivered_by_dealer"];
+    if (
+      !user ||
+      !order?.id ||
+      user.uid !== order?.farmerUid ||
+      !eligibleStatuses.includes(getNormalizedOrderStatus(order)) ||
+      order.farmerReceived ||
+      updatingId
+    ) {
       showMessage(
         "warning",
-        "Only accepted orders can be confirmed as received."
+        "Only your accepted or delivered orders can be confirmed as received."
       );
 
-      setConfirmation(null);
+      setReceiptConfirmation(null);
       return;
     }
 
@@ -885,21 +900,21 @@ export default function FarmerOrdersPage() {
 
       const now = new Date().toISOString();
 
-      await update(
-        ref(database, `dealerOrders/${order.id}`),
-        {
-          farmerReceived: true,
-          farmerReceivedAt: now,
-          status: "received_by_farmer",
-          updatedAt: now,
-        }
-      );
+      await update(ref(database), {
+        [`dealerOrders/${order.id}/farmerReceived`]: true,
+        [`dealerOrders/${order.id}/farmerReceivedAt`]: now,
+        [`dealerOrders/${order.id}/completedBy`]: "farmer",
+        [`dealerOrders/${order.id}/completedByUid`]: user.uid,
+        [`dealerOrders/${order.id}/completedAt`]: now,
+        [`dealerOrders/${order.id}/status`]: "completed",
+        [`dealerOrders/${order.id}/updatedAt`]: now,
+      });
 
-      setConfirmation(null);
+      setReceiptConfirmation(null);
 
       showMessage(
         "success",
-        "Product receipt was confirmed."
+        "Order marked as completed successfully."
       );
 
       await refreshOrders();
@@ -921,9 +936,9 @@ export default function FarmerOrdersPage() {
       showMessage(
         "error",
         permissionDenied
-          ? "Firebase blocked this update. Its database rules must let the signed-in farmer update receipt fields on their own order."
+          ? "Firebase blocked this update. Its rules must allow the order owner to confirm receipt and move their accepted or delivered order to completed."
           : validationFailed
-            ? "Firebase rejected the receipt fields. Check the dealerOrders validation rules for farmerReceived, farmerReceivedAt, status, and updatedAt."
+            ? "Firebase rejected the completion fields. Check the dealerOrders rules for farmerReceived, farmerReceivedAt, completedBy, completedByUid, completedAt, status, and updatedAt."
             : "The order update failed. Check your connection and try again."
       );
     } finally {
@@ -1239,8 +1254,8 @@ export default function FarmerOrdersPage() {
                     {orderStatus === "rejected" && order.rejectionReason && <p className="mt-2 text-xs text-red-700">Reason: {order.rejectionReason}</p>}
                     {(orderStatus === "cancelled" || orderStatus === "canceled") && order.cancellationReason && order.cancellationReason !== "dealer_acceptance_timeout" && <p className="mt-2 text-xs text-gray-700">Reason: {order.cancellationReason}</p>}
                     {["accepted", "delivered_by_dealer"].includes(orderStatus) && !order.farmerReceived && (
-                      <button type="button" disabled={updating} onClick={(event) => { event.stopPropagation(); confirmProductReceived(order); }} className="mt-2 rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white disabled:bg-gray-400">
-                        {updating ? "Please wait..." : "Mark products collected"}
+                      <button type="button" disabled={updating || Boolean(receiptConfirmation)} onClick={(event) => { event.stopPropagation(); setReceiptConfirmation(order); }} className="mt-2 rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white disabled:bg-gray-400">
+                        Order Received
                       </button>
                     )}
                   </article>
@@ -1274,8 +1289,20 @@ export default function FarmerOrdersPage() {
                         <a href={`tel:${String(selectedOrder.dealerPhone).replace(/[^\d+]/g, "")}`} className="inline-flex rounded-xl bg-green-700 px-4 py-3 font-semibold text-white">Call Dealer</a>
                       )}
                       {["accepted", "delivered_by_dealer"].includes(getNormalizedOrderStatus(selectedOrder)) && !selectedOrder.farmerReceived && (
-                        <button type="button" disabled={updatingId === selectedOrder.id} onClick={() => { confirmProductReceived(selectedOrder); setSelectedOrder(null); }} className="ml-2 rounded-xl border border-green-700 px-4 py-3 font-semibold text-green-800 disabled:opacity-50">{updatingId === selectedOrder.id ? "Please wait..." : "Mark products collected"}</button>
+                        <button type="button" disabled={Boolean(updatingId) || Boolean(receiptConfirmation)} onClick={() => { setReceiptConfirmation(selectedOrder); setSelectedOrder(null); }} className="ml-2 rounded-xl border border-green-700 px-4 py-3 font-semibold text-green-800 disabled:opacity-50">Order Received</button>
                       )}
+                    </div>
+                  </section>
+                </div>
+              )}
+              {receiptConfirmation && (
+                <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !updatingId) setReceiptConfirmation(null); }}>
+                  <section role="dialog" aria-modal="true" aria-labelledby="confirm-order-received-title" className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
+                    <h2 id="confirm-order-received-title" className="text-xl font-bold text-gray-900">Confirm order received?</h2>
+                    <p className="mt-2 text-sm text-gray-600">Have you received this product successfully? Confirming will mark this order as completed.</p>
+                    <div className="mt-5 flex justify-end gap-3">
+                      <button type="button" disabled={Boolean(updatingId)} onClick={() => setReceiptConfirmation(null)} className="min-h-11 rounded-xl border border-gray-300 px-4 font-semibold text-gray-700 disabled:opacity-50">Not yet</button>
+                      <button type="button" disabled={Boolean(updatingId)} onClick={() => confirmProductReceived(receiptConfirmation)} className="min-h-11 rounded-xl bg-green-700 px-4 font-semibold text-white hover:bg-green-800 disabled:opacity-50">{updatingId === receiptConfirmation.id ? "Updating..." : "Confirm received"}</button>
                     </div>
                   </section>
                 </div>

@@ -37,6 +37,10 @@ function getOrderStatus(order) {
     return "rejected";
   }
 
+  if (["cancelled", "canceled", "cancelled_by_farmer", "canceled_by_farmer"].includes(status)) {
+    return "cancelled";
+  }
+
   // Delivered
   if (
     status === "delivered" ||
@@ -694,8 +698,8 @@ export default function AdminOrderManagementPage() {
               Delivered
             </option>
 
-            <option value="completed">
-              Completed
+            <option value="cancelled">
+              Cancelled
             </option>
 
           </select>

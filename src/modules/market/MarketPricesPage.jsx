@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
-import { auth, database, getAuthUser } from "../../firebase";
+import { database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
@@ -624,6 +624,7 @@ export default function MarketPricesPage() {
   const [sortMode, setSortMode] =
     useState("latest");
   const [visibleRecordLimit, setVisibleRecordLimit] = useState(60);
+  const [featuredPricesExpanded, setFeaturedPricesExpanded] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadingPrices, setLoadingPrices] =
@@ -914,6 +915,14 @@ export default function MarketPricesPage() {
     sortMode,
   ]);
 
+  const featuredCropPrices = useMemo(() => {
+    const cropTerms = getCropSearchTerms(farmer?.mainCrop || "");
+    if (!cropTerms.length) return [];
+    return prices.filter((item) =>
+      cropTerms.some((term) => normalizeText(item.commodity).includes(term))
+    );
+  }, [farmer?.mainCrop, prices]);
+
   const groupedCropSummary = useMemo(() => {
     const cropMap = new Map();
 
@@ -1069,7 +1078,7 @@ export default function MarketPricesPage() {
     }
   }
 
-  async function detectLocationAndLoadData() {
+  async function detectLocationAndLoadData(options = {}) {
     setDetectedPlace(null);
     setLocation(null);
     setPrices([]);
@@ -1085,6 +1094,7 @@ export default function MarketPricesPage() {
       const currentLocation = await getCurrentLocation({
         enableHighAccuracy: true,
         timeout: 20000,
+        forceRefresh: options.forceRefresh === true,
       });
 
       if (
@@ -1127,7 +1137,12 @@ export default function MarketPricesPage() {
       const messageKey = errorKey === "locationAccessNeeded"
         ? "locationPermissionNearby"
         : errorKey;
-      showMessage("warning", t(messageKey, {}, language));
+      showMessage(
+        "warning",
+        ["LOW_ACCURACY", "LOCATION_DISABLED"].includes(error?.code)
+          ? error.message
+          : t(messageKey, {}, language)
+      );
     } finally {
       setDetectingLocation(false);
     }
@@ -1652,8 +1667,8 @@ out center tags;
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4">
-      <div className="w-full">
+    <div className="min-h-screen bg-green-50 p-3 sm:p-5">
+      <div className="mx-auto max-w-7xl">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
@@ -1686,7 +1701,7 @@ out center tags;
               disabled={detectingLocation}
               onClick={() =>
                 detectLocationAndLoadData(
-                  farmer
+                  { forceRefresh: true }
                 )
               }
               className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60 self-start"
@@ -1708,11 +1723,16 @@ out center tags;
               : detectingLocation
                 ? t("detectingMarketArea", {}, language)
                 : t("locationNotDetected", {}, language)}
+            {location?.accuracy != null && (
+              <span className="mt-1 block text-xs text-green-100">
+                Live device location · GPS accuracy about ±{Math.round(location.accuracy)} m
+              </span>
+            )}
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-4 mt-5">
-          <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("cropCount", {}, language)}
             </p>
@@ -1722,7 +1742,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
+          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("marketCount", {}, language)}
             </p>
@@ -1732,7 +1752,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
+          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("priceRecords", {}, language)}
             </p>
@@ -1742,7 +1762,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
+          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("averagePrice", {}, language)}
             </p>
@@ -1760,7 +1780,7 @@ out center tags;
         </section>
 
         {farmer?.mainCrop && (
-          <section className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mt-5">
+          <section className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 sm:p-4 mt-4">
             <div className="flex items-center gap-3">
               <img
                 src={getCropImage(farmer.mainCrop)}
@@ -1782,17 +1802,38 @@ out center tags;
             <button
               type="button"
               onClick={() => {
-                setSearchText(farmer.mainCrop);
-                setSelectedCategory("all");
+                setFeaturedPricesExpanded((expanded) => !expanded);
               }}
-              className="bg-yellow-700 text-white px-4 py-2.5 rounded-xl font-semibold mt-4 w-full"
+              aria-expanded={featuredPricesExpanded}
+              className="bg-yellow-700 hover:bg-yellow-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-800 text-white px-4 py-2 rounded-lg font-semibold mt-3"
             >
-              {t("showPrices", {}, language)}
+              {featuredPricesExpanded ? "Hide Prices" : t("showPrices", {}, language)}
             </button>
+            {featuredPricesExpanded && (
+              <div className="mt-3 rounded-lg border border-yellow-200 bg-white p-3" aria-live="polite">
+                {featuredCropPrices.length ? (
+                  <>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-semibold text-green-900">{featuredCropPrices.length} {t("recordCount", {}, language)}</p>
+                      <p className="text-sm text-gray-600">{new Set(featuredCropPrices.map((item) => item.market)).size} {t("marketCountLower", {}, language)}</p>
+                    </div>
+                    <div className="mt-2 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                      {featuredCropPrices.map((item) => (
+                        <div key={item.id} className="rounded-lg bg-green-50 px-3 py-2 text-sm">
+                          <p className="font-semibold text-gray-900">{item.market}</p>
+                          <p className="text-gray-600">{item.district}{item.arrivalDate ? ` · ${item.arrivalDate}` : ""}</p>
+                          <p className="mt-1 font-bold text-green-800">{formatCurrency(item.modalPrice)} <span className="font-normal text-gray-600">/ quintal</span></p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : <p className="text-sm text-gray-600">No current prices found for {farmer.mainCrop} in the loaded area.</p>}
+              </div>
+            )}
           </section>
         )}
 
-        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
+        <section className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4 mt-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-gray-800">
@@ -2062,7 +2103,7 @@ out center tags;
               </p>
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {groupedCropSummary.map((summary) => {
                 const advice =
                   getSellingAdvice(summary);
@@ -2070,7 +2111,7 @@ out center tags;
                 return (
                   <article
                     key={summary.commodity}
-                    className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
+                    className="bg-white rounded-xl border border-green-100 shadow-sm p-3"
                   >
                     <div className="flex items-start gap-3">
                       <img
@@ -2103,7 +2144,7 @@ out center tags;
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="grid grid-cols-2 gap-2 mt-3">
                       <div className="bg-green-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">
                           {t("highest", {}, language)}
@@ -2159,7 +2200,7 @@ out center tags;
                         setSearchText(summary.commodity);
                         setSelectedCategory("all");
                       }}
-                      className="w-full mt-4 bg-green-700 text-white py-2.5 rounded-xl font-semibold"
+                      className="w-full mt-3 bg-green-700 hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800 text-white py-2 rounded-lg font-semibold"
                     >
                       {t("viewCommodityDetails", { crop: summary.commodity }, language)}
                     </button>
@@ -2190,11 +2231,11 @@ out center tags;
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3 xl:grid-cols-2">
               {filteredPrices.slice(0, visibleRecordLimit).map((item) => (
                 <article
                   key={item.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
+                  className="bg-white rounded-xl border border-green-100 shadow-sm p-3"
                 >
                   <div className="flex items-start gap-3">
                     <img
@@ -2227,7 +2268,7 @@ out center tags;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 mt-4">
+                  <div className="grid grid-cols-3 gap-2 mt-3">
                     <div className="bg-gray-50 rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
                         {t("minPrice", {}, language)}

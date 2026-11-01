@@ -1,150 +1,109 @@
-const DEFAULT_GEOLOCATION_OPTIONS = {
-  enableHighAccuracy: true,
-  timeout: 15000,
-  maximumAge: 0,
-};
-const MAX_POSITION_AGE_MS = 2 * 60 * 1000;
-let inFlightLocationRequest = null;
-
-function createLocationError(message, code) {
-  const error = new Error(message);
-  error.code = code;
-  return error;
-}
-
-/** Request a fresh device/browser position without substituting profile/IP data. */
-export function getCurrentLocation(options = {}) {
-  if (inFlightLocationRequest) {
-    return inFlightLocationRequest;
-  }
-
-  inFlightLocationRequest = requestCurrentLocation(options).finally(() => {
-    inFlightLocationRequest = null;
-  });
-  return inFlightLocationRequest;
-}
-
-function requestCurrentLocation(options) {
-  if (
-    typeof navigator === "undefined" ||
-    !navigator.geolocation
-  ) {
-    return Promise.reject(
-      createLocationError("Geolocation is not supported.", "UNSUPPORTED")
-    );
-  }
-
+function requestPosition(options) {
   return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latitude = Number(position?.coords?.latitude);
-        const longitude = Number(position?.coords?.longitude);
-        const timestamp = Number(position?.timestamp);
-        const accuracy = Number(position?.coords?.accuracy);
-
-        if (
-          !Number.isFinite(latitude) ||
-          !Number.isFinite(longitude) ||
-          latitude < -90 ||
-          latitude > 90 ||
-          longitude < -180 ||
-          longitude > 180
-        ) {
-          reject(
-            createLocationError("The device returned invalid coordinates.", "INVALID_COORDINATES")
-          );
-          return;
-        }
-
-        const now = Date.now();
-        if (
-          !Number.isFinite(timestamp) ||
-          timestamp > now + 60_000 ||
-          now - timestamp > MAX_POSITION_AGE_MS
-        ) {
-          reject(
-            createLocationError(
-              "The device returned an outdated location. Please try again.",
-              "STALE_POSITION"
-            )
-          );
-          return;
-        }
-
-        if (!Number.isFinite(accuracy) || accuracy < 0) {
-          reject(
-            createLocationError(
-              "The device could not verify location accuracy. Please try again.",
-              "INVALID_ACCURACY"
-            )
-          );
-          return;
-        }
-
-        resolve({
-          latitude,
-          longitude,
-          accuracy,
-          timestamp,
-          source: "device",
-        });
-      },
-      (error) => {
-        reject(
-          createLocationError(
-            error?.message || "Unable to determine the current location.",
-            error?.code || "UNKNOWN"
-          )
-        );
-      },
-      {
-        ...DEFAULT_GEOLOCATION_OPTIONS,
-        ...options,
-        enableHighAccuracy: true,
-        // Never serve cached coordinates for a request explicitly asking for
-        // the user's current location.
-        maximumAge: 0,
-      }
-    );
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      const error = new Error("Geolocation is not supported");
+      error.code = "UNSUPPORTED";
+      reject(error);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
   });
+}
+
+function toLocation(position, source) {
+  return {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracy: position.coords.accuracy,
+    timestamp: position.timestamp,
+    source,
+  };
+}
+
+// Approximate fallback (city level) for desktops without GPS / Wi-Fi location.
+async function getIpLocation() {
+  const response = await fetch("https://ipapi.co/json/");
+  if (!response.ok) {
+    const error = new Error("IP location failed");
+    error.code = 2;
+    throw error;
+  }
+  const data = await response.json();
+  if (typeof data.latitude !== "number" || typeof data.longitude !== "number") {
+    const error = new Error("IP location unavailable");
+    error.code = 2;
+    throw error;
+  }
+  return {
+    latitude: data.latitude,
+    longitude: data.longitude,
+    accuracy: 5000,
+    timestamp: Date.now(),
+    source: "ip",
+  };
+}
+
+export async function getCurrentLocation() {
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    const error = new Error("Geolocation needs HTTPS or localhost");
+    error.code = "INSECURE";
+    throw error;
+  }
+
+  try {
+    const position = await requestPosition({
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    });
+    return toLocation(position, "gps");
+  } catch (error) {
+    // Permission denied / unsupported: retrying will not help.
+    if (error.code === 1 || error.code === "UNSUPPORTED") throw error;
+  }
+
+  try {
+    const position = await requestPosition({
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 5 * 60 * 1000,
+    });
+    return toLocation(position, "network");
+  } catch (error) {
+    if (error.code === 1) throw error;
+    // Last resort: approximate location from IP address.
+    try {
+      return await getIpLocation();
+    } catch {
+      throw error;
+    }
+  }
 }
 
 export function getLocationErrorTranslationKey(error) {
-  if (error?.code === "UNSUPPORTED") return "locationUnsupported";
-  if (error?.code === 1) return "locationAccessNeeded";
-  if (error?.code === 2) return "locationPositionUnavailable";
-  if (error?.code === 3) return "locationDetectionTimedOut";
-  return "locationFallback";
+  switch (error?.code) {
+    case 1:
+      return "locationPermissionDenied";
+    case 3:
+      return "locationTimeout";
+    case "UNSUPPORTED":
+      return "locationUnsupported";
+    case "INSECURE":
+      return "locationInsecure";
+    default:
+      return "locationUnavailable";
+  }
 }
 
-/** Reverse-geocode only coordinates provided by the device. */
-export async function reverseGeocodeCoordinates(
-  { latitude, longitude },
-  { signal } = {}
-) {
-  const parameters = new URLSearchParams({
+export async function reverseGeocodeCoordinates({ latitude, longitude }) {
+  const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
     localityLanguage: "en",
   });
-
-  let requestSignal = signal;
-  if (
-    !requestSignal &&
-    typeof AbortSignal !== "undefined" &&
-    typeof AbortSignal.timeout === "function"
-  ) {
-    requestSignal = AbortSignal.timeout(7000);
-  }
-
   const response = await fetch(
-    `https://api.bigdatacloud.net/data/reverse-geocode-client?${parameters.toString()}`,
-    requestSignal ? { signal: requestSignal } : undefined
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`
   );
-
-  if (!response.ok) {
-    throw new Error(`Reverse geocoding failed (${response.status}).`);
-  }
-
+  if (!response.ok) throw new Error("Reverse geocoding failed");
   return response.json();
 }

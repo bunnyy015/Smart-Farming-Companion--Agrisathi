@@ -120,6 +120,11 @@ function App() {
         />
 
         <Route
+          path="/weather"
+          element={<WeatherPage />}
+        />
+
+        <Route
           path="/farmer/dealer-products"
           element={<FarmerDealerProductsPage />}
         />
@@ -147,11 +152,6 @@ function App() {
         <Route
           path="/farmer/nearby-services"
           element={<NearbyServicesPage />}
-        />
-
-        <Route
-          path="/weather"
-          element={<WeatherPage />}
         />
 
         <Route

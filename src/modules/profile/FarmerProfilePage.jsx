@@ -4,6 +4,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { get, ref, update } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import CropSelector from "../../components/CropSelector";
 import {
   getLanguage,
   getLanguageName,
@@ -26,6 +27,10 @@ const emptyForm = {
   irrigationType: "",
   soilType: "",
   preferredLanguage: "English",
+  selectedCrops: [],
+  cropAreas: {},
+  cultivationStatus: "",
+  age: "",
 };
 
 export default function FarmerProfilePage() {
@@ -38,25 +43,6 @@ export default function FarmerProfilePage() {
   const [whatsappSaving, setWhatsappSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [language, setCurrentLanguage] = useState(getLanguage());
-
-  useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      await loadProfile(user.uid, user.email);
-    });
-
-    const unsubscribeLanguage = subscribeLanguageChange((nextLanguage) => {
-      setCurrentLanguage(nextLanguage);
-    });
-
-    return () => {
-      unsubscribeAuth();
-      unsubscribeLanguage();
-    };
-  }, [navigate]);
 
   const profileCompletion = useMemo(() => {
     if (!farmer) {
@@ -96,6 +82,12 @@ export default function FarmerProfilePage() {
       address: profile.address || "",
       mainCrop: profile.mainCrop || "",
       otherCrops: profile.otherCrops || "",
+      selectedCrops: Array.isArray(profile.selectedCrops) && profile.selectedCrops.length
+        ? profile.selectedCrops
+        : [profile.mainCrop, ...String(profile.otherCrops || "").split(",")].map((crop) => crop.trim()).filter(Boolean),
+      cultivationStatus: profile.cultivationStatus || "",
+      age: profile.age ? String(profile.age) : "",
+      cropAreas: profile.cropAreas && typeof profile.cropAreas === "object" ? profile.cropAreas : {},
       landSize: String(profile.landSize || ""),
       landUnit: profile.landUnit || "acres",
       irrigationType: profile.irrigationType || "",
@@ -151,6 +143,25 @@ export default function FarmerProfilePage() {
     }
   }
 
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      await loadProfile(user.uid, user.email);
+    });
+    const unsubscribeLanguage = subscribeLanguageChange((nextLanguage) => {
+      setCurrentLanguage(nextLanguage);
+    });
+    return () => {
+      unsubscribeAuth();
+      unsubscribeLanguage();
+    };
+    // This page intentionally registers its auth and language listeners once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({
@@ -187,7 +198,8 @@ export default function FarmerProfilePage() {
     const phone = form.phone.trim();
     const district = form.district.trim();
     const state = form.state.trim();
-    const mainCrop = form.mainCrop.trim();
+    const selectedCrops = form.selectedCrops || [];
+    const mainCrop = selectedCrops[0] || form.mainCrop.trim();
 
     if (!name) {
       showMessage("warning", "Enter farmer name.");
@@ -215,7 +227,7 @@ export default function FarmerProfilePage() {
     }
 
     if (!mainCrop) {
-      showMessage("warning", "Enter main crop.");
+      showMessage("warning", "Select at least one crop.");
       return;
     }
 
@@ -242,7 +254,11 @@ export default function FarmerProfilePage() {
         state,
         address: form.address.trim(),
         mainCrop,
-        otherCrops: form.otherCrops.trim(),
+        selectedCrops: selectedCrops.length ? selectedCrops : [mainCrop],
+        cropAreas: Object.fromEntries(Object.entries(form.cropAreas || {}).filter(([crop, area]) => (selectedCrops.length ? selectedCrops : [mainCrop]).includes(crop) && Number(area) > 0).map(([crop, area]) => [crop, Number(area)])),
+        otherCrops: (selectedCrops.length ? selectedCrops.slice(1) : String(form.otherCrops || "").split(",")).join(", "),
+        cultivationStatus: form.cultivationStatus,
+        age: form.age ? Number(form.age) : null,
         landSize,
         landUnit: form.landUnit,
         irrigationType: form.irrigationType,
@@ -427,7 +443,7 @@ export default function FarmerProfilePage() {
             </div>
             {profileCompletion < 100 && (
               <p className="text-sm text-gray-500 mt-2">
-                Add complete farm details for better weather, crop and product recommendations.
+                Add complete farm details for better crop and product recommendations.
               </p>
             )}
           </div>
@@ -556,30 +572,25 @@ export default function FarmerProfilePage() {
                 />
               </div>
 
+              <CropSelector selectedCrops={form.selectedCrops || []} onChange={(selectedCrops) => setForm((current) => ({ ...current, selectedCrops, mainCrop: selectedCrops[0] || "", cropAreas: Object.fromEntries(Object.entries(current.cropAreas || {}).filter(([crop]) => selectedCrops.includes(crop))) }))} disabled={saving} />
+
+              <div className="rounded-xl border border-green-100 p-3">
+                <p className="text-sm font-semibold text-gray-800">Area by crop <span className="font-normal text-gray-500">(optional · {form.landUnit})</span></p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {(form.selectedCrops || []).map((crop) => <label key={crop} className="text-sm text-gray-700">{crop}<input type="number" min="0" step="0.01" value={form.cropAreas?.[crop] || ""} onChange={(event) => setForm((current) => ({ ...current, cropAreas: { ...(current.cropAreas || {}), [crop]: event.target.value } }))} disabled={saving} placeholder={`Area in ${form.landUnit}`} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>)}
+                </div>
+              </div>
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-gray-700">
-                    Main Crop
-                  </label>
-                  <input
-                    name="mainCrop"
-                    value={form.mainCrop}
-                    onChange={handleChange}
-                    placeholder="Example: Cotton"
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                  />
+                  <label className="text-sm font-semibold text-gray-700">Land / cultivation status</label>
+                  <select name="cultivationStatus" value={form.cultivationStatus} onChange={handleChange} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500">
+                    <option value="">Prefer not to say</option><option value="owner">I own the cultivated land</option><option value="tenant">I cultivate leased land</option><option value="sharecropper">I cultivate as a sharecropper</option><option value="other">Other arrangement</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-700">
-                    Other Crops
-                  </label>
-                  <input
-                    name="otherCrops"
-                    value={form.otherCrops}
-                    onChange={handleChange}
-                    placeholder="Rice, maize, chilli"
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                  />
+                  <label className="text-sm font-semibold text-gray-700">Age (optional)</label>
+                  <input name="age" type="number" min="1" max="120" value={form.age} onChange={handleChange} placeholder="Age in years" className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500" />
                 </div>
               </div>
 
@@ -732,15 +743,9 @@ export default function FarmerProfilePage() {
               <h2 className="text-lg font-bold text-green-900">🌾 Farm Details</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 <div className="bg-green-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Main Crop</p>
+                  <p className="text-sm text-gray-500">Selected Crops</p>
                   <p className="font-bold text-green-900 mt-1">
-                    {getProfileValue(farmer.mainCrop)}
-                  </p>
-                </div>
-                <div className="bg-green-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Other Crops</p>
-                  <p className="font-bold text-green-900 mt-1">
-                    {getProfileValue(farmer.otherCrops)}
+                    {getProfileValue((farmer.selectedCrops || [farmer.mainCrop, ...String(farmer.otherCrops || "").split(",")]).filter(Boolean).join(", "))}
                   </p>
                 </div>
                 <div className="bg-blue-50 rounded-xl p-4">
@@ -778,8 +783,8 @@ export default function FarmerProfilePage() {
                 onClick={() => navigate("/weather")}
                 className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 text-center hover:shadow-md hover:-translate-y-0.5 transition"
               >
-                <div className="text-2xl">🌤️</div>
-                <p className="font-semibold mt-2">{t("weather", {}, language)}</p>
+                <div className="text-2xl">🌦️</div>
+                <p className="mt-2 font-semibold">{t("weather", {}, language)}</p>
               </button>
               <button
                 type="button"

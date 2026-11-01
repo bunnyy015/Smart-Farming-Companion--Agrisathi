@@ -1,5 +1,20 @@
 # React + Vite
 
+## Android app with live device location
+
+Agrisathi includes a Capacitor Android project. In the installed Android app, Weather and Market Prices request the phone's native location permission and use a fresh high-accuracy location fix. The app does not use an IP-based location as a substitute for GPS.
+
+To build and open the Android project:
+
+1. Install Android Studio and Android SDK Platform 36, then connect an Android phone with USB debugging enabled or create an emulator.
+2. Run `npm run android:sync` to build the web app and copy it into the Android project.
+3. Run `npm run android:open` to open the project in Android Studio.
+4. Run it on the phone. When Android asks, allow location and choose **Precise**.
+
+Android's precise-location permission is required. If the phone grants approximate-only access, Agrisathi will show the reported accuracy and will not claim that it has the farmer's exact area. Browser development remains available through `npm run dev`, but desktop browser location may be approximate when no GPS receiver is present.
+
+The Android app calls the authenticated `fetchMarketPricePage` Firebase function so the AGMARKNET API key stays on the server. Before market prices can load in the Android app, set the `DATA_GOV_API_KEY` Firebase Function secret and deploy that function with `firebase deploy --only functions:fetchMarketPricePage`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

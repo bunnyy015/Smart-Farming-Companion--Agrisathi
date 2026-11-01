@@ -4,6 +4,7 @@ import { signOut } from "firebase/auth";
 import {
   equalTo,
   get,
+  onValue,
   orderByChild,
   query,
   ref,
@@ -53,6 +54,11 @@ export default function DealerDashboard() {
     lowStock: 0,
     completedSales: 0,
     totalRevenue: 0,
+  });
+  const [salesSummary, setSalesSummary] = useState({
+    count: 0,
+    revenue: 0,
+    orderIds: [],
   });
 
   const [notifications, setNotifications] = useState([]);
@@ -127,6 +133,42 @@ export default function DealerDashboard() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return undefined;
+
+    const ordersQuery = query(
+      ref(database, "dealerOrders"),
+      orderByChild("dealerUid"),
+      equalTo(currentUser.uid)
+    );
+
+    return onValue(ordersQuery, (snapshot) => {
+      const orders = snapshot.exists()
+        ? Object.entries(snapshot.val()).map(([id, order]) => ({ id, ...(order || {}) }))
+        : [];
+      const recordedOrderIds = new Set(salesSummary.orderIds);
+      const olderCompletedOrders = orders.filter((order) => {
+        const status = String(order.status || order.orderStatus || "")
+          .trim()
+          .toLowerCase()
+          .replaceAll(" ", "_");
+        return status === "completed" && !recordedOrderIds.has(order.id);
+      });
+
+      setStats((current) => ({
+        ...current,
+        completedSales: salesSummary.count + olderCompletedOrders.length,
+        totalRevenue: salesSummary.revenue + olderCompletedOrders.reduce(
+          (total, order) => total + Number(order.totalAmount || 0),
+          0
+        ),
+      }));
+    }, (error) => {
+      console.error("Dealer dashboard live order updates error:", error);
+    });
+  }, [salesSummary]);
 
   async function loadDashboard() {
     try {
@@ -269,6 +311,12 @@ export default function DealerDashboard() {
       const totalRevenue =
         recordedRevenue +
         olderOrderRevenue;
+
+      setSalesSummary({
+        count: recordedSales.length,
+        revenue: recordedRevenue,
+        orderIds: [...recordedOrderIds],
+      });
 
       /* ===================================================
          LOW STOCK

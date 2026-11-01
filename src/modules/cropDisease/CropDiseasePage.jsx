@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { get, push, ref, set } from "firebase/database";
@@ -7,9 +7,8 @@ import { getLanguage, t } from "../../utils/language";
 import useLanguage from "../../utils/useLanguage";
 
 const MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
 ];
 
 // Keep crop diagnosis available if one model is temporarily overloaded.
@@ -322,8 +321,8 @@ function inferClimateZone(profile = {}) {
 
 function recommendCropsForProfile(profile, selectedValues = {}) {
   const cropRecommendations = CROP_RECOMMENDATIONS.map((crop) => {
-    const soilMatches = getSoilMatches(profile.soilType || selectedValues.soilType).includes(crop.soil[0]) ||
-      getSoilMatches(profile.soilType || selectedValues.soilType).some((soil) => crop.soil.includes(soil));
+    const soilMatches = getSoilMatches(selectedValues.soilType || profile.soilType)
+      .some((soil) => crop.soil.includes(soil));
 
     const waterLevel = selectedValues.waterAvailability || getWaterAvailability(profile.irrigationType, "Moderate");
     const climateZone = selectedValues.climateZone || inferClimateZone(profile);
@@ -357,6 +356,25 @@ function recommendCropsForProfile(profile, selectedValues = {}) {
     .filter((crop) => crop.totalScore > 0)
     .sort((first, second) => second.totalScore - first.totalScore)
     .slice(0, 4);
+}
+
+function getCropInputGuidance(crop, soilType) {
+  const legumes = ["Groundnut", "Red Gram", "Soybean"].includes(crop.name);
+  const soil = String(soilType || "").toLowerCase();
+  const soilCare = soil.includes("sandy")
+    ? "Sandy soil: build organic matter and avoid applying nutrients in one large dose; follow local split-application advice."
+    : soil.includes("clay") || soil.includes("black")
+      ? "Clay/black soil: maintain drainage and avoid over-irrigation; base nutrient amendments on a soil test."
+      : soil.includes("red")
+        ? "Red soil: check organic carbon and soil-test nutrient status before choosing amendments."
+        : "Use a soil test to choose nutrient sources and rates; maintain organic matter and suitable drainage.";
+
+  return {
+    fertilizer: legumes
+      ? `For ${crop.name}, ask your local agriculture office about crop-appropriate seed inoculation and apply nutrients only as indicated by the soil test. ${soilCare}`
+      : `For ${crop.name}, use a crop-specific NPK and organic-manure plan based on the soil test and local crop calendar. ${soilCare}`,
+    pesticide: "No pesticide can be selected from soil/land type alone. Monitor the crop, identify the pest or disease first, and use locally approved integrated pest management advice only when needed.",
+  };
 }
 
 function ProductCard({ product, onOpen }) {
@@ -421,19 +439,23 @@ export default function CropDiseasePage() {
     climateZone: "",
     landType: "",
   });
-  const [recommendationResults, setRecommendationResults] = useState([]);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState("");
   const [landPhoto, setLandPhoto] = useState(null);
   const [landPhotoPreview, setLandPhotoPreview] = useState("");
   const [landAnalysis, setLandAnalysis] = useState(null);
   const [landAnalysisLoading, setLandAnalysisLoading] = useState(false);
+  const [landAnalysisStage, setLandAnalysisStage] = useState("");
   const [landAnalysisError, setLandAnalysisError] = useState("");
   const cropFileInput = useRef(null);
   const landFileInput = useRef(null);
   const cameraVideo = useRef(null);
   const cameraStream = useRef(null);
   const [cameraTarget, setCameraTarget] = useState("");
+  const recommendationResults = useMemo(() => {
+    if (!landAnalysis) return [];
+    return recommendCropsForProfile(profile, recommendationInputs);
+  }, [landAnalysis, profile, recommendationInputs]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -465,15 +487,6 @@ export default function CropDiseasePage() {
 
     return () => unsubscribe();
   }, [language]);
-
-  useEffect(() => {
-    if (!profile && !recommendationInputs.soilType && !recommendationInputs.waterAvailability) {
-      return;
-    }
-
-    const recommended = recommendCropsForProfile(profile, recommendationInputs);
-    setRecommendationResults(recommended);
-  }, [profile, recommendationInputs]);
 
   useEffect(() => {
     return () => {
@@ -604,26 +617,43 @@ export default function CropDiseasePage() {
     setLandAnalysisLoading(true);
     setLandAnalysisError("");
     try {
-      const { base64, mimeType } = await fileToBase64(landPhoto);
+      setLandAnalysisStage("Preparing photo...");
+      const optimizedPhoto = await optimizeLandPhoto(landPhoto);
+      const { base64, mimeType } = await fileToBase64(optimizedPhoto);
       const outputLanguage = languageNames[getLanguage()] || "English";
       const prompt = `Inspect this farmland/soil photo. Estimate only visible soil texture/color and landform; do not claim lab-level certainty. If no soil or farmland is visible, set isLandPhoto false. Return only JSON in ${outputLanguage}: {"isLandPhoto":true,"soilType":"Black Soil|Red Soil|Sandy Soil|Loamy Soil|Clay Soil|Unclear","landType":"Irrigated|Rainfed|Lowland|Upland|Unclear","confidence":"high|medium|low","observation":""}. Mention visual uncertainty in observation.`;
-      let responseData;
       let lastError;
-      for (const model of MODELS) {
+      const modelAttempts = MODELS.slice(0, 2);
+      for (let modelIndex = 0; modelIndex < modelAttempts.length; modelIndex += 1) {
+        const model = modelAttempts[modelIndex];
+        const controller = new AbortController();
+        // Vision requests can take longer on mobile networks. Keep the request
+        // alive long enough for a normal response, then try one backup model.
+        const timeoutId = window.setTimeout(() => controller.abort(), 30000);
         try {
+          setLandAnalysisStage("Analyzing soil and land type...");
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
             body: JSON.stringify({
               contents: [{ role: "user", parts: [
                 { inline_data: { mime_type: mimeType || "image/jpeg", data: base64 } },
                 { text: prompt },
               ] }],
-              generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: "application/json",
+                maxOutputTokens: 256,
+              },
             }),
           });
-          responseData = await response.json();
-          if (!response.ok) throw new Error(responseData?.error?.message || `Land analysis failed (${response.status}).`);
+          const responseData = await response.json();
+          if (!response.ok) {
+            const error = new Error(responseData?.error?.message || `Land analysis failed (${response.status}).`);
+            error.status = response.status;
+            throw error;
+          }
           const responseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!responseText) throw new Error("The land analysis service returned no result.");
           const parsed = extractJson(responseText);
@@ -643,14 +673,48 @@ export default function CropDiseasePage() {
           return;
         } catch (error) {
           lastError = error;
-          if (error.message?.startsWith("Please choose")) throw error;
+          const mayRetry = error.name === "AbortError" ||
+            error.status === 404 || error.status === 429 || error.status >= 500;
+          if (!mayRetry || modelIndex === modelAttempts.length - 1) {
+            throw error.name === "AbortError"
+              ? new Error("Land detection timed out. Try a smaller, clearer photo.")
+              : error;
+          }
+        } finally {
+          window.clearTimeout(timeoutId);
         }
       }
       throw lastError || new Error("Land photo analysis is unavailable.");
     } catch (error) {
       setLandAnalysisError(error.message || "Land photo analysis failed. Please try another image.");
     } finally {
+      setLandAnalysisStage("");
       setLandAnalysisLoading(false);
+    }
+  }
+
+  async function optimizeLandPhoto(file) {
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => reject(new Error("The land photo could not be opened."));
+        element.src = imageUrl;
+      });
+      const maxDimension = 1024;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The land photo could not be prepared.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.76));
+      if (!blob) throw new Error("The land photo could not be compressed.");
+      return new File([blob], "land-photo.jpg", { type: "image/jpeg" });
+    } finally {
+      URL.revokeObjectURL(imageUrl);
     }
   }
 
@@ -1090,7 +1154,7 @@ Required JSON structure:
               disabled={!landPhoto || landAnalysisLoading}
               className="mt-3 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800 disabled:bg-gray-400"
             >
-              {landAnalysisLoading ? "Detecting land..." : "Detect from land photo"}
+              {landAnalysisLoading ? (landAnalysisStage || "Detecting land...") : "Detect from land photo"}
             </button>
           </div>
 
@@ -1197,12 +1261,14 @@ Required JSON structure:
             </div>
           ) : recommendationResults.length > 0 ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {recommendationResults.map((crop) => (
-                <article key={crop.name} className="border border-green-200 rounded-2xl p-4 bg-green-50">
+              {recommendationResults.map((crop) => {
+                const guidance = getCropInputGuidance(crop, recommendationInputs.soilType || profile.soilType);
+                return (
+                  <article key={crop.name} className="border border-green-200 rounded-2xl p-4 bg-green-50">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-lg font-bold text-green-900">{crop.name}</h3>
                     <span className="bg-green-700 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                      {crop.totalScore}/100
+                      {crop.totalScore}/16 match points
                     </span>
                   </div>
 
@@ -1213,8 +1279,21 @@ Required JSON structure:
                       <li key={`${crop.name}-${reason}`}>{reason}</li>
                     ))}
                   </ul>
-                </article>
-              ))}
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3">
+                    <h4 className="text-sm font-semibold text-emerald-900">Fertilizer guidance</h4>
+                    <p className="mt-1 text-sm text-gray-700">{guidance.fertilizer}</p>
+                  </div>
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <h4 className="text-sm font-semibold text-amber-900">Pest control</h4>
+                    <p className="mt-1 text-sm text-amber-900">{guidance.pesticide}</p>
+                  </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : !landAnalysis ? (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              Choose or take a clear land photo, then select “Detect from land photo” to see crop suggestions based on the detected land profile.
             </div>
           ) : (
             <div className="mt-4 text-sm text-gray-600">

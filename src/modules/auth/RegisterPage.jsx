@@ -7,9 +7,10 @@ import {
   sendEmailVerification,
   setPersistence,
 } from "firebase/auth";
-import { ref, set } from "firebase/database";
+import { ref, update } from "firebase/database";
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import CropSelector from "../../components/CropSelector";
 
 const INITIAL_FORM = {
   name: "",
@@ -30,25 +31,9 @@ const INITIAL_FORM = {
   irrigationType: "",
   soilType: "",
   preferredLanguage: "English",
+  age: "",
+  cultivationStatus: "",
 };
-
-const CROPS = [
-  "Paddy",
-  "Cotton",
-  "Maize",
-  "Chilli",
-  "Turmeric",
-  "Groundnut",
-  "Soybean",
-  "Red Gram",
-  "Green Gram",
-  "Black Gram",
-  "Wheat",
-  "Sugarcane",
-  "Vegetables",
-  "Fruits",
-  "Other",
-];
 
 const STATES = [
   "Telangana",
@@ -71,6 +56,11 @@ const STATES = [
   "Jharkhand",
   "Other",
 ];
+
+const SOIL_TYPES = ["Black Soil", "Red Soil", "Alluvial Soil", "Laterite Soil", "Sandy Soil", "Clay Soil", "Loamy Soil", "Mountain/Forest Soil", "Saline Soil", "Other"];
+const unitLabel = (unit) => unit === "hectares" ? "hectares" : "acres";
+const areaToAcres = (value, unit) => Number(value || 0) * (unit === "hectares" ? 2.47105 : 1);
+const formatArea = (value) => Number(value.toFixed(2)).toString();
 
 function getFriendlyError(error) {
   const code = error?.code || "";
@@ -102,6 +92,10 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState(INITIAL_FORM);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [selectedCrops, setSelectedCrops] = useState([]);
+  const [cropAreas, setCropAreas] = useState({});
+  const [soilDistribution, setSoilDistribution] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
@@ -113,6 +107,13 @@ export default function RegisterPage() {
     () => form.email.trim().toLowerCase(),
     [form.email]
   );
+  const landAcres = areaToAcres(form.landSize, form.landUnit);
+  const cropAreaAcres = selectedCrops.reduce((sum, crop) => sum + areaToAcres(cropAreas[crop], form.landUnit), 0);
+  const soilAreaAcres = soilDistribution.reduce((sum, soil) => sum + areaToAcres(soil.area, form.landUnit), 0);
+  const cropAllocationInvalid = Boolean(form.landSize) && Number.isFinite(landAcres) && cropAreaAcres > landAcres + 1e-8;
+  const soilAllocationInvalid = Boolean(form.landSize) && Number.isFinite(landAcres) && soilAreaAcres > landAcres + 1e-8;
+  const invalidAreaInput = [form.landSize, ...selectedCrops.map((crop) => cropAreas[crop] ?? ""), ...soilDistribution.map((soil) => soil.area ?? "")]
+    .some((value) => value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0));
 
   function showMessage(type, text) {
     setMessage({ type, text });
@@ -124,6 +125,16 @@ export default function RegisterPage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
+
+    if (name === "landUnit" && value !== form.landUnit) {
+      const factor = form.landUnit === "acres" && value === "hectares" ? 1 / 2.47105 : 2.47105;
+      const convert = (amount) => amount === "" || amount == null ? amount : String(Number((Number(amount) * factor).toFixed(4)));
+      setForm((current) => ({ ...current, landUnit: value, landSize: convert(current.landSize) }));
+      setCropAreas((current) => Object.fromEntries(Object.entries(current).map(([crop, area]) => [crop, convert(area)])));
+      setSoilDistribution((current) => current.map((soil) => ({ ...soil, area: convert(soil.area) })));
+      clearMessage();
+      return;
+    }
 
     setForm((current) => ({
       ...current,
@@ -156,6 +167,10 @@ export default function RegisterPage() {
 
     if (form.password !== form.confirmPassword) {
       return "Password and confirm password do not match.";
+    }
+
+    if (form.age && (!Number.isInteger(Number(form.age)) || Number(form.age) < 1 || Number(form.age) > 120)) {
+      return "Enter an age between 1 and 120, or leave it blank.";
     }
 
     if (!phone) {
@@ -197,6 +212,10 @@ export default function RegisterPage() {
       return "Enter a valid land size.";
     }
 
+    if (invalidAreaInput) return "Land, crop, and soil areas must be valid non-negative numbers.";
+    if (cropAllocationInvalid) return `Total crop area (${formatArea(cropAreaAcres)} acres) exceeds your available land size (${formatArea(landAcres)} acres). Please adjust the crop areas or land size.`;
+    if (soilAllocationInvalid) return `Total soil area (${formatArea(soilAreaAcres)} acres) exceeds your available land size (${formatArea(landAcres)} acres). Please correct the allocation.`;
+
     return "";
   }
 
@@ -204,10 +223,34 @@ export default function RegisterPage() {
     event.preventDefault();
     clearMessage();
 
+    if (onboardingStep === 1) {
+      if (!selectedCrops.length) {
+        showMessage("warning", "Select at least one crop to continue.");
+        return;
+      }
+      setForm((current) => ({
+        ...current,
+        mainCrop: selectedCrops[0],
+        otherCrops: selectedCrops.slice(1).join(", "),
+      }));
+      setOnboardingStep(2);
+      return;
+    }
+
+    if (invalidAreaInput || cropAllocationInvalid || soilAllocationInvalid) {
+      showMessage("warning", invalidAreaInput ? "Land, crop, and soil areas must be valid non-negative numbers." : cropAllocationInvalid ? `Total crop area (${formatArea(cropAreaAcres)} acres) exceeds your available land size (${formatArea(landAcres)} acres). Please adjust the crop areas or land size.` : `Total soil area (${formatArea(soilAreaAcres)} acres) exceeds your available land size (${formatArea(landAcres)} acres). Please correct the allocation.`);
+      return;
+    }
+
     const validationError = validateForm();
 
     if (validationError) {
       showMessage("warning", validationError);
+      return;
+    }
+
+    if (onboardingStep === 2) {
+      setOnboardingStep(3);
       return;
     }
 
@@ -251,6 +294,9 @@ export default function RegisterPage() {
         pincode: form.pincode.trim(),
 
         mainCrop: form.mainCrop.trim(),
+        selectedCrops,
+        cropAreas: Object.fromEntries(Object.entries(cropAreas).filter(([, area]) => Number(area) > 0).map(([crop, area]) => [crop, Number(area)])),
+        cropAreaUnit: form.landUnit,
         otherCrops: form.otherCrops.trim(),
 
         landSize: form.landSize
@@ -259,23 +305,27 @@ export default function RegisterPage() {
 
         landUnit: form.landUnit,
         irrigationType: form.irrigationType,
-        soilType: form.soilType,
+        cultivationStatus: form.cultivationStatus,
+        age: form.age ? Number(form.age) : null,
+        soilType: soilDistribution.find((soil) => soil.soilType)?.customType || soilDistribution.find((soil) => soil.soilType)?.soilType || "",
+        soilDistribution: soilDistribution.filter((soil) => soil.soilType || soil.area || soil.customType).map((soil) => ({ soilType: soil.soilType === "Other" ? soil.customType.trim() : soil.soilType, area: soil.area === "" ? null : Number(soil.area), unit: form.landUnit })),
         preferredLanguage: form.preferredLanguage,
 
         role: "farmer",
         status: "active",
 
         emailVerified: false,
-        profileCompleted: false,
+        profileCompleted: true,
+        onboardingCompletedAt: now,
 
         createdAt: now,
         updatedAt: now,
       };
 
-      await set(
-        ref(database, `users/${createdUser.uid}`),
-        farmerData
-      );
+      await update(ref(database), {
+        [`users/${createdUser.uid}`]: farmerData,
+        [`farmers/${createdUser.uid}`]: farmerData,
+      });
 
       try {
         await sendEmailVerification(createdUser);
@@ -353,6 +403,34 @@ export default function RegisterPage() {
             onSubmit={handleRegister}
             className="p-5 md:p-7 space-y-6"
           >
+            {onboardingStep === 1 ? (
+              <CropSelector selectedCrops={selectedCrops} onChange={(nextCrops) => {
+                setSelectedCrops(nextCrops);
+                setCropAreas((current) => Object.fromEntries(Object.entries(current).filter(([crop]) => nextCrops.includes(crop))));
+              }} disabled={loading} />
+            ) : onboardingStep === 3 ? (
+              <section aria-labelledby="registration-review-title" className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-green-700">Step 3 of 3</p>
+                  <h2 id="registration-review-title" className="mt-1 text-2xl font-bold text-green-950">Review your details</h2>
+                  <p className="mt-1 text-sm text-gray-600">Check your information before creating your account.</p>
+                </div>
+                <div className="rounded-xl border border-green-100 bg-green-50 p-4">
+                  <div className="flex items-center justify-between gap-2"><h3 className="font-bold text-green-950">Selected crops</h3><button type="button" onClick={() => setOnboardingStep(1)} className="text-sm font-semibold text-green-800 underline">Edit crops</button></div>
+                  <div className="mt-2 flex flex-wrap gap-2">{selectedCrops.map((crop) => <span key={crop} className="rounded-full bg-white px-3 py-1 text-sm text-green-900">{crop}{cropAreas[crop] ? ` · ${cropAreas[crop]} ${form.landUnit}` : ""}</span>)}</div>
+                </div>
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-2"><h3 className="font-bold text-gray-900">Farmer and farm details</h3><button type="button" onClick={() => setOnboardingStep(2)} className="text-sm font-semibold text-green-800 underline">Edit details</button></div>
+                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                    {[["Name", form.name], ["Age", form.age || "Not provided"], ["Email", normalizedEmail], ["Mobile", form.phone], ["Delivery address", [form.address, form.village, form.mandal, form.district, form.state, form.pincode].filter(Boolean).join(", ")], ["Land", form.landSize ? `${form.landSize} ${form.landUnit}` : "Not provided"], ["Cultivation", form.cultivationStatus || "Not provided"], ["Irrigation", form.irrigationType || "Not provided"], ["Language", form.preferredLanguage]].map(([label, value]) => <div key={label}><dt className="text-gray-500">{label}</dt><dd className="font-medium text-gray-900">{value}</dd></div>)}
+                  </dl>
+                  <div className="mt-3 border-t border-gray-100 pt-3 text-sm"><p className="text-gray-500">Soil distribution</p><p className="font-medium text-gray-900">{soilDistribution.filter((soil) => soil.soilType || soil.area).map((soil) => `${soil.soilType === "Other" ? soil.customType || "Other" : soil.soilType || "Unclassified"}${soil.area ? ` · ${soil.area} ${form.landUnit}` : ""}`).join("; ") || "Not provided"}</p></div>
+                </div>
+                <p className="text-sm text-gray-600">Your profile is saved to your AgriSaathi account. Government scheme matches are informational and do not guarantee approval.</p>
+              </section>
+            ) : (
+              <>
+            <div className="mb-2"><p className="text-sm font-semibold text-green-700">Step 2 of 3</p><div className="mt-2 h-2 rounded-full bg-gray-100"><div className="h-2 w-2/3 rounded-full bg-green-700" /></div></div>
 
             {/* Personal Details */}
             <section>
@@ -361,6 +439,11 @@ export default function RegisterPage() {
               </h2>
 
               <div className="grid md:grid-cols-2 gap-4 mt-4">
+
+                <div>
+                  <label htmlFor="farmer-age" className="text-sm font-semibold text-gray-700">Age <span className="font-normal text-gray-500">(optional)</span></label>
+                  <input id="farmer-age" name="age" type="number" min="1" max="120" value={form.age} onChange={handleChange} disabled={loading} placeholder="Age in years" className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-600" />
+                </div>
 
                 <div>
                   <label
@@ -656,53 +739,28 @@ export default function RegisterPage() {
               <div className="grid md:grid-cols-2 gap-4 mt-4">
 
                 <div>
-                  <label
-                    htmlFor="main-crop"
-                    className="text-sm font-semibold text-gray-700"
-                  >
-                    Main Crop
-                  </label>
+                  <p className="text-sm font-semibold text-gray-700">Selected crops</p>
+                  <div className="mt-1 flex min-h-12 flex-wrap items-center gap-2 rounded-xl border border-gray-200 p-2">
+                    {selectedCrops.map((crop) => <span key={crop} className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-900">{crop}{cropAreas[crop] ? ` · ${cropAreas[crop]} ${form.landUnit}` : ""}</span>)}
+                    <button type="button" onClick={() => setOnboardingStep(1)} className="text-sm font-semibold text-green-800 underline">Change</button>
+                  </div>
+                </div>
 
-                  <select
-                    id="main-crop"
-                    name="mainCrop"
-                    value={form.mainCrop}
-                    onChange={handleChange}
-                    disabled={loading}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
-                  >
-                    <option value="">
-                      Select main crop
-                    </option>
-
-                    {CROPS.map((crop) => (
-                      <option
-                        key={crop}
-                        value={crop}
-                      >
-                        {crop}
-                      </option>
-                    ))}
-                  </select>
+                <div className="md:col-span-2 rounded-xl border border-green-100 p-3">
+                  <p className="text-sm font-semibold text-gray-800">Area by crop <span className="font-normal text-gray-500">(optional · {form.landUnit})</span></p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {selectedCrops.map((crop) => <label key={crop} className="text-sm text-gray-700">{crop}<input type="number" min="0" step="0.01" value={cropAreas[crop] || ""} onChange={(event) => setCropAreas((current) => ({ ...current, [crop]: event.target.value }))} disabled={loading} placeholder={`Area in ${form.landUnit}`} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>)}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">Areas are optional; enter them only if you know them.</p>
+                  <p className="mt-2 text-sm text-gray-700">{form.landSize ? `Total land: ${form.landSize} ${unitLabel(form.landUnit)} · Allocated: ${formatArea(cropAreaAcres / (form.landUnit === "hectares" ? 2.47105 : 1))} ${unitLabel(form.landUnit)} · Remaining: ${formatArea(Math.max(0, landAcres - cropAreaAcres) / (form.landUnit === "hectares" ? 2.47105 : 1))} ${unitLabel(form.landUnit)}.` : "Enter total land size to see crop allocation totals."}</p>
+                  {cropAllocationInvalid && <p role="alert" className="mt-2 text-sm font-medium text-red-700">Total crop area ({formatArea(cropAreaAcres)} acres) exceeds your available land size ({formatArea(landAcres)} acres). Please adjust the crop areas or land size.</p>}
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="other-crops"
-                    className="text-sm font-semibold text-gray-700"
-                  >
-                    Other Crops
-                  </label>
-
-                  <input
-                    id="other-crops"
-                    name="otherCrops"
-                    value={form.otherCrops}
-                    onChange={handleChange}
-                    disabled={loading}
-                    placeholder="Example: Maize, chilli"
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
-                  />
+                  <label htmlFor="cultivation-status" className="text-sm font-semibold text-gray-700">Land / cultivation status <span className="font-normal text-gray-500">(optional)</span></label>
+                  <select id="cultivation-status" name="cultivationStatus" value={form.cultivationStatus} onChange={handleChange} disabled={loading} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-600">
+                    <option value="">Prefer not to say</option><option value="owner">I own the cultivated land</option><option value="tenant">I cultivate leased land</option><option value="sharecropper">I cultivate as a sharecropper</option><option value="other">Other arrangement</option>
+                  </select>
                 </div>
 
                 <div>
@@ -787,44 +845,11 @@ export default function RegisterPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="soil-type"
-                    className="text-sm font-semibold text-gray-700"
-                  >
-                    Soil Type
-                  </label>
-
-                  <select
-                    id="soil-type"
-                    name="soilType"
-                    value={form.soilType}
-                    onChange={handleChange}
-                    disabled={loading}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100"
-                  >
-                    <option value="">
-                      Select soil type
-                    </option>
-                    <option value="Black Soil">
-                      Black Soil
-                    </option>
-                    <option value="Red Soil">
-                      Red Soil
-                    </option>
-                    <option value="Sandy Soil">
-                      Sandy Soil
-                    </option>
-                    <option value="Loamy Soil">
-                      Loamy Soil
-                    </option>
-                    <option value="Clay Soil">
-                      Clay Soil
-                    </option>
-                    <option value="Other">
-                      Other
-                    </option>
-                  </select>
+                <div className="md:col-span-2 rounded-xl border border-green-100 bg-green-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-green-950">Soil Distribution</h3><p className="mt-1 text-sm text-gray-600">Add the different soil types found across your farmland and specify their areas.</p></div><button type="button" onClick={() => setSoilDistribution((rows) => [...rows, { soilType: "", customType: "", area: "" }])} className="min-h-11 rounded-xl border border-green-700 bg-white px-4 py-2 font-semibold text-green-800">+ Add Soil Type</button></div>
+                  <div className="mt-3 space-y-3">{soilDistribution.map((soil, index) => <div key={index} className="grid min-w-0 gap-3 rounded-xl border border-green-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)_auto] sm:items-end"><label className="min-w-0 text-sm font-semibold text-gray-700">Soil Type<select value={soil.soilType} onChange={(event) => setSoilDistribution((rows) => rows.map((row, i) => i === index ? { ...row, soilType: event.target.value, customType: event.target.value === "Other" ? row.customType : "" } : row))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3"><option value="">Select soil type</option>{SOIL_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label><label className="min-w-0 text-sm font-semibold text-gray-700">Area ({unitLabel(form.landUnit)})<input type="number" min="0" step="any" inputMode="decimal" value={soil.area} onChange={(event) => setSoilDistribution((rows) => rows.map((row, i) => i === index ? { ...row, area: event.target.value } : row))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3" /></label><button type="button" onClick={() => setSoilDistribution((rows) => rows.filter((_, i) => i !== index))} className="min-h-11 rounded-xl border border-red-200 px-4 py-2 font-semibold text-red-700">Remove</button>{soil.soilType === "Other" && <label className="sm:col-span-2 text-sm font-semibold text-gray-700">Custom soil type<input value={soil.customType} onChange={(event) => setSoilDistribution((rows) => rows.map((row, i) => i === index ? { ...row, customType: event.target.value } : row))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3" /></label>}</div>)}</div>
+                  <p className="mt-3 text-sm text-gray-700">{form.landSize ? `Total land: ${form.landSize} ${unitLabel(form.landUnit)} · Allocated: ${formatArea(soilAreaAcres / (form.landUnit === "hectares" ? 2.47105 : 1))} ${unitLabel(form.landUnit)} · Unclassified: ${formatArea(Math.max(0, landAcres - soilAreaAcres) / (form.landUnit === "hectares" ? 2.47105 : 1))} ${unitLabel(form.landUnit)}.` : "Enter total land size to see soil allocation totals."}</p>
+                  {soilAllocationInvalid && <p role="alert" className="mt-2 text-sm font-medium text-red-700">Total soil area ({formatArea(soilAreaAcres)} acres) exceeds your available land size ({formatArea(landAcres)} acres). Please correct the allocation.</p>}
                 </div>
 
                 <div>
@@ -890,12 +915,15 @@ export default function RegisterPage() {
               A verification link will be sent to the registered
               email address.
             </div>
+              </>
+            )}
 
-            {/* Register Button */}
+            <div className="flex gap-3">
+            {onboardingStep > 1 && <button type="button" disabled={loading} onClick={() => setOnboardingStep((step) => step - 1)} className="flex-1 rounded-xl border border-green-200 bg-white py-3 font-semibold text-green-800 disabled:opacity-50">Back</button>}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
+              disabled={loading || (onboardingStep >= 2 && (invalidAreaInput || cropAllocationInvalid || soilAllocationInvalid))}
+              className="flex-1 bg-green-700 text-white py-3 rounded-xl font-semibold hover:bg-green-800 transition disabled:bg-gray-400"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -903,19 +931,20 @@ export default function RegisterPage() {
                   Creating Account...
                 </span>
               ) : (
-                "Create Farmer Account"
+                onboardingStep === 1 ? "Continue with selected crops" : onboardingStep === 2 ? "Review details" : "Create Farmer Account"
               )}
             </button>
+            </div>
 
             {/* Login Button */}
-            <button
+            {onboardingStep === 1 && <button
               type="button"
               disabled={loading}
               onClick={() => navigate("/login")}
               className="w-full border border-green-200 bg-green-50 text-green-800 py-3 rounded-xl font-semibold disabled:opacity-50"
             >
               Already Have an Account? Login
-            </button>
+            </button>}
 
           </form>
         </section>

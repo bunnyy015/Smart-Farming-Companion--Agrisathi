@@ -13,10 +13,7 @@ import { auth, database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 
 const emptyForm = {
-  title: "",
   content: "",
-  category: "Question",
-  crop: "",
 };
 
 export default function CommunityPage() {
@@ -160,16 +157,10 @@ export default function CommunityPage() {
       return;
     }
 
-    const title = form.title.trim();
     const content = form.content.trim();
 
-    if (!title) {
-      showMessage("warning", "Enter a short post title.");
-      return;
-    }
-
     if (!content) {
-      showMessage("warning", "Enter your question or message.");
+      showMessage("warning", "Write something before posting.");
       return;
     }
 
@@ -197,10 +188,11 @@ export default function CommunityPage() {
         district: currentProfile.district || "",
         state: currentProfile.state || "",
 
-        title,
+        title: content.split(/\r?\n/)[0].slice(0, 80),
         content,
-        category: form.category,
-        crop: form.crop.trim(),
+        category: "Question",
+        crop: "",
+        generatedTitle: true,
 
         likes: {},
         likeCount: 0,
@@ -436,54 +428,22 @@ export default function CommunityPage() {
           </h2>
 
           <form onSubmit={createPost} className="mt-4 space-y-3">
-            <input
-              name="title"
-              value={form.title}
-              onChange={handleFormChange}
-              placeholder="Short title"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3"
-            />
-
             <textarea
               name="content"
               value={form.content}
               onChange={handleFormChange}
-              placeholder="Ask a question or share advice..."
+              placeholder="Write your message..."
               rows="4"
+              required
               className="w-full border border-gray-300 rounded-xl px-4 py-3"
             />
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleFormChange}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3"
-              >
-                <option value="Question">Question</option>
-                <option value="Advice">Advice</option>
-                <option value="Experience">Experience</option>
-                <option value="Alert">Alert</option>
-                <option value="Announcement">
-                  Announcement
-                </option>
-              </select>
-
-              <input
-                name="crop"
-                value={form.crop}
-                onChange={handleFormChange}
-                placeholder="Crop name (optional)"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3"
-              />
-            </div>
 
             <button
               type="submit"
               disabled={creating}
               className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold disabled:bg-gray-400"
             >
-              {creating ? "Sharing..." : "Share Post"}
+              {creating ? "Posting..." : "Post"}
             </button>
           </form>
         </section>
@@ -578,9 +538,11 @@ export default function CommunityPage() {
                     </span>
                   </div>
 
-                  <h2 className="text-xl font-bold text-green-900 mt-4">
-                    {post.title}
-                  </h2>
+                  {!post.generatedTitle && post.title && (
+                    <h2 className="text-xl font-bold text-green-900 mt-4">
+                      {post.title}
+                    </h2>
+                  )}
 
                   <p className="text-gray-700 mt-2 whitespace-pre-wrap">
                     {post.content}

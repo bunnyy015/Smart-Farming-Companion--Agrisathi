@@ -38,7 +38,6 @@ import {
   VOICE_ACTION_ROUTES,
 } from "./voiceLocalCommands";
 
-import { createWeatherPromptContext } from "./weatherContext";
 import { requestVoiceAssistantResponse } from "./voiceAssistantService";
 import { getVoiceSmallTalkReply } from "./voiceSmallTalk";
 import { cancelSpeech, speakLocalizedText } from "./speechOutput";
@@ -262,8 +261,6 @@ export default function VoiceAssistantPage() {
    * automatic retry loops.
    */
   const microphoneBlockedRef = useRef(false);
-
-  const weatherContext = createWeatherPromptContext();
 
   /* =======================================================
      LANGUAGE
@@ -879,16 +876,11 @@ Phone: ${farmer.phone || "Unknown"}
 `
       : "Farmer profile is not available.";
 
-    const weatherInformation =
-      JSON.stringify(
-        weatherContext || {}
-      );
-
     const conversation =
       getVoiceMemoryForPrompt();
     let orderContext = "Farmer order details are unavailable.";
     // Loading orders for every turn adds a Firebase round trip to questions
-    // that cannot use the data (for example crop, weather, and greetings).
+    // that cannot use the data (for example crop questions and greetings).
     const asksAboutOrders =
       /\b(?:order|orders|purchase|purchases|delivery|deliveries|shipment|tracking|track|status)\b|ఆర్డర్|ఆర్డర్లు|ఆర్డర్ స్థితి|ऑर्डर|आर्डर|डिलीवरी|ऑर्डर की स्थिति|ஆர்டர்|ವಿತರಣೆ|ഓർഡർ|ऑर्डरची|অর্ডার|ઓર્ડર|ਆਰਡਰ|آرڈر|ଅର୍ଡର/u.test(
         String(userText || "").normalize("NFC").toLocaleLowerCase()
@@ -952,7 +944,7 @@ Reply in the same language requested by the current language code.
 Keep responses concise because they will be spoken aloud.
 
 You can help with:
-- weather and weather-related field work
+  - general crop and field-work questions
 - crop selection, crop growth, seeds, soil, irrigation, fertilizer, pests, and disease
 - market prices and selling guidance
 - government schemes
@@ -983,14 +975,11 @@ For a product search, use action "dealer_products" and put only the requested pr
 To open a particular existing product, use action "product_details" and put the product name in searchQuery.
 If the request could refer to more than one page, ask a short clarification question and set action to "none".
 If speech is unclear, unrelated, or has no safe matching route, do not navigate; ask one natural, concise clarification question. Do not list navigation commands unless the farmer explicitly asks what you can do.
-For agriculture questions, answer in the selected language. Do not invent local weather, market prices, diagnoses, or scheme eligibility. Keep the answer to 1-2 short sentences.
+For agriculture questions, answer in the selected language. Do not invent live local weather, market prices, diagnoses, or scheme eligibility. Direct farmers to the Weather page for the next 12 hours of local forecast. Keep the answer to 1-2 short sentences.
 
 Do not put markdown around the JSON.
 
 ${farmerContext}
-
-Weather context:
-${weatherInformation}
 
 Previous conversation:
 ${conversation || "No previous conversation."}
@@ -2049,7 +2038,7 @@ ${userText}
               </h2>
 
               <p className="text-blue-100 text-sm mt-2">
-                Try questions about weather,
+                Try questions about weather, crops,
                 crop disease, market prices,
                 government schemes or your orders.
               </p>

@@ -3,6 +3,7 @@ import { getDatabase } from "firebase-admin/database";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { onValueCreated, onValueUpdated } from "firebase-functions/v2/database";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import { setGlobalOptions } from "firebase-functions/v2";
 
@@ -10,6 +11,7 @@ initializeApp();
 setGlobalOptions({ region: "asia-southeast1", maxInstances: 5 });
 
 const whatsappAccessToken = defineSecret("WHATSAPP_ACCESS_TOKEN");
+const dataGovApiKey = defineSecret("DATA_GOV_API_KEY");
 const whatsappPhoneNumberId = defineString("WHATSAPP_PHONE_NUMBER_ID");
 const whatsappTemplateName = defineString("WHATSAPP_TEMPLATE_NAME", { default: "agrisathi_order_update" });
 const whatsappGraphApiVersion = defineString("WHATSAPP_GRAPH_API_VERSION");
@@ -141,4 +143,81 @@ export const notifyFarmerOnReservationUpdate = onValueUpdated({
   const after = event.data.after.val() || {};
   const previousStatus = normalizedStatus(before.status || before.orderStatus);
   return processOrder(event.params.orderId, after, previousStatus);
+});
+
+const AGMARKNET_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
+const MARKET_QUERY_FIELDS = new Set([
+  "format",
+  "limit",
+  "offset",
+  "filters[state]",
+  "filters[district]",
+]);
+
+export const fetchMarketPricePage = onCall({
+  region: "asia-southeast1",
+  maxInstances: 5,
+  timeoutSeconds: 30,
+  secrets: [dataGovApiKey],
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in to load market prices.");
+  }
+
+  const parameters = request.data?.parameters;
+  if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
+    throw new HttpsError("invalid-argument", "Invalid market price request.");
+  }
+
+  const query = new URLSearchParams();
+  for (const [key, rawValue] of Object.entries(parameters)) {
+    if (!MARKET_QUERY_FIELDS.has(key) || typeof rawValue !== "string") {
+      throw new HttpsError("invalid-argument", "Invalid market price filter.");
+    }
+    query.set(key, rawValue.trim());
+  }
+
+  const state = query.get("filters[state]");
+  const limit = Number(query.get("limit"));
+  const offset = Number(query.get("offset"));
+  if (
+    !state || state.length > 80 ||
+    query.get("format") !== "json" ||
+    !Number.isInteger(limit) || limit < 1 || limit > 1000 ||
+    !Number.isInteger(offset) || offset < 0 || offset > 20000
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid market price query.");
+  }
+
+  const apiKey = dataGovApiKey.value().trim();
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "MISSING_DATA_GOV_API_KEY");
+  }
+
+  const url = new URL(`https://api.data.gov.in/resource/${AGMARKNET_RESOURCE_ID}`);
+  for (const [key, value] of query.entries()) url.searchParams.set(key, value);
+  url.searchParams.set("api-key", apiKey);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      const code = response.status === 429 ? "resource-exhausted" : "unavailable";
+      throw new HttpsError(code, `MARKET_API_HTTP_${response.status}`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data?.records)) {
+      throw new HttpsError("internal", "MARKET_API_INVALID_RESPONSE");
+    }
+    return data;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError(
+      error?.name === "AbortError" ? "deadline-exceeded" : "unavailable",
+      error?.name === "AbortError" ? "MARKET_API_TIMEOUT" : "MARKET_API_NETWORK_ERROR"
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
 });

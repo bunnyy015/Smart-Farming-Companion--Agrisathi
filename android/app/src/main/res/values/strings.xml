@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Agrisathi</string>
+    <string name="title_activity_main">Agrisathi</string>
+    <string name="package_name">com.agrisathi.app</string>
+    <string name="custom_url_scheme">com.agrisathi.app</string>
+</resources>
