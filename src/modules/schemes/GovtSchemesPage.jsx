@@ -9,6 +9,33 @@ import { resolveGovernmentSchemesPath, subscribeToGovernmentSchemes } from "../.
 import { DEFAULT_SCHEMES } from "./defaultGovernmentSchemes";
 import { assessScheme, getSchemeRule } from "./schemeEligibility";
 
+function localizeKnownSchemeTitle(title, language) {
+  const normalized = String(title || "").toLowerCase();
+  const knownTitles = [
+    ["pm kisan", "schemeTitlePmkisan"],
+    ["pm-kisan", "schemeTitlePmkisan"],
+    ["fasal bima", "schemeTitleInsurance"],
+    ["kisan credit card", "schemeTitleCredit"],
+    ["soil health card", "schemeTitleSoil"],
+    ["krishi sinchayee", "schemeTitleIrrigation"],
+    ["enam", "schemeTitleEnam"],
+    ["rythu bharosa", "schemeTitleRythuBharosa"],
+    ["agriculture infrastructure fund", "schemeTitleAif"],
+    ["national mission on natural farming", "schemeTitleNmnf"],
+    ["kisan maandhan", "schemeTitlePmkmy"],
+    ["pm-kusum", "schemeTitleKusum"],
+    ["sub-mission on agricultural mechanization", "schemeTitleSmam"],
+  ];
+  const match = knownTitles.find(([phrase]) => normalized.includes(phrase));
+  return match ? t(match[1], {}, language) : title;
+}
+
+function localizeGovernmentLabel(value, language) {
+  return String(value || "").toLowerCase() === "central"
+    ? t("centralGovernment", {}, language)
+    : value;
+}
+
 export default function GovtSchemesPage() {
   const navigate = useNavigate();
   const language = useLanguage();
@@ -107,7 +134,7 @@ export default function GovtSchemesPage() {
       : value || t(field, {}, language);
 
     return {
-      title: legacyText(scheme.titleKey, scheme.title || scheme.schemeName, scheme.defaultValues?.title),
+      title: localizeKnownSchemeTitle(legacyText(scheme.titleKey, scheme.title || scheme.schemeName, scheme.defaultValues?.title), language),
       category: legacyText(scheme.categoryKey, scheme.category || scheme.department, scheme.defaultValues?.category),
       benefits: legacyText(scheme.benefitKey, scheme.benefits || scheme.benefit, scheme.defaultValues?.benefits),
       eligibility: legacyText(scheme.eligibilityKey, scheme.eligibility, scheme.defaultValues?.eligibility),
@@ -134,7 +161,7 @@ export default function GovtSchemesPage() {
 
   const filteredSchemes = assessedSchemes.filter(({ scheme, assessment }) => {
     const details = getSchemeDetails(scheme);
-    const matchesSearch = [details.title, details.category, details.benefits, details.eligibility,
+    const matchesSearch = [details.title, scheme.title, scheme.schemeName, details.category, details.benefits, details.eligibility,
       scheme.department, scheme.state, details.documents, assessment.label].join(" ").toLowerCase().includes(search.toLowerCase());
     const personalized = assessment.status === "likely_eligible";
     return matchesSearch && (view === "all" || personalized) &&
@@ -202,7 +229,7 @@ export default function GovtSchemesPage() {
             <article className="mx-auto max-w-4xl rounded-2xl border border-green-100 bg-white p-5 shadow-lg sm:p-8">
               <button type="button" onClick={() => setSelectedSchemeKey("")} className="mb-5 rounded-lg border border-green-200 px-4 py-2 font-semibold text-green-900 hover:bg-green-50">← Back to schemes</button>
               <header className="border-b border-gray-100 pb-5">
-                <div className="flex items-start gap-4"><span aria-hidden="true" className="text-5xl">{details.icon}</span><div><p className="text-sm font-semibold text-green-800">{rule?.government || scheme.government || scheme.level || "Government scheme"}</p><h2 className="mt-1 text-2xl font-bold text-green-950 sm:text-3xl">{details.title}</h2><p className="mt-2 text-sm text-gray-600">{[rule?.department || scheme.department, scheme.state || scheme.applicableState || scheme.geography].filter(Boolean).join(" · ")}</p></div></div>
+                <div className="flex items-start gap-4"><span aria-hidden="true" className="text-5xl">{details.icon}</span><div><p className="text-sm font-semibold text-green-800">{localizeGovernmentLabel(rule?.government || scheme.government || scheme.level || t("governmentScheme", {}, language), language)}</p><h2 className="mt-1 text-2xl font-bold text-green-950 sm:text-3xl">{details.title}</h2><p className="mt-2 text-sm text-gray-600">{[rule?.department || scheme.department, scheme.state || scheme.applicableState || scheme.geography].filter(Boolean).map((value) => localizeGovernmentLabel(value, language)).join(" · ")}</p></div></div>
               </header>
 
               <section className={`mt-5 rounded-xl border p-4 ${assessment.status === "likely_eligible" ? "border-green-200 bg-green-50" : assessment.status === "not_eligible" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`} aria-live="polite">
@@ -232,12 +259,12 @@ export default function GovtSchemesPage() {
         })() : (
           <>
             <section className="mb-6 rounded-2xl bg-white p-5 shadow-lg">
-              <p className="mb-3 text-sm text-gray-700">{view === "personalized" ? "Showing schemes assessed as likely eligible from your saved profile. Open a scheme to see why it matches." : "Browse the directory and open any scheme to see its information and profile assessment."}</p>
+              <p className="mb-3 text-sm text-gray-700">{view === "personalized" ? t("showingLikelySchemes", {}, language) : t("browseSchemesIntro", {}, language)}</p>
               <div className="mb-4 flex flex-wrap gap-2">
-                <button type="button" onClick={() => { setView("personalized"); setStatusFilter("all"); setSearch(""); }} aria-pressed={view === "personalized"} className={`rounded-lg px-4 py-2 font-semibold ${view === "personalized" ? "bg-green-700 text-white" : "bg-green-50 text-green-900"}`}>For your profile</button>
-                <button type="button" onClick={() => { setView("all"); setStatusFilter("all"); }} aria-pressed={view === "all"} className={`rounded-lg px-4 py-2 font-semibold ${view === "all" ? "bg-green-700 text-white" : "bg-green-50 text-green-900"}`}>All schemes</button>
+                <button type="button" onClick={() => { setView("personalized"); setStatusFilter("all"); setSearch(""); }} aria-pressed={view === "personalized"} className={`rounded-lg px-4 py-2 font-semibold ${view === "personalized" ? "bg-green-700 text-white" : "bg-green-50 text-green-900"}`}>{t("forYourProfile", {}, language)}</button>
+                <button type="button" onClick={() => { setView("all"); setStatusFilter("all"); }} aria-pressed={view === "all"} className={`rounded-lg px-4 py-2 font-semibold ${view === "all" ? "bg-green-700 text-white" : "bg-green-50 text-green-900"}`}>{t("allSchemes", {}, language)}</button>
               </div>
-              {view === "all" && <div className="mb-4 flex flex-wrap gap-2" aria-label="Filter schemes by eligibility">{[["all", "All statuses"], ["likely_eligible", "Likely eligible"], ["potentially_eligible", "Potential match"], ["not_eligible", "Not eligible"], ["unverified", "Unverified"]].map(([value, label]) => <button key={value} type="button" onClick={() => setStatusFilter(value)} aria-pressed={statusFilter === value} className={`rounded-full border px-3 py-1.5 text-sm ${statusFilter === value ? "border-green-700 bg-green-100 text-green-950" : "border-gray-200 text-gray-700"}`}>{label}</button>)}</div>}
+              {view === "all" && <div className="mb-4 flex flex-wrap gap-2" aria-label={t("filterSchemesEligibility", {}, language)}>{[["all", "allStatuses"], ["likely_eligible", "likelyEligible"], ["potentially_eligible", "potentialMatch"], ["not_eligible", "notEligible"], ["unverified", "unverified"]].map(([value, key]) => <button key={value} type="button" onClick={() => setStatusFilter(value)} aria-pressed={statusFilter === value} className={`rounded-full border px-3 py-1.5 text-sm ${statusFilter === value ? "border-green-700 bg-green-100 text-green-950" : "border-gray-200 text-gray-700"}`}>{t(key, {}, language)}</button>)}</div>}
               {!profileLoading && !farmer && view === "personalized" && <p role="status" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Sign in and complete your farmer profile to see eligible scheme matches.</p>}
               {farmer && view === "personalized" && <p className="mb-3 text-xs text-gray-500">Matches are recalculated from your saved profile{farmer.updatedAt ? ` · updated ${new Date(farmer.updatedAt).toLocaleDateString()}` : ""}.</p>}
               <label htmlFor="scheme-search" className="sr-only">Search schemes</label><input id="scheme-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("searchSchemesPlaceholder", {}, language)} className="w-full rounded-lg border border-gray-300 p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700" />
@@ -248,14 +275,14 @@ export default function GovtSchemesPage() {
                 const details = getSchemeDetails(scheme);
                 const statusStyle = assessment.status === "likely_eligible" ? "bg-green-100 text-green-900" : assessment.status === "not_eligible" ? "bg-red-100 text-red-900" : "bg-amber-100 text-amber-950";
                 return <button key={getSchemeKey(scheme)} type="button" onClick={() => setSelectedSchemeKey(getSchemeKey(scheme))} className="rounded-xl border border-green-100 bg-white p-4 text-left shadow-sm transition hover:border-green-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">
-                  <div className="flex items-start gap-3"><span aria-hidden="true" className="text-3xl">{details.icon}</span><div className="min-w-0"><h2 className="font-bold text-green-950">{details.title}</h2><p className="mt-1 text-xs text-gray-500">{rule?.government || scheme.government || scheme.state || "Government scheme"}</p></div></div>
-                  <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusStyle}`}>{assessment.label}</span>
-                  <span className="mt-3 block text-sm font-semibold text-green-800">View complete scheme information →</span>
+                  <div className="flex items-start gap-3"><span aria-hidden="true" className="text-3xl">{details.icon}</span><div className="min-w-0"><h2 className="font-bold text-green-950">{details.title}</h2><p className="mt-1 text-xs text-gray-500">{localizeGovernmentLabel(rule?.government || scheme.government || scheme.state || t("governmentScheme", {}, language), language)}</p></div></div>
+                  <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusStyle}`}>{t(({ likely_eligible: "likelyEligible", potentially_eligible: "potentialMatch", not_eligible: "notEligible", unverified: "unverified" })[assessment.status] || "unverified", {}, language)}</span>
+                  <span className="mt-3 block text-sm font-semibold text-green-800">{t("viewCompleteScheme", {}, language)} →</span>
                 </button>;
               })}
             </div>
 
-            {filteredSchemes.length === 0 && !schemesLoading && !profileLoading && <div className="rounded-2xl bg-white p-8 text-center shadow-lg"><h2 className="text-xl font-bold text-green-900">{view === "personalized" ? "No likely eligible schemes found yet" : t("noSchemesFound", {}, language)}</h2><p className="mt-2 text-gray-600">{view === "personalized" ? "Complete your farmer profile with location, crops, and cultivated land details, or open All schemes to review potential matches and unverified programs." : t("searchSchemesHint", {}, language)}</p>{view === "personalized" && <button type="button" onClick={() => { setView("all"); setStatusFilter("all"); }} className="mt-4 rounded-lg bg-green-700 px-4 py-2 font-semibold text-white">Browse all schemes</button>}</div>}
+            {filteredSchemes.length === 0 && !schemesLoading && !profileLoading && <div className="rounded-2xl bg-white p-8 text-center shadow-lg"><h2 className="text-xl font-bold text-green-900">{view === "personalized" ? t("noLikelySchemes", {}, language) : t("noSchemesFound", {}, language)}</h2><p className="mt-2 text-gray-600">{view === "personalized" ? t("noLikelySchemesHelp", {}, language) : t("searchSchemesHint", {}, language)}</p>{view === "personalized" && <button type="button" onClick={() => { setView("all"); setStatusFilter("all"); }} className="mt-4 rounded-lg bg-green-700 px-4 py-2 font-semibold text-white">{t("browseAllSchemes", {}, language)}</button>}</div>}
           </>
         )}
       </div>

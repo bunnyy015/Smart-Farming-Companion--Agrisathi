@@ -17,7 +17,6 @@ import {
 } from "../../utils/language";
 import LanguageSelector from "../../components/LanguageSelector";
 import VoiceAssistantCard from "../../components/VoiceAssistantCard";
-import PushNotificationTest from "../../components/PushNotificationTest";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 import { getCurrentLocation } from "../../services/currentLocationService";
 import { fetchWeatherForecast, selectNextTwelveHours } from "../../services/weatherService";
@@ -85,7 +84,7 @@ const FARMER_FEATURES = [
   { key: "marketPrices", titleKey: "marketPrices", descriptionKey: "featureMarketPricesDescription", icon: "📈", path: "/market-prices" },
   { key: "schemes", titleKey: "govtSchemes", descriptionKey: "featureSchemesDescription", icon: "📋", path: "/govt-schemes" },
   { key: "community", titleKey: "community", descriptionKey: "featureCommunityDescription", icon: "👥", path: "/community" },
-  { key: "nearbyServices", titleKey: "nearbyServices", descriptionKey: "featureNearbyServicesDescription", icon: "📍", external: true },
+  { key: "nearbyServices", titleKey: "nearbyServices", descriptionKey: "featureNearbyServicesDescription", icon: "📍", path: "/farmer/nearby-services" },
 ];
 
 export default function DashboardPage() {
@@ -477,8 +476,6 @@ export default function DashboardPage() {
           <VoiceAssistantCard onOpen={() => navigate("/farmer/voice")} />
         </section>
 
-        <PushNotificationTest />
-
         <section className="rounded-2xl border border-[var(--agri-border)] bg-white/80 p-4 shadow-sm sm:p-5" aria-labelledby="farmer-features-heading">
           <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
             <div>
@@ -507,11 +504,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   key={feature.key}
-                  onClick={() =>
-                  feature.external
-                      ? navigate("/farmer/nearby-services")
-                      : navigate(feature.path)
-                  }
+                  onClick={() => navigate(feature.path)}
                   className="group flex min-h-[92px] min-w-0 items-center gap-3 rounded-xl border border-[var(--agri-border)] bg-[var(--agri-card)] p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 sm:p-3.5"
                 >
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100/70 text-2xl">

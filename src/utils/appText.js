@@ -1,4 +1,4 @@
-import { getLanguage } from "./language";
+import { getLanguage, recordMissingTranslation } from "./language";
 
 const text = {
   en: {
@@ -304,11 +304,19 @@ const text = {
 export function appText(key) {
   const language = getLanguage();
 
+  if (language !== "en" && text[language]?.[key] === undefined) {
+    recordMissingTranslation(language, `appText:${key}`);
+  }
+
   return text[language]?.[key] || text.en[key] || key;
 }
 
 export function appTextGroup(key) {
   const language = getLanguage();
+
+  if (language !== "en" && text[language]?.[key] === undefined) {
+    recordMissingTranslation(language, `appTextGroup:${key}`);
+  }
 
   return text[language]?.[key] || text.en[key] || [];
 }
@@ -316,6 +324,13 @@ export function appTextGroup(key) {
 export function appValue(value) {
   const language = getLanguage();
   const normalized = String(value || "").trim().toLowerCase();
+
+  if (
+    language !== "en" &&
+    text[language]?.valueLabels?.[normalized] === undefined
+  ) {
+    recordMissingTranslation(language, `appValue:${normalized}`);
+  }
 
   return text[language]?.valueLabels?.[normalized] || text.en.valueLabels[normalized] || value;
 }

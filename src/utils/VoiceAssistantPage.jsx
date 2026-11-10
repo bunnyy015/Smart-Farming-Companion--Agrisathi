@@ -40,7 +40,13 @@ import {
 
 import { requestVoiceAssistantResponse } from "./voiceAssistantService";
 import { getVoiceSmallTalkReply } from "./voiceSmallTalk";
-import { cancelSpeech, speakLocalizedText } from "./speechOutput";
+import { cancelSpeech, createSpeechQueue, speakLocalizedText } from "./speechOutput";
+import { getCurrentLocation, reverseGeocodeCoordinates } from "../services/currentLocationService";
+import { fetchWeatherForecast, selectNextTwelveHours } from "../services/weatherService";
+import {
+  fetchGovernmentMarketPrices,
+  getGovernmentMarketPriceErrorMessage,
+} from "../services/marketPriceService";
 
 /* =========================================================
    GEMINI
@@ -213,6 +219,118 @@ function normalize(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function isWeatherQuestion(text) {
+  const normalized = normalize(text);
+  const asksWeather = /\b(weather|forecast|temperature|rain|raining|rainfall|hot|cold)\b|వాతావరణ|వర్షం|ఉష్ణోగ్రత|मौसम|बारिश|तापमान|வானிலை|மழை|ಹವಾಮಾನ|ಮಳೆ|കാലാവസ്ഥ|മഴ|हवामान|पाऊस|আবহাওয়া|বৃষ্টি|હવામાન|વરસાદ|ਮੌਸਮ|ਮੀਂਹ|موسم|بارش|ପାଣିପାଗ|ବର୍ଷା/u.test(normalized);
+  const asksToOpenPage = /\b(open|go to|navigate to|take me to)\b.*\b(weather|forecast)\b|\b(weather|forecast)\s+page\b|వాతావరణం.*తెరువు|मौसम.*खोलो/u.test(normalized);
+  return asksWeather && !asksToOpenPage;
+}
+
+async function getSpokenWeatherSummary(languageCode) {
+  const location = await getCurrentLocation();
+  const [forecast, placeResult] = await Promise.all([
+    fetchWeatherForecast(location),
+    reverseGeocodeCoordinates(location).catch(() => null),
+  ]);
+  const current = forecast?.current;
+  if (!current) throw new Error("Weather provider returned no current conditions.");
+
+  const hourly = selectNextTwelveHours(forecast);
+  const rainChance = hourly
+    .map((hour) => Number(hour.precipitationProbability))
+    .filter(Number.isFinite);
+  const maxRainChance = rainChance.length ? Math.max(...rainChance) : null;
+  const conditionKeys = {
+    0: "conditionClearSky", 1: "conditionMostlyClear", 2: "conditionPartlyCloudy",
+    3: "conditionCloudy", 45: "conditionFog", 48: "conditionFog",
+    51: "conditionLightDrizzle", 53: "conditionDrizzle", 55: "conditionHeavyDrizzle",
+    61: "conditionLightRain", 63: "conditionRain", 65: "conditionHeavyRain",
+    71: "conditionLightSnow", 73: "conditionSnow", 75: "conditionHeavySnow",
+    80: "conditionRainShowers", 81: "conditionRainShowers", 82: "conditionHeavyShowers",
+    95: "conditionThunderstorm", 96: "conditionThunderstorm", 99: "conditionSevereThunderstorm",
+  };
+  const condition = t(conditionKeys[Number(current.weather_code)] || "conditionWeather", {}, languageCode);
+  const temperature = Math.round(Number(current.temperature_2m));
+  const place = placeResult?.locality || placeResult?.city || "";
+  const placePhrase = place ? ` ${languageCode === "te" ? `${place} ప్రాంతంలో` : languageCode === "hi" ? `${place} में` : `in ${place}`}` : "";
+
+  if (languageCode === "te") {
+    return `ప్రస్తుత వాతావరణం${placePhrase}: ${condition}, ${temperature} డిగ్రీల సెల్సియస్.${maxRainChance === null ? "" : ` రాబోయే 12 గంటల్లో వర్షం పడే అవకాశం గరిష్టంగా ${Math.round(maxRainChance)} శాతం.`}`;
+  }
+  if (languageCode === "hi") {
+    return `अभी का मौसम${placePhrase}: ${condition}, ${temperature} डिग्री सेल्सियस.${maxRainChance === null ? "" : ` अगले 12 घंटों में बारिश की संभावना अधिकतम ${Math.round(maxRainChance)} प्रतिशत है।`}`;
+  }
+  return `Current weather${placePhrase}: ${condition}, ${temperature} degrees Celsius.${maxRainChance === null ? "" : ` The highest chance of rain in the next 12 hours is ${Math.round(maxRainChance)} percent.`}`;
+}
+
+function isMarketPriceQuestion(text) {
+  const normalized = normalize(text);
+  return /\b(?:market|mandi)\s+(?:price|prices|rate|rates|bhav|bhav)\b|\b(?:crop|today)\s+(?:market\s+)?prices?\b|\bprices?\s+(?:today|now|right now)\b|\bwhat(?:'s| is| are)?\s+(?:the\s+)?(?:market|mandi|crop)?\s*prices?\b|\bhow(?:'s| is| are)?\s+(?:the\s+)?(?:market|mandi)?\s*prices?\b|మార్కెట్ ధరలు|మండి ధరలు|ధరలు|बाजार भाव|मंडी भाव|भाव|சந்தை விலை|ಮಾರುಕಟ್ಟೆ ಬೆಲೆ|വിപണി വില|বাজার দর|બજાર ભાવ|ਮੰਡੀ ਭਾਅ|منڈی ریٹ|ବଜାର ଦର/u.test(normalized);
+}
+
+async function getSpokenMarketPriceSummary(languageCode, farmer) {
+  let state = "";
+  let district = "";
+  try {
+    const deviceLocation = await getCurrentLocation();
+    // Avoid returning prices for a potentially wrong district when the browser
+    // supplied only a coarse/IP-derived fix; prefer the farmer's saved region.
+    if (deviceLocation.source === "ip" || (Number.isFinite(deviceLocation.accuracy) && deviceLocation.accuracy > 25000)) {
+      throw new Error("MARKET_LOCATION_TOO_APPROXIMATE");
+    }
+    const place = await reverseGeocodeCoordinates(deviceLocation);
+    if (place?.countryCode === "IN") {
+      state = place.principalSubdivision || "";
+      const administrative = place.localityInfo?.administrative || [];
+      district = administrative.find((area) => /district/i.test(`${area.name || ""} ${area.description || ""}`))?.name || "";
+    }
+  } catch (error) {
+    console.info("Voice market prices: using the farmer's saved area because current location was unavailable.", error);
+  }
+
+  state ||= farmer?.state || "";
+  district ||= farmer?.district || "";
+  if (!state) throw new Error("MARKET_LOCATION_UNAVAILABLE");
+
+  const result = await fetchGovernmentMarketPrices({ state, district });
+  const records = (result.records || []).map((record) => ({
+    crop: String(record.commodity || record.Commodity || "").trim(),
+    market: String(record.market || record.Market || "").trim(),
+    arrivalDate: String(record.arrival_date || record.Arrival_Date || "").trim(),
+    modalPrice: Number(record.modal_price || record.Modal_Price),
+    minimumPrice: Number(record.min_price || record.Min_Price),
+    maximumPrice: Number(record.max_price || record.Max_Price),
+  })).filter((record) => record.crop && record.market && Number.isFinite(record.modalPrice) && record.modalPrice > 0);
+
+  if (!records.length) {
+    return languageCode === "te"
+      ? `ఈ ప్రాంతానికి ప్రస్తుతం మార్కెట్ ధరల సమాచారం అందుబాటులో లేదు. ${state} రాష్ట్రంలోని మార్కెట్ ధరల పేజీలో మళ్లీ తనిఖీ చేయండి.`
+      : languageCode === "hi"
+        ? `इस क्षेत्र के लिए अभी मंडी भाव उपलब्ध नहीं हैं। ${state} के बाजार भाव पेज पर फिर जाँचें।`
+        : `I couldn’t find current mandi price records for ${district ? `${district}, ` : ""}${state}. Please check the Market Prices page again later.`;
+  }
+
+  const arrivalTime = (value) => {
+    const standardDate = Date.parse(value);
+    if (Number.isFinite(standardDate)) return standardDate;
+    const parts = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/u);
+    return parts ? new Date(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1])).getTime() : 0;
+  };
+  records.sort((first, second) => arrivalTime(second.arrivalDate) - arrivalTime(first.arrivalDate));
+  const latestDate = records[0].arrivalDate;
+  const latestRecords = records.filter((record) => record.arrivalDate === latestDate).slice(0, 4);
+  const prices = latestRecords.map((record) => `${record.crop} at ${record.market}: ₹${Math.round(record.modalPrice)} per quintal`).join(". ");
+  const datePhrase = latestDate ? ` Latest reported arrival date: ${latestDate}.` : "";
+
+  if (languageCode === "te") {
+    return `${district ? `${district}, ` : ""}${state} ప్రాంతానికి అందుబాటులో ఉన్న తాజా మార్కెట్ ధరలు: ${prices}.${datePhrase ? ` తాజా రాక తేదీ ${latestDate}.` : ""}`;
+  }
+  if (languageCode === "hi") {
+    return `${district ? `${district}, ` : ""}${state} के उपलब्ध ताज़ा मंडी भाव: ${prices}.${datePhrase ? ` सबसे हाल की आवक तारीख ${latestDate} है।` : ""}`;
+  }
+  return `Latest available mandi prices for ${district ? `${district}, ` : ""}${state}: ${prices}.${datePhrase}`;
 }
 
 /* =========================================================
@@ -843,19 +961,26 @@ export default function VoiceAssistantPage() {
   function addConversationMessage(role, text) {
     const cleaned = String(text || "").trim();
     if (!cleaned) return;
+    const id = `${Date.now()}-${Math.random()}`;
     setMessages((current) => [
       ...current,
-      { id: `${Date.now()}-${Math.random()}`, role, text: cleaned },
+      { id, role, text: cleaned },
     ].slice(-40));
+    return id;
+  }
+
+  function updateConversationMessage(id, text) {
+    if (!id) return;
+    setMessages((current) => current.map((message) => (
+      message.id === id ? { ...message, text } : message
+    )));
   }
 
   /* =======================================================
      GEMINI
   ======================================================= */
 
-  async function askGemini(
-    userText
-  ) {
+  async function askGemini(userText, onReplyText) {
     const currentLanguage =
       languageRef.current || "en";
 
@@ -997,6 +1122,7 @@ ${userText}
       languageCode: currentLanguage,
       supportedLanguages: Object.keys(speechLocales),
       signal: requestControllerRef.current.signal,
+      ...(languageRef.current === "te" && onReplyText ? { onReplyText } : {}),
     });
 
     console.info(
@@ -1316,6 +1442,60 @@ ${userText}
         return;
       }
 
+      if (isWeatherQuestion(spokenText)) {
+        try {
+          const weatherReply = await getSpokenWeatherSummary(languageRef.current || "en");
+          if (!activeRef.current) return;
+          addMemory("assistant", weatherReply);
+          addConversationMessage("assistant", weatherReply);
+          speak(weatherReply, languageRef.current || "en", () => {
+            if (activeRef.current) setStatus("idle");
+          });
+        } catch (weatherError) {
+          if (!activeRef.current) return;
+          console.warn("Voice weather lookup failed:", weatherError);
+          const weatherReply = {
+            te: "మీ ప్రస్తుత స్థానానికి వాతావరణ సమాచారం అందుబాటులో లేదు. దయచేసి లొకేషన్ అనుమతిని తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.",
+            hi: "आपके वर्तमान स्थान का मौसम उपलब्ध नहीं है। कृपया लोकेशन अनुमति जाँचकर फिर कोशिश करें।",
+            en: "I couldn’t get weather for your current location. Please check location permission and try again.",
+          }[languageRef.current] || "I couldn’t get weather for your current location. Please check location permission and try again.";
+          addMemory("assistant", weatherReply);
+          addConversationMessage("assistant", weatherReply);
+          speak(weatherReply, languageRef.current || "en", () => {
+            if (activeRef.current) setStatus("idle");
+          });
+        }
+        return;
+      }
+
+      if (isMarketPriceQuestion(spokenText)) {
+        let marketReply;
+        try {
+          marketReply = await getSpokenMarketPriceSummary(
+            languageRef.current || "en",
+            farmer
+          );
+        } catch (marketError) {
+          if (!activeRef.current) return;
+          console.warn("Voice market-price lookup failed:", marketError);
+          const detail = getGovernmentMarketPriceErrorMessage(marketError);
+          marketReply = languageRef.current === "te"
+            ? "ప్రస్తుతం మార్కెట్ ధరల సమాచారం పొందలేకపోయాను. దయచేసి కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి."
+            : languageRef.current === "hi"
+              ? "अभी मंडी भाव नहीं मिल पाए। कृपया थोड़ी देर बाद फिर कोशिश करें।"
+              : marketError?.message === "MARKET_LOCATION_UNAVAILABLE"
+                ? "I couldn’t detect your current state for market prices. Please check that location access is allowed."
+                : detail;
+        }
+        if (!activeRef.current) return;
+        addMemory("assistant", marketReply);
+        addConversationMessage("assistant", marketReply);
+        speak(marketReply, languageRef.current || "en", () => {
+          if (activeRef.current) setStatus("idle");
+        });
+        return;
+      }
+
       const smallTalkReply = getVoiceSmallTalkReply(
         spokenText,
         languageRef.current
@@ -1332,9 +1512,30 @@ ${userText}
       /*
        * GEMINI
        */
+      const streamTelugu = languageRef.current === "te";
+      const speechQueue = streamTelugu
+        ? createSpeechQueue("te", { rate: 0.94, pitch: 1, volume: 1, onStart: () => setStatus("speaking") })
+        : null;
+      let progressiveMessageId = null;
+      let lastSpokenIndex = 0;
+      const onReplyText = streamTelugu ? (partialReply) => {
+        if (!activeRef.current) return;
+        if (progressiveMessageId) updateConversationMessage(progressiveMessageId, partialReply);
+        else progressiveMessageId = addConversationMessage("assistant", partialReply);
+
+        const sentences = [...partialReply.matchAll(/[^.!?।॥]+[.!?।॥]+(?:["'”’)]*)/gu)];
+        for (const sentence of sentences) {
+          const endIndex = sentence.index + sentence[0].length;
+          if (endIndex > lastSpokenIndex) {
+            speechQueue.enqueue(sentence[0]);
+            lastSpokenIndex = endIndex;
+          }
+        }
+      } : undefined;
       const result =
         await askGemini(
-          spokenText
+          spokenText,
+          onReplyText
         );
 
       if (!activeRef.current) {
@@ -1363,7 +1564,32 @@ ${userText}
         "assistant",
         reply
       );
-      addConversationMessage("assistant", reply);
+      if (progressiveMessageId) updateConversationMessage(progressiveMessageId, reply);
+      else addConversationMessage("assistant", reply);
+
+      if (speechQueue) {
+        const remainder = reply.slice(lastSpokenIndex).trim();
+        if (remainder) speechQueue.enqueue(remainder);
+        const speechResult = await speechQueue.finish();
+        if (!activeRef.current) return;
+        if (speechResult.status === "voice-unavailable") {
+          // Keep the existing cloud TTS fallback for devices without a Telugu system voice.
+          speak(reply, responseLanguage, () => {
+            if (activeRef.current) setStatus("idle");
+          });
+          return;
+        }
+        if (speechResult.status !== "spoken") {
+          if (speechResult.status !== "cancelled") setError(interfaceText.te.voiceUnavailable);
+          return;
+        }
+        if (result.action !== "none" && actionRoutes[result.action]) {
+          await navigateForVoiceAction(result.action, result.searchQuery);
+          return;
+        }
+        setStatus("idle");
+        return;
+      }
 
       speak(
         reply,

@@ -1827,7 +1827,7 @@ out center tags;
                       ))}
                     </div>
                   </>
-                ) : <p className="text-sm text-gray-600">No current prices found for {farmer.mainCrop} in the loaded area.</p>}
+                ) : <p className="text-sm text-gray-600">{t("noCurrentPricesForCrop", { crop: farmer.mainCrop }, language)}</p>}
               </div>
             )}
           </section>

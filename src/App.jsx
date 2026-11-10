@@ -149,10 +149,7 @@ function App() {
           element={<FarmerNotificationsPage />}
         />
 
-        <Route
-          path="/farmer/nearby-services"
-          element={<NearbyServicesPage />}
-        />
+        <Route path="/farmer/nearby-services" element={<NearbyServicesPage />} />
 
         <Route
           path="/market-prices"

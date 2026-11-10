@@ -1070,8 +1070,8 @@ Required JSON structure:
             {t("cropOrLeafPhoto", {}, language)}
           </label>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={() => openCamera("crop")} disabled={loading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">Take crop photo</button>
-            <button type="button" onClick={() => cropFileInput.current?.click()} disabled={loading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-60">Choose crop photo</button>
+            <button type="button" onClick={() => openCamera("crop")} disabled={loading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">{t("takeCropPhotoLabel", {}, language)}</button>
+            <button type="button" onClick={() => cropFileInput.current?.click()} disabled={loading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-60">{t("chooseCropPhotoLabel", {}, language)}</button>
           </div>
           <input ref={cropFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={loading} onChange={selectPhoto} className="hidden" />
 
@@ -1129,18 +1129,18 @@ Required JSON structure:
 
           <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
             <label className="block text-sm font-semibold text-gray-800">
-              Land photo detection
+              {t("landPhotoDetectionLabel", {}, language)}
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" onClick={() => openCamera("land")} disabled={landAnalysisLoading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">Take land photo</button>
-              <button type="button" onClick={() => landFileInput.current?.click()} disabled={landAnalysisLoading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-white disabled:opacity-60">Choose land photo</button>
+              <button type="button" onClick={() => openCamera("land")} disabled={landAnalysisLoading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">{t("takeLandPhotoLabel", {}, language)}</button>
+              <button type="button" onClick={() => landFileInput.current?.click()} disabled={landAnalysisLoading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-white disabled:opacity-60">{t("chooseLandPhotoLabel", {}, language)}</button>
             </div>
             <input ref={landFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={landAnalysisLoading} onChange={selectLandPhoto} className="hidden" />
             {landPhotoPreview && (
-              <img src={landPhotoPreview} alt="Selected land" className="mt-3 max-h-64 w-full rounded-lg bg-white object-contain" />
+            <img src={landPhotoPreview} alt={t("landPhotoDetectionLabel", {}, language)} className="mt-3 max-h-64 w-full rounded-lg bg-white object-contain" />
             )}
             <p className="mt-2 text-xs text-gray-600">
-              Photo-based soil and land-type estimates are approximate; use a soil test for confirmation.
+              {t("soilEstimateDisclaimer", {}, language)}
             </p>
             {landAnalysisError && <p role="alert" className="mt-2 text-sm text-red-700">{landAnalysisError}</p>}
             {landAnalysis && (
@@ -1154,7 +1154,7 @@ Required JSON structure:
               disabled={!landPhoto || landAnalysisLoading}
               className="mt-3 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800 disabled:bg-gray-400"
             >
-              {landAnalysisLoading ? (landAnalysisStage || "Detecting land...") : "Detect from land photo"}
+              {landAnalysisLoading ? (landAnalysisStage || t("detectingLandLabel", {}, language)) : t("detectLandLabel", {}, language)}
             </button>
           </div>
 
@@ -1180,11 +1180,11 @@ Required JSON structure:
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
               >
                 <option value="">{t("cropRecommendationSelectSoil", {}, language)}</option>
-                <option value="Black Soil">Black Soil</option>
-                <option value="Red Soil">Red Soil</option>
-                <option value="Sandy Soil">Sandy Soil</option>
-                <option value="Loamy Soil">Loamy Soil</option>
-                <option value="Clay Soil">Clay Soil</option>
+                <option value="Black Soil">{t("blackSoilLabel", {}, language)}</option>
+                <option value="Red Soil">{t("redSoilLabel", {}, language)}</option>
+                <option value="Sandy Soil">{t("sandySoilLabel", {}, language)}</option>
+                <option value="Loamy Soil">{t("loamySoilLabel", {}, language)}</option>
+                <option value="Clay Soil">{t("claySoilLabel", {}, language)}</option>
               </select>
             </div>
 
@@ -1203,9 +1203,9 @@ Required JSON structure:
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
               >
                 <option value="">{t("cropRecommendationSelectWater", {}, language)}</option>
-                <option value="Low">Low</option>
-                <option value="Moderate">Moderate</option>
-                <option value="High">High</option>
+                <option value="Low">{t("lowLabel", {}, language)}</option>
+                <option value="Moderate">{t("moderateLabel", {}, language)}</option>
+                <option value="High">{t("highLabel", {}, language)}</option>
               </select>
             </div>
 
@@ -1224,11 +1224,11 @@ Required JSON structure:
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
               >
                 <option value="">{t("cropRecommendationSelectClimate", {}, language)}</option>
-                <option value="Dry">Dry</option>
-                <option value="Semi-arid">Semi-arid</option>
-                <option value="Humid">Humid</option>
-                <option value="Coastal">Coastal</option>
-                <option value="Temperate">Temperate</option>
+                <option value="Dry">{t("dryLabel", {}, language)}</option>
+                <option value="Semi-arid">{t("semiAridLabel", {}, language)}</option>
+                <option value="Humid">{t("humidLabel", {}, language)}</option>
+                <option value="Coastal">{t("coastalLabel", {}, language)}</option>
+                <option value="Temperate">{t("temperateLabel", {}, language)}</option>
               </select>
             </div>
 
@@ -1247,10 +1247,10 @@ Required JSON structure:
                 className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-600"
               >
                 <option value="">{t("cropRecommendationSelectLand", {}, language)}</option>
-                <option value="Irrigated">Irrigated</option>
-                <option value="Rainfed">Rainfed</option>
-                <option value="Lowland">Lowland</option>
-                <option value="Upland">Upland</option>
+                <option value="Irrigated">{t("irrigatedLabel", {}, language)}</option>
+                <option value="Rainfed">{t("rainfedLabel", {}, language)}</option>
+                <option value="Lowland">{t("lowlandLabel", {}, language)}</option>
+                <option value="Upland">{t("uplandLabel", {}, language)}</option>
               </select>
             </div>
           </div>
@@ -1280,11 +1280,11 @@ Required JSON structure:
                     ))}
                   </ul>
                   <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3">
-                    <h4 className="text-sm font-semibold text-emerald-900">Fertilizer guidance</h4>
+                    <h4 className="text-sm font-semibold text-emerald-900">{t("fertilizerGuidanceLabel", {}, language)}</h4>
                     <p className="mt-1 text-sm text-gray-700">{guidance.fertilizer}</p>
                   </div>
                   <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <h4 className="text-sm font-semibold text-amber-900">Pest control</h4>
+                    <h4 className="text-sm font-semibold text-amber-900">{t("pestControlLabel", {}, language)}</h4>
                     <p className="mt-1 text-sm text-amber-900">{guidance.pesticide}</p>
                   </div>
                   </article>
@@ -1293,7 +1293,7 @@ Required JSON structure:
             </div>
           ) : !landAnalysis ? (
             <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-              Choose or take a clear land photo, then select “Detect from land photo” to see crop suggestions based on the detected land profile.
+              {t("landPhotoInstruction", {}, language)}
             </div>
           ) : (
             <div className="mt-4 text-sm text-gray-600">
@@ -1416,11 +1416,11 @@ Required JSON structure:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={cameraTarget === "land" ? "Land camera" : "Crop camera"}>
           <div className="w-full max-w-xl rounded-xl bg-white p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-gray-900">{cameraTarget === "land" ? "Take land photo" : "Take crop photo"}</h2>
-              <button type="button" onClick={closeCamera} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Close</button>
+              <h2 className="text-lg font-bold text-gray-900">{cameraTarget === "land" ? t("takeLandPhotoLabel", {}, language) : t("takeCropPhotoLabel", {}, language)}</h2>
+            <button type="button" onClick={closeCamera} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">{t("cancel", {}, language)}</button>
             </div>
             <video ref={cameraVideo} autoPlay playsInline className="max-h-[65vh] w-full rounded-lg bg-black object-contain" />
-            <button type="button" onClick={captureCameraPhoto} className="mt-3 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-800">Capture photo</button>
+            <button type="button" onClick={captureCameraPhoto} className="mt-3 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-800">{t("capturePhotoLabel", {}, language)}</button>
           </div>
         </div>
       )}

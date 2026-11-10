@@ -1373,6 +1373,7 @@ export default function DealerOrdersPage() {
         text:
           "Order accepted successfully. The requested quantity has been reserved.",
       });
+      setSelectedCompletedOrder(null);
     } catch (error) {
       console.error(
         "Order acceptance error:",

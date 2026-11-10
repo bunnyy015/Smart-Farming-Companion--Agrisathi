@@ -1,0 +1,123 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || data.child('role').val() === 'dealer')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && ((!data.exists() && (newData.child('role').val() === 'farmer' || newData.child('role').val() === 'dealer')) || (data.exists() && newData.child('role').val() === data.child('role').val() && ((newData.child('licenseNumber').val() === data.child('licenseNumber').val()) || (!data.child('licenseNumber').exists() && newData.child('licenseNumber').val() === '')) && ((newData.child('gstNumber').val() === data.child('gstNumber').val()) || (!data.child('gstNumber').exists() && newData.child('gstNumber').val() === '')) && newData.child('status').val() === data.child('status').val()))))"
+      }
+    },
+    "dealerProfiles": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && root.child('users').child($uid).child('role').val() === 'dealer' && newData.child('uid').val() === $uid && newData.child('role').val() === 'dealer' && (newData.child('status').val() === data.child('status').val() || (!data.child('status').exists() && newData.child('status').val() === root.child('users').child($uid).child('status').val())) && (newData.child('licenseNumber').val() === data.child('licenseNumber').val() || (!data.child('licenseNumber').exists() && (newData.child('licenseNumber').val() === root.child('users').child($uid).child('licenseNumber').val() || (!root.child('users').child($uid).child('licenseNumber').exists() && newData.child('licenseNumber').val() === ''))) && (newData.child('gstNumber').val() === data.child('gstNumber').val() || (!data.child('gstNumber').exists() && (newData.child('gstNumber').val() === root.child('users').child($uid).child('gstNumber').val() || (!root.child('users').child($uid).child('gstNumber').exists() && newData.child('gstNumber').val() === '')))))))"
+      }
+    },
+    "dealerRequests": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "dealerProducts": {
+      ".read": "auth != null",
+      "$dealerUid": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $dealerUid && root.child('users').child(auth.uid).child('role').val() === 'dealer'))",
+        "$productId": {
+          ".validate": "!newData.exists() || (newData.hasChildren(['productName', 'category', 'price', 'quantity', 'unit', 'dealerUid']) && newData.child('dealerUid').isString() && newData.child('dealerUid').val() === $dealerUid && newData.child('productName').isString() && newData.child('category').isString() && newData.child('unit').isString() && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 0 && (!newData.hasChild('reservedQuantity') || (newData.child('reservedQuantity').isNumber() && newData.child('reservedQuantity').val() >= 0)) && (!newData.hasChild('soldQuantity') || (newData.child('soldQuantity').isNumber() && newData.child('soldQuantity').val() >= 0)))"
+        }
+      }
+    },
+    "dealerOrders": {
+      ".indexOn": [
+        "farmerUid",
+        "dealerUid",
+        "status",
+        "createdAt"
+      ],
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'farmerUid' && query.equalTo === auth.uid) || (query.orderByChild === 'dealerUid' && query.equalTo === auth.uid))",
+      "$orderId": {
+        ".read": "auth != null && (data.child('farmerUid').val() === auth.uid || data.child('dealerUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && ((!data.exists() && root.child('users').child(auth.uid).child('role').val() === 'farmer' && newData.child('farmerUid').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && root.child('users').child(auth.uid).child('role').val() === 'admin') || (data.exists() && data.child('dealerUid').val() === auth.uid && root.child('users').child(auth.uid).child('role').val() === 'dealer') || (data.exists() && data.child('farmerUid').val() === auth.uid && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.child('status').val() === 'pending' && newData.child('status').val() === 'cancelled'))",
+        "farmerReceived": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.val() === true"
+        },
+        "farmerReceivedAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
+        },
+        "orderReceivedAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
+        },
+        "status": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && (newData.val() === 'received_by_farmer' || newData.val() === 'completed')"
+        },
+        "updatedAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
+        },
+        ".validate": "!newData.exists() || (newData.hasChildren(['farmerUid', 'dealerUid', 'productName', 'price', 'quantity', 'totalAmount', 'status']) && newData.child('farmerUid').isString() && newData.child('dealerUid').isString() && newData.child('productName').isString() && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('quantity').isNumber() && newData.child('quantity').val() > 0 && newData.child('totalAmount').isNumber() && newData.child('totalAmount').val() >= 0 && (!data.exists() || (newData.child('farmerUid').val() === data.child('farmerUid').val() && newData.child('dealerUid').val() === data.child('dealerUid').val())))",
+        "completedBy": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.val() === 'farmer'"
+        },
+        "completedByUid": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.val() === auth.uid"
+        },
+        "completedAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
+        }
+      }
+    },
+    "sales": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'dealer' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+      "$dealerUid": {
+        ".write": "auth != null && ((auth.uid === $dealerUid && root.child('users').child(auth.uid).child('role').val() === 'dealer') || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "marketPrices": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "farmers": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'dealer' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "governmentSchemes": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "schemes": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "communityPosts": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "notificationTokens": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['token', 'updatedAt'])",
+        "token": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "notificationTokens": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

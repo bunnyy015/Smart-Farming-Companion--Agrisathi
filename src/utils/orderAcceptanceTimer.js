@@ -20,6 +20,7 @@ export async function createOrderAcceptanceFields(database) {
   const createdAtMs = Date.now() + serverOffset;
   return {
     createdAt: serverTimestamp(),
+    orderPlacedAt: serverTimestamp(),
     acceptanceDeadlineAt: createdAtMs + ORDER_ACCEPTANCE_WINDOW_MS,
     updatedAt: serverTimestamp(),
   };

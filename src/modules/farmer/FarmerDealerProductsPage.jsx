@@ -17,6 +17,7 @@ import MarketplaceEmptyState from "../../components/marketplace/MarketplaceEmpty
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
 import { createOrderAcceptanceFields } from "../../utils/orderAcceptanceTimer";
+import { getMarketplaceCategory } from "../../utils/marketplaceCategories";
 
 export default function FarmerDealerProductsPage() {
   const navigate = useNavigate();
@@ -25,13 +26,16 @@ export default function FarmerDealerProductsPage() {
 
   const voiceSearch =
     searchParams.get("search") || "";
+  const requestedCategory = getMarketplaceCategory(
+    searchParams.get("category") || voiceSearch
+  );
 
   const [farmer, setFarmer] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [searchText, setSearchText] =
-    useState(voiceSearch);
+    useState(() => requestedCategory ? "" : voiceSearch);
   const [selectedCategory, setSelectedCategory] =
-    useState("all");
+    useState(() => requestedCategory || "all");
   const [quantities, setQuantities] = useState({});
   const [submittingKey, setSubmittingKey] =
     useState("");
@@ -46,11 +50,13 @@ export default function FarmerDealerProductsPage() {
     const searchQuery = searchText
       .trim()
       .toLowerCase();
+    const searchCategory = getMarketplaceCategory(searchQuery);
 
     return allProducts.filter((product) => {
+      const productCategory = getMarketplaceCategory(product.category);
       const categoryMatches =
         selectedCategory === "all" ||
-        product.category === selectedCategory;
+        productCategory === selectedCategory;
 
       if (!categoryMatches) {
         return false;
@@ -58,6 +64,10 @@ export default function FarmerDealerProductsPage() {
 
       if (!searchQuery) {
         return true;
+      }
+
+      if (searchCategory) {
+        return productCategory === searchCategory;
       }
 
       const searchableText = [
