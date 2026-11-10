@@ -582,6 +582,36 @@ export const translations = {
     localMandi: "Local mandi",
     nearbyMarket: "Nearby market",
     perQuintal: "per quintal",
+    activeOrdersLabel: "Active Orders",
+    acceptedOrdersLabel: "Accepted Orders",
+    orderHistoryLabel: "Order History",
+    completedLabel: "Completed",
+    cancelledLabel: "Cancelled",
+    rejectedLabel: "Rejected",
+    expiredLabel: "Expired",
+    farmerPurchasesLabel: "Farmer purchases",
+    trackOrdersDescription: "Track requested orders or review completed orders.",
+    activeLabel: "Active",
+    historyLabel: "History",
+    noOrdersFoundLabel: "No orders found",
+    currentOrdersWillAppear: "Your current orders will appear here.",
+    completedRejectedWillAppear: "Completed and rejected orders will appear here.",
+    browseProductsLabel: "Browse Products",
+    takeCropPhotoLabel: "Take crop photo",
+    chooseCropPhotoLabel: "Choose crop photo",
+    takeLandPhotoLabel: "Take land photo",
+    chooseLandPhotoLabel: "Choose land photo",
+    landPhotoDetectionLabel: "Land photo detection",
+    soilEstimateDisclaimer: "Photo-based soil and land-type estimates are approximate; use a soil test for confirmation.",
+    detectLandLabel: "Detect from land photo",
+    detectingLandLabel: "Detecting land...",
+    fertilizerGuidanceLabel: "Fertilizer guidance",
+    pestControlLabel: "Pest control",
+    landPhotoInstruction: "Choose or take a clear land photo, then select ‘Detect from land photo’ to see crop suggestions based on the detected land profile.",
+    capturePhotoLabel: "Capture photo",
+    noCurrentPricesForCrop: "No current prices found for {{crop}} in the loaded area.",
+    blackSoilLabel: "Black Soil", redSoilLabel: "Red Soil", sandySoilLabel: "Sandy Soil", loamySoilLabel: "Loamy Soil", claySoilLabel: "Clay Soil",
+    lowLabel: "Low", moderateLabel: "Moderate", highLabel: "High", dryLabel: "Dry", semiAridLabel: "Semi-arid", humidLabel: "Humid", coastalLabel: "Coastal", temperateLabel: "Temperate", irrigatedLabel: "Irrigated", rainfedLabel: "Rainfed", lowlandLabel: "Lowland", uplandLabel: "Upland",
     minimum: "Minimum",
     maximum: "Maximum",
     compareAllMarkets: "Compare All Markets",
@@ -1074,6 +1104,36 @@ export const translations = {
     localMandi: "స్థానిక మండి",
     nearbyMarket: "సమీప మార్కెట్",
     perQuintal: "క్వింటాల్‌కు",
+    activeOrdersLabel: "ప్రస్తుత ఆర్డర్లు",
+    acceptedOrdersLabel: "ఆమోదించిన ఆర్డర్లు",
+    orderHistoryLabel: "ఆర్డర్ చరిత్ర",
+    completedLabel: "పూర్తయ్యాయి",
+    cancelledLabel: "రద్దయ్యాయి",
+    rejectedLabel: "తిరస్కరించబడ్డాయి",
+    expiredLabel: "గడువు ముగిసింది",
+    farmerPurchasesLabel: "రైతు కొనుగోళ్లు",
+    trackOrdersDescription: "అభ్యర్థించిన ఆర్డర్లను చూడండి లేదా పూర్తైన ఆర్డర్లను పరిశీలించండి.",
+    activeLabel: "ప్రస్తుత",
+    historyLabel: "చరిత్ర",
+    noOrdersFoundLabel: "ఆర్డర్లు కనిపించలేదు",
+    currentOrdersWillAppear: "మీ ప్రస్తుత ఆర్డర్లు ఇక్కడ కనిపిస్తాయి.",
+    completedRejectedWillAppear: "పూర్తైన మరియు తిరస్కరించిన ఆర్డర్లు ఇక్కడ కనిపిస్తాయి.",
+    browseProductsLabel: "ఉత్పత్తులను చూడండి",
+    takeCropPhotoLabel: "పంట ఫోటో తీయండి",
+    chooseCropPhotoLabel: "పంట ఫోటో ఎంచుకోండి",
+    takeLandPhotoLabel: "భూమి ఫోటో తీయండి",
+    chooseLandPhotoLabel: "భూమి ఫోటో ఎంచుకోండి",
+    landPhotoDetectionLabel: "భూమి ఫోటో గుర్తింపు",
+    soilEstimateDisclaimer: "ఫోటో ఆధారిత నేల, భూమి అంచనాలు సుమారుగా ఉంటాయి; నిర్ధారణ కోసం నేల పరీక్ష చేయించండి.",
+    detectLandLabel: "భూమి ఫోటోతో గుర్తించండి",
+    detectingLandLabel: "భూమిని గుర్తిస్తోంది...",
+    fertilizerGuidanceLabel: "ఎరువుల సూచనలు",
+    pestControlLabel: "చీడపీడల నియంత్రణ",
+    landPhotoInstruction: "స్పష్టమైన భూమి ఫోటో ఎంచుకోండి లేదా తీయండి. గుర్తించిన భూమి వివరాల ఆధారంగా పంట సూచనలు చూడటానికి ‘భూమి ఫోటోతో గుర్తించండి’ ఎంచుకోండి.",
+    capturePhotoLabel: "ఫోటో తీయండి",
+    noCurrentPricesForCrop: "లోడ్ చేసిన ప్రాంతంలో {{crop}} పంటకు ప్రస్తుత ధరలు లేవు.",
+    blackSoilLabel: "నల్ల నేల", redSoilLabel: "ఎర్ర నేల", sandySoilLabel: "ఇసుక నేల", loamySoilLabel: "లోమీ నేల", claySoilLabel: "బంకమట్టి నేల",
+    lowLabel: "తక్కువ", moderateLabel: "మధ్యస్థం", highLabel: "ఎక్కువ", dryLabel: "పొడి", semiAridLabel: "అర్ధ శుష్కం", humidLabel: "తేమగల", coastalLabel: "తీర ప్రాంతం", temperateLabel: "మితమైన వాతావరణం", irrigatedLabel: "నీటిపారుదల", rainfedLabel: "వర్షాధారం", lowlandLabel: "లోతట్టు భూమి", uplandLabel: "ఎత్తైన భూమి",
     minimum: "కనిష్ఠం",
     maximum: "గరిష్ఠం",
     compareAllMarkets: "అన్ని మార్కెట్లను పోల్చండి",
@@ -2014,6 +2074,40 @@ export const translations = {
   },
 };
 
+// Keep a de-duplicated in-memory record of untranslated dictionary keys so
+// missing copy can be audited without sending user content to a third party.
+const missingTranslationKeys = new Map();
+
+export function recordMissingTranslation(languageCode, key) {
+  const language = normalizeLanguage(languageCode);
+  if (!key || language === DEFAULT_LANGUAGE) return;
+
+  if (!missingTranslationKeys.has(language)) {
+    missingTranslationKeys.set(language, new Set());
+  }
+  missingTranslationKeys.get(language).add(String(key));
+}
+
+export function getMissingTranslationKeys(languageCode) {
+  const language = normalizeLanguage(languageCode);
+  return [...(missingTranslationKeys.get(language) || [])].sort();
+}
+
+export function getTranslationCoverage(languageCode) {
+  const language = normalizeLanguage(languageCode);
+  const englishKeys = Object.keys(translations[DEFAULT_LANGUAGE] || {});
+  const localized = translations[language] || {};
+  const missingKeys = englishKeys.filter((key) => !(key in localized));
+
+  return {
+    language,
+    total: englishKeys.length,
+    translated: englishKeys.length - missingKeys.length,
+    missing: missingKeys.length,
+    missingKeys,
+  };
+}
+
 const farmerDashboardTranslations = {
   en: {
     dashboardPageTitle: "Farmer Dashboard",
@@ -2070,6 +2164,7 @@ const farmerDashboardTranslations = {
     featureOrdersDescription: "ప్రస్తుత కొనుగోలు అభ్యర్థనలు, డెలివరీ స్థితిని చూడండి.",
     featureOrderHistoryDescription: "పూర్తైన, రద్దైన మరియు పాత కొనుగోళ్లను చూడండి.",
     featureCropHealthDescription: "పంట ఫోటోలో కనిపించే వ్యాధి లక్షణాలను పరిశీలించండి.",
+    featureWeatherDescription: "ప్రస్తుత వాతావరణం మరియు తదుపరి 12 గంటల స్థానిక సూచనను చూడండి.",
     featureMarketPricesDescription: "సమీప మార్కెట్ల పంట ధరలను పోల్చండి.",
     featureSchemesDescription: "ప్రభుత్వ సహాయం, రైతు పథకాలను తెలుసుకోండి.",
     featureCommunityDescription: "ప్రశ్నలు అడిగి వ్యవసాయ అనుభవాన్ని పంచుకోండి.",
@@ -2534,6 +2629,111 @@ for (const [languageCode, copy] of Object.entries(marketPageTranslations)) {
   Object.assign(translations[languageCode], copy);
 }
 
+// Shared copy added while closing translation gaps found on commonly used
+// farmer pages. Keep these in the same dictionary so existing live language
+// switching and persistence continue to apply.
+const farmerPageTranslations = {
+  te: {
+    farmerDashboardLabel: "రైతు డాష్‌బోర్డ్", findFarmingHelp: "మీ దగ్గర వ్యవసాయ సహాయం కనుగొనండి లేదా తెలంగాణ గ్రామాన్ని వెతకండి.", findServicesByVillage: "గ్రామం లేదా పట్టణం ద్వారా సేవలను కనుగొనండి", typeOrSpeakPlace: "స్థలం పేరు టైప్ చేయండి లేదా మాట్లాడండి", voiceInputLanguage: "వాయిస్ ఇన్‌పుట్ భాష", speak: "మాట్లాడండి", searching: "వెతుకుతోంది…", searchNearbyServices: "సమీప సేవలను వెతకండి", allServices: "అన్ని సేవలు", soilTesting: "నేల పరీక్ష", officesExperts: "కార్యాలయాలు మరియు నిపుణులు", seedsFertilizer: "విత్తనాలు మరియు ఎరువులు", equipment: "పరికరాలు", veterinary: "పశువైద్యం", farmerSupport: "రైతు సహాయం", nearbyServicesMap: "సమీప సేవల మ్యాప్", yourLocation: "మీ స్థానం", searchLocation: "శోధన స్థానం", officialDirectoryListing: "అధికారిక డైరెక్టరీ జాబితా", addressNotListed: "చిరునామా ఇవ్వలేదు", fromSearchPoint: "శోధన స్థానం నుండి", getDirections: "దారి చూపండి", findingRoute: "మార్గాన్ని కనుగొంటోంది…", call: "కాల్ చేయండి", servicesFound: "కనుగొన్న సేవలు", searchingNearbyServices: "సమీప సేవలను వెతుకుతోంది…", officialTelanganaServices: "తెలంగాణ అధికారిక రైతు సేవలు", officialDirectoryInfo: "శోధించిన ప్రాంతానికి చెందిన జిల్లా డైరెక్టరీ వివరాలు. ఖచ్చితమైన స్థానాంకాలు అందుబాటులో లేకపోతే ఇవి 25 కి.మీ. పరిధిలో ఉన్నాయని చెప్పలేము. వివరాలు మరియు దిశల కోసం సేవను ఎంచుకోండి.", districtLabel: "జిల్లా", detailsDirections: "వివరాలు మరియు దిశలు", viewSource: "మూలాన్ని చూడండి", liveMapListing: "ప్రత్యక్ష మ్యాప్ జాబితా", showOnMap: "మ్యాప్‌లో చూపండి", listen: "వినండి", noServicesCategory: "ఈ వర్గంలో సేవలు కనబడలేదు", tryAnotherCategory: "మరో వర్గాన్ని ఎంచుకోండి లేదా మీ శోధనలో మండలం లేదా జిల్లాను చేర్చండి.", liveMapData: "ప్రత్యక్ష మ్యాప్ డేటా", coverageMayBeIncomplete: "సమాచారం మరియు పరిధి అసంపూర్ణంగా ఉండవచ్చు.",
+    cropStep: "దశ 1 / 3", whatDoYouGrow: "మీరు ఏ పంటలు పండిస్తున్నారు?", chooseCrops: "ప్రస్తుతం మీరు పండిస్తున్న పంటలను ఎంచుకోండి. ఈ ఎంపికను తర్వాత మార్చవచ్చు.", selectedCount: "ఎంచుకున్నారు", searchCrops: "పంటలను వెతకండి", searchByCropName: "పంట పేరు ద్వారా వెతకండి", cropCategories: "పంట వర్గాలు", selectCrops: "పంటలను ఎంచుకోండి", noCropsMatch: "మీ శోధనకు పంటలు సరిపోలలేదు.",
+    profileCompletion: "ప్రొఫైల్ పూర్తి స్థాయి", profileCompletionHelp: "మంచి పంట మరియు ఉత్పత్తి సూచనల కోసం వ్యవసాయ వివరాలను పూర్తి చేయండి.", whatsappOrderUpdates: "వాట్సాప్ ఆర్డర్ అప్‌డేట్‌లు", whatsappOrderUpdatesHelp: "మీ నమోదిత మొబైల్‌కు రిజర్వేషన్ స్థితి ముఖ్యమైన అప్‌డేట్‌లు అందుతాయి. మీరు ఎప్పుడైనా నిలిపివేయవచ్చు.", whatsappApprovedTemplates: "ముఖ్యమైన ఆర్డర్ సందర్భాల్లో మాత్రమే వాట్సాప్ ఆమోదించిన సందేశాలు పంపబడతాయి.", editProfile: "ప్రొఫైల్ సవరించండి", farmerName: "రైతు పేరు", phoneNumber: "ఫోన్ నంబర్", email: "ఇమెయిల్", village: "గ్రామం", mandal: "మండలం", district: "జిల్లా", state: "రాష్ట్రం", address: "చిరునామా", addressPlaceholder: "ఇల్లు, గ్రామం లేదా డెలివరీ చిరునామా", areaByCrop: "పంటవారీ విస్తీర్ణం", optional: "ఐచ్ఛికం", landCultivationStatus: "భూమి / సాగు స్థితి", preferNotToSay: "చెప్పకూడదని కోరుకుంటున్నాను", ownLand: "నేను సాగు భూమికి యజమానిని", leasedLand: "నేను కౌలుకు తీసుకున్న భూమిని సాగు చేస్తున్నాను", sharecropper: "నేను భాగస్వామ్య పద్ధతిలో సాగు చేస్తున్నాను", otherArrangement: "ఇతర ఏర్పాటు", ageOptional: "వయస్సు (ఐచ్ఛికం)", ageYears: "సంవత్సరాల్లో వయస్సు", landSize: "భూమి విస్తీర్ణం", acres: "ఎకరాలు", hectares: "హెక్టార్లు", irrigationType: "నీటిపారుదల రకం", selectIrrigation: "నీటిపారుదలను ఎంచుకోండి", rainfed: "వర్షాధారం", borewell: "బోర్‌వెల్", canal: "కాలువ", drip: "బిందు సేద్యం", sprinkler: "స్ప్రింక్లర్", tank: "చెరువు", soilType: "నేల రకం", selectSoil: "నేల రకాన్ని ఎంచుకోండి", blackSoil: "నల్ల నేల", redSoil: "ఎర్ర నేల", sandySoil: "ఇసుక నేల", loamySoil: "లోమీ నేల", claySoil: "బంకమట్టి నేల", saveProfile: "ప్రొఫైల్ భద్రపరచండి", cancel: "రద్దు చేయండి", contactDetails: "సంప్రదింపు వివరాలు", location: "స్థానం", districtAndState: "జిల్లా మరియు రాష్ట్రం", farmDetails: "వ్యవసాయ వివరాలు", selectedCrops: "ఎంచుకున్న పంటలు", irrigation: "నీటిపారుదల", language: "భాష", notAdded: "జోడించలేదు",
+    browseSchemesIntro: "సమాచారం మరియు మీ ప్రొఫైల్ అంచనాను చూడటానికి పథకాన్ని తెరవండి.", forYourProfile: "మీ ప్రొఫైల్ కోసం", allSchemes: "అన్ని పథకాలు", filterSchemesEligibility: "అర్హత ప్రకారం పథకాలను వడపోసండి", allStatuses: "అన్ని స్థితులు", likelyEligible: "అర్హత ఉండవచ్చు", potentialMatch: "సరిపడే అవకాశం", notEligible: "అర్హత లేదు", unverified: "ధృవీకరించలేదు", governmentScheme: "ప్రభుత్వ పథకం", eligibilityConditions: "అర్హత షరతులు", eligibilityUnverified: "అర్హత ధృవీకరించబడలేదు", viewCompleteScheme: "పథకం పూర్తి వివరాలు చూడండి", noLikelySchemes: "అర్హత ఉండే పథకాలు ఇంకా కనబడలేదు", browseAllSchemes: "అన్ని పథకాలు చూడండి",
+    farmerPurchases: "రైతు కొనుగోళ్లు", trackOrdersIntro: "మీరు కోరిన ఆర్డర్‌లను అనుసరించండి లేదా పూర్తయిన ఆర్డర్‌లను చూడండి.", active: "ప్రస్తుతం", history: "చరిత్ర", activeOrders: "ప్రస్తుత ఆర్డర్‌లు", acceptedOrders: "ఆమోదించిన ఆర్డర్‌లు", orderHistory: "ఆర్డర్ చరిత్ర", noOrdersFoundLabel: "ఆర్డర్‌లు కనబడలేదు", currentOrdersWillAppear: "మీ ప్రస్తుత ఆర్డర్‌లు ఇక్కడ కనిపిస్తాయి.", browseProducts: "ఉత్పత్తులను చూడండి", refresh: "రిఫ్రెష్ చేయండి", refreshing: "రిఫ్రెష్ అవుతోంది…",
+  },
+  hi: {
+    farmerDashboardLabel: "किसान डैशबोर्ड", findFarmingHelp: "अपने पास खेती की सहायता खोजें या तेलंगाना का गाँव खोजें।", findServicesByVillage: "गाँव या शहर से सेवाएँ खोजें", typeOrSpeakPlace: "जगह का नाम लिखें या बोलें", voiceInputLanguage: "आवाज़ इनपुट की भाषा", speak: "बोलें", searching: "खोज रहे हैं…", searchNearbyServices: "पास की सेवाएँ खोजें", allServices: "सभी सेवाएँ", soilTesting: "मिट्टी की जाँच", officesExperts: "कार्यालय और विशेषज्ञ", seedsFertilizer: "बीज और उर्वरक", equipment: "उपकरण", veterinary: "पशु चिकित्सा", farmerSupport: "किसान सहायता", nearbyServicesMap: "पास की सेवाओं का नक्शा", yourLocation: "आपकी जगह", searchLocation: "खोज की जगह", officialDirectoryListing: "आधिकारिक निर्देशिका सूची", addressNotListed: "पता उपलब्ध नहीं", fromSearchPoint: "खोज की जगह से", getDirections: "रास्ता देखें", findingRoute: "रास्ता खोज रहे हैं…", call: "कॉल करें", servicesFound: "सेवाएँ मिलीं", searchingNearbyServices: "पास की सेवाएँ खोज रहे हैं…", officialTelanganaServices: "तेलंगाना की आधिकारिक किसान सेवाएँ", officialDirectoryInfo: "खोजे गए क्षेत्र की जिला निर्देशिका की जानकारी। सटीक निर्देशांक उपलब्ध न हों तो इन्हें 25 किमी के भीतर होने का दावा नहीं किया जाता। जानकारी और रास्ते के लिए सेवा चुनें।", districtLabel: "जिला", detailsDirections: "जानकारी और रास्ता", viewSource: "स्रोत देखें", liveMapListing: "लाइव नक्शा सूची", showOnMap: "नक्शे पर दिखाएँ", listen: "सुनें", noServicesCategory: "इस श्रेणी में कोई सेवा नहीं मिली", tryAnotherCategory: "दूसरी श्रेणी चुनें या खोज में मंडल या जिला जोड़ें।", liveMapData: "लाइव नक्शे का डेटा", coverageMayBeIncomplete: "जानकारी और कवरेज अधूरी हो सकती है।",
+    cropStep: "चरण 1 / 3", whatDoYouGrow: "आप कौन सी फसलें उगाते हैं?", chooseCrops: "अभी उगाई जा रही सभी फसलें चुनें। आप बाद में चयन बदल सकते हैं।", selectedCount: "चुनी गईं", searchCrops: "फसलें खोजें", searchByCropName: "फसल के नाम से खोजें", cropCategories: "फसल श्रेणियाँ", selectCrops: "फसलें चुनें", noCropsMatch: "आपकी खोज से कोई फसल नहीं मिली।",
+    profileCompletion: "प्रोफ़ाइल पूरी", profileCompletionHelp: "बेहतर फसल और उत्पाद सुझावों के लिए खेती की जानकारी पूरी करें।", whatsappOrderUpdates: "WhatsApp ऑर्डर अपडेट", whatsappOrderUpdatesHelp: "आपके पंजीकृत मोबाइल पर ज़रूरी आरक्षण स्थिति अपडेट भेजे जाएँगे। आप इसे कभी भी बंद कर सकते हैं।", whatsappApprovedTemplates: "संदेश केवल ज़रूरी ऑर्डर अवसरों पर WhatsApp के स्वीकृत टेम्पलेट से भेजे जाते हैं।", editProfile: "प्रोफ़ाइल संपादित करें", farmerName: "किसान का नाम", phoneNumber: "फ़ोन नंबर", email: "ईमेल", village: "गाँव", mandal: "मंडल", district: "ज़िला", state: "राज्य", address: "पता", addressPlaceholder: "घर, गाँव या डिलीवरी का पता", areaByCrop: "फसल के अनुसार क्षेत्र", optional: "वैकल्पिक", landCultivationStatus: "भूमि / खेती की स्थिति", preferNotToSay: "बताने की इच्छा नहीं", ownLand: "मैं अपनी खेती की भूमि का मालिक हूँ", leasedLand: "मैं पट्टे की भूमि पर खेती करता हूँ", sharecropper: "मैं बटाई पर खेती करता हूँ", otherArrangement: "अन्य व्यवस्था", ageOptional: "आयु (वैकल्पिक)", ageYears: "आयु वर्ष में", landSize: "भूमि का आकार", acres: "एकड़", hectares: "हेक्टेयर", irrigationType: "सिंचाई का प्रकार", selectIrrigation: "सिंचाई चुनें", rainfed: "वर्षा आधारित", borewell: "बोरवेल", canal: "नहर", drip: "ड्रिप", sprinkler: "स्प्रिंकलर", tank: "तालाब", soilType: "मिट्टी का प्रकार", selectSoil: "मिट्टी चुनें", blackSoil: "काली मिट्टी", redSoil: "लाल मिट्टी", sandySoil: "रेतीली मिट्टी", loamySoil: "दोमट मिट्टी", claySoil: "चिकनी मिट्टी", saveProfile: "प्रोफ़ाइल सहेजें", cancel: "रद्द करें", contactDetails: "संपर्क विवरण", location: "स्थान", districtAndState: "ज़िला और राज्य", farmDetails: "खेती का विवरण", selectedCrops: "चुनी गई फसलें", irrigation: "सिंचाई", language: "भाषा", notAdded: "जोड़ा नहीं गया",
+    browseSchemesIntro: "जानकारी और अपनी प्रोफ़ाइल का आकलन देखने के लिए योजना खोलें।", forYourProfile: "आपकी प्रोफ़ाइल के लिए", allSchemes: "सभी योजनाएँ", filterSchemesEligibility: "पात्रता के अनुसार योजनाएँ छाँटें", allStatuses: "सभी स्थितियाँ", likelyEligible: "संभवतः पात्र", potentialMatch: "संभावित मेल", notEligible: "पात्र नहीं", unverified: "असत्यापित", governmentScheme: "सरकारी योजना", eligibilityConditions: "पात्रता की शर्तें", eligibilityUnverified: "पात्रता सत्यापित नहीं", viewCompleteScheme: "योजना की पूरी जानकारी देखें", noLikelySchemes: "अभी पात्र योजनाएँ नहीं मिलीं", browseAllSchemes: "सभी योजनाएँ देखें",
+    farmerPurchases: "किसान की खरीद", trackOrdersIntro: "अपने अनुरोधित ऑर्डर देखें या पूरे हुए ऑर्डर की समीक्षा करें।", active: "चालू", history: "इतिहास", activeOrders: "चालू ऑर्डर", acceptedOrders: "स्वीकृत ऑर्डर", orderHistory: "ऑर्डर इतिहास", noOrdersFoundLabel: "कोई ऑर्डर नहीं मिला", currentOrdersWillAppear: "आपके मौजूदा ऑर्डर यहाँ दिखाई देंगे।", browseProducts: "उत्पाद देखें", refresh: "रीफ़्रेश करें", refreshing: "रीफ़्रेश हो रहा है…",
+  },
+  kn: {
+    farmerDashboardLabel: "ರೈತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", findFarmingHelp: "ನಿಮ್ಮ ಹತ್ತಿರ ಕೃಷಿ ಸಹಾಯ ಹುಡುಕಿ ಅಥವಾ ತೆಲಂಗಾಣದ ಗ್ರಾಮವನ್ನು ಹುಡುಕಿ.", findServicesByVillage: "ಗ್ರಾಮ ಅಥವಾ ಪಟ್ಟಣದ ಮೂಲಕ ಸೇವೆಗಳನ್ನು ಹುಡುಕಿ", typeOrSpeakPlace: "ಸ್ಥಳದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಹೇಳಿ", voiceInputLanguage: "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಭಾಷೆ", speak: "ಮಾತನಾಡಿ", searching: "ಹುಡುಕಲಾಗುತ್ತಿದೆ…", searchNearbyServices: "ಹತ್ತಿರದ ಸೇವೆಗಳನ್ನು ಹುಡುಕಿ", allServices: "ಎಲ್ಲಾ ಸೇವೆಗಳು", soilTesting: "ಮಣ್ಣಿನ ಪರೀಕ್ಷೆ", officesExperts: "ಕಚೇರಿಗಳು ಮತ್ತು ತಜ್ಞರು", seedsFertilizer: "ಬೀಜಗಳು ಮತ್ತು ಗೊಬ್ಬರ", equipment: "ಉಪಕರಣಗಳು", veterinary: "ಪಶುವೈದ್ಯಕೀಯ", farmerSupport: "ರೈತರಿಗೆ ನೆರವು", nearbyServicesMap: "ಹತ್ತಿರದ ಸೇವೆಗಳ ನಕ್ಷೆ", yourLocation: "ನಿಮ್ಮ ಸ್ಥಳ", searchLocation: "ಹುಡುಕಿದ ಸ್ಥಳ", officialDirectoryListing: "ಅಧಿಕೃತ ಡೈರೆಕ್ಟರಿ ಪಟ್ಟಿ", addressNotListed: "ವಿಳಾಸ ನೀಡಿಲ್ಲ", fromSearchPoint: "ಹುಡುಕಿದ ಸ್ಥಳದಿಂದ", getDirections: "ದಾರಿ ತೋರಿಸಿ", findingRoute: "ಮಾರ್ಗ ಹುಡುಕಲಾಗುತ್ತಿದೆ…", call: "ಕರೆ ಮಾಡಿ", servicesFound: "ಸೇವೆಗಳು ಕಂಡುಬಂದಿವೆ", searchingNearbyServices: "ಹತ್ತಿರದ ಸೇವೆಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…", officialTelanganaServices: "ತೆಲಂಗಾಣದ ಅಧಿಕೃತ ರೈತ ಸೇವೆಗಳು", officialDirectoryInfo: "ಹುಡುಕಿದ ಪ್ರದೇಶದ ಜಿಲ್ಲಾ ಡೈರೆಕ್ಟರಿ ವಿವರಗಳು. ನಿಖರ ನಿರ್ದೇಶಾಂಕಗಳಿಲ್ಲದಿದ್ದರೆ 25 ಕಿ.ಮೀ. ಒಳಗಿವೆ ಎಂದು ಹೇಳಲಾಗುವುದಿಲ್ಲ. ವಿವರ ಮತ್ತು ದಾರಿಗಾಗಿ ಸೇವೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.", districtLabel: "ಜಿಲ್ಲೆ", detailsDirections: "ವಿವರಗಳು ಮತ್ತು ದಾರಿ", viewSource: "ಮೂಲವನ್ನು ನೋಡಿ", liveMapListing: "ನೇರ ನಕ್ಷೆ ಪಟ್ಟಿ", showOnMap: "ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಿ", listen: "ಆಲಿಸಿ", noServicesCategory: "ಈ ವಿಭಾಗದಲ್ಲಿ ಸೇವೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ", tryAnotherCategory: "ಬೇರೆ ವಿಭಾಗ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಹುಡುಕಾಟಕ್ಕೆ ಮಂಡಲ ಅಥವಾ ಜಿಲ್ಲೆಯನ್ನು ಸೇರಿಸಿ.", liveMapData: "ನೇರ ನಕ್ಷೆ ಮಾಹಿತಿ", coverageMayBeIncomplete: "ವಿವರಗಳು ಮತ್ತು ವ್ಯಾಪ್ತಿ ಅಪೂರ್ಣವಾಗಿರಬಹುದು.",
+    cropStep: "ಹಂತ 1 / 3", whatDoYouGrow: "ನೀವು ಯಾವ ಬೆಳೆಗಳನ್ನು ಬೆಳೆಯುತ್ತೀರಿ?", chooseCrops: "ಪ್ರಸ್ತುತ ಬೆಳೆಯುತ್ತಿರುವ ಎಲ್ಲಾ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿ. ನಂತರ ಆಯ್ಕೆಯನ್ನು ಬದಲಾಯಿಸಬಹುದು.", selectedCount: "ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ", searchCrops: "ಬೆಳೆಗಳನ್ನು ಹುಡುಕಿ", searchByCropName: "ಬೆಳೆ ಹೆಸರಿನಿಂದ ಹುಡುಕಿ", cropCategories: "ಬೆಳೆ ವರ್ಗಗಳು", selectCrops: "ಬೆಳೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ", noCropsMatch: "ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ಬೆಳೆಗಳು ಹೊಂದಿಕೆಯಾಗಿಲ್ಲ.",
+    profileCompletion: "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣತೆ", profileCompletionHelp: "ಉತ್ತಮ ಬೆಳೆ ಮತ್ತು ಉತ್ಪನ್ನ ಸಲಹೆಗಳಿಗಾಗಿ ಕೃಷಿ ವಿವರಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ.", whatsappOrderUpdates: "WhatsApp ಆರ್ಡರ್ ಮಾಹಿತಿ", whatsappOrderUpdatesHelp: "ನೋಂದಾಯಿತ ಮೊಬೈಲ್‌ಗೆ ಪ್ರಮುಖ ಕಾಯ್ದಿರಿಸುವಿಕೆ ಸ್ಥಿತಿ ಮಾಹಿತಿ ಬರುತ್ತದೆ. ಯಾವಾಗ ಬೇಕಾದರೂ ನಿಲ್ಲಿಸಬಹುದು.", whatsappApprovedTemplates: "ಮುಖ್ಯ ಆರ್ಡರ್ ಸಂದರ್ಭಗಳಲ್ಲಿ ಮಾತ್ರ WhatsApp ಅನುಮೋದಿತ ಮಾದರಿಗಳ ಮೂಲಕ ಸಂದೇಶ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.", editProfile: "ಪ್ರೊಫೈಲ್ ಸಂಪಾದಿಸಿ", farmerName: "ರೈತರ ಹೆಸರು", phoneNumber: "ಫೋನ್ ಸಂಖ್ಯೆ", email: "ಇಮೇಲ್", village: "ಗ್ರಾಮ", mandal: "ಮಂಡಲ", district: "ಜಿಲ್ಲೆ", state: "ರಾಜ್ಯ", address: "ವಿಳಾಸ", addressPlaceholder: "ಮನೆ, ಗ್ರಾಮ ಅಥವಾ ವಿತರಣಾ ವಿಳಾಸ", areaByCrop: "ಬೆಳೆವಾರು ವಿಸ್ತೀರ್ಣ", optional: "ಐಚ್ಛಿಕ", landCultivationStatus: "ಭೂಮಿ / ಕೃಷಿ ಸ್ಥಿತಿ", preferNotToSay: "ಹೇಳಲು ಇಷ್ಟವಿಲ್ಲ", ownLand: "ನಾನು ಕೃಷಿ ಭೂಮಿಯ ಮಾಲೀಕ", leasedLand: "ನಾನು ಗುತ್ತಿಗೆ ಭೂಮಿಯಲ್ಲಿ ಕೃಷಿ ಮಾಡುತ್ತೇನೆ", sharecropper: "ನಾನು ಪಾಲು ಕೃಷಿ ಮಾಡುತ್ತೇನೆ", otherArrangement: "ಇತರೆ ವ್ಯವಸ್ಥೆ", ageOptional: "ವಯಸ್ಸು (ಐಚ್ಛಿಕ)", ageYears: "ವರ್ಷಗಳಲ್ಲಿ ವಯಸ್ಸು", landSize: "ಭೂಮಿಯ ಗಾತ್ರ", acres: "ಎಕರೆಗಳು", hectares: "ಹೆಕ್ಟೇರ್‌ಗಳು", irrigationType: "ನೀರಾವರಿ ವಿಧಾನ", selectIrrigation: "ನೀರಾವರಿ ಆಯ್ಕೆಮಾಡಿ", rainfed: "ಮಳೆಆಧಾರಿತ", borewell: "ಬೋರ್‌ವೆಲ್", canal: "ಕಾಲುವೆ", drip: "ಹನಿ ನೀರಾವರಿ", sprinkler: "ಸ್ಪ್ರಿಂಕ್ಲರ್", tank: "ಕೆರೆ", soilType: "ಮಣ್ಣಿನ ವಿಧ", selectSoil: "ಮಣ್ಣಿನ ವಿಧ ಆಯ್ಕೆಮಾಡಿ", blackSoil: "ಕಪ್ಪು ಮಣ್ಣು", redSoil: "ಕೆಂಪು ಮಣ್ಣು", sandySoil: "ಮರಳು ಮಣ್ಣು", loamySoil: "ಲೋಮಿ ಮಣ್ಣು", claySoil: "ಜೇಡಿ ಮಣ್ಣು", saveProfile: "ಪ್ರೊಫೈಲ್ ಉಳಿಸಿ", cancel: "ರದ್ದುಮಾಡಿ", contactDetails: "ಸಂಪರ್ಕ ವಿವರಗಳು", location: "ಸ್ಥಳ", districtAndState: "ಜಿಲ್ಲೆ ಮತ್ತು ರಾಜ್ಯ", farmDetails: "ಕೃಷಿ ವಿವರಗಳು", selectedCrops: "ಆಯ್ದ ಬೆಳೆಗಳು", irrigation: "ನೀರಾವರಿ", language: "ಭಾಷೆ", notAdded: "ಸೇರಿಸಲಾಗಿಲ್ಲ",
+    browseSchemesIntro: "ಮಾಹಿತಿ ಮತ್ತು ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪರಿಶೀಲನೆ ನೋಡಲು ಯೋಜನೆ ತೆರೆಯಿರಿ.", forYourProfile: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ಗೆ", allSchemes: "ಎಲ್ಲಾ ಯೋಜನೆಗಳು", filterSchemesEligibility: "ಅರ್ಹತೆಯಂತೆ ಯೋಜನೆಗಳನ್ನು ವಿಂಗಡಿಸಿ", allStatuses: "ಎಲ್ಲಾ ಸ್ಥಿತಿಗಳು", likelyEligible: "ಅರ್ಹರಾಗಿರಬಹುದು", potentialMatch: "ಹೊಂದಾಣಿಕೆಯ ಸಾಧ್ಯತೆ", notEligible: "ಅರ್ಹರಲ್ಲ", unverified: "ಪರಿಶೀಲಿಸಿಲ್ಲ", governmentScheme: "ಸರ್ಕಾರಿ ಯೋಜನೆ", eligibilityConditions: "ಅರ್ಹತಾ ಷರತ್ತುಗಳು", eligibilityUnverified: "ಅರ್ಹತೆ ಪರಿಶೀಲಿಸಿಲ್ಲ", viewCompleteScheme: "ಯೋಜನೆಯ ಸಂಪೂರ್ಣ ಮಾಹಿತಿ ನೋಡಿ", noLikelySchemes: "ಅರ್ಹ ಯೋಜನೆಗಳು ಇನ್ನೂ ಕಂಡುಬಂದಿಲ್ಲ", browseAllSchemes: "ಎಲ್ಲಾ ಯೋಜನೆಗಳನ್ನು ನೋಡಿ",
+    farmerPurchases: "ರೈತರ ಖರೀದಿಗಳು", trackOrdersIntro: "ನೀವು ಕೇಳಿದ ಆರ್ಡರ್‌ಗಳನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ ಅಥವಾ ಪೂರ್ಣಗೊಂಡ ಆರ್ಡರ್‌ಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.", active: "ಪ್ರಸ್ತುತ", history: "ಇತಿಹಾಸ", activeOrders: "ಪ್ರಸ್ತುತ ಆರ್ಡರ್‌ಗಳು", acceptedOrders: "ಒಪ್ಪಿದ ಆರ್ಡರ್‌ಗಳು", orderHistory: "ಆರ್ಡರ್ ಇತಿಹಾಸ", noOrdersFoundLabel: "ಆರ್ಡರ್‌ಗಳು ಕಂಡುಬಂದಿಲ್ಲ", currentOrdersWillAppear: "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಆರ್ಡರ್‌ಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.", browseProducts: "ಉತ್ಪನ್ನಗಳನ್ನು ವೀಕ್ಷಿಸಿ", refresh: "ಮತ್ತೆ ಲೋಡ್ ಮಾಡಿ", refreshing: "ಮತ್ತೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
+  },
+};
+
+for (const [languageCode, copy] of Object.entries(farmerPageTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+const cropSelectorTranslations = {
+  te: { categoryAll: "అన్ని", categoryCereals: "ధాన్యాలు", categoryFibre: "పీచు పంటలు", categorySpices: "మసాలా పంటలు", categoryVegetables: "కూరగాయలు", categoryOther: "ఇతరాలు", categoryOilseeds: "నూనెగింజలు", categoryPulses: "పప్పుధాన్యాలు", categoryFruits: "పండ్లు", cropPaddy: "వరి", cropWheat: "గోధుమ", cropMaize: "మొక్కజొన్న", cropCotton: "పత్తి", cropChilli: "మిరప", cropTurmeric: "పసుపు", cropTomato: "టమాటా", cropPotato: "బంగాళాదుంప", cropOnion: "ఉల్లిపాయ", cropBrinjal: "వంకాయ", cropVegetables: "కూరగాయలు", cropSugarcane: "చెరకు", cropGroundnut: "వేరుశెనగ", cropSoybean: "సోయాబీన్", cropRedGram: "కందిపప్పు", cropGreenGram: "పెసరపప్పు", cropBlackGram: "మినపప్పు", cropBanana: "అరటి", cropMango: "మామిడి", cropApple: "ఆపిల్", cropFruits: "పండ్లు", cropOther: "ఇతర పంట" },
+  hi: { categoryAll: "सभी", categoryCereals: "अनाज", categoryFibre: "रेशेदार फसलें", categorySpices: "मसाले", categoryVegetables: "सब्ज़ियाँ", categoryOther: "अन्य", categoryOilseeds: "तिलहन", categoryPulses: "दालें", categoryFruits: "फल", cropPaddy: "धान", cropWheat: "गेहूँ", cropMaize: "मक्का", cropCotton: "कपास", cropChilli: "मिर्च", cropTurmeric: "हल्दी", cropTomato: "टमाटर", cropPotato: "आलू", cropOnion: "प्याज़", cropBrinjal: "बैंगन", cropVegetables: "सब्ज़ियाँ", cropSugarcane: "गन्ना", cropGroundnut: "मूँगफली", cropSoybean: "सोयाबीन", cropRedGram: "अरहर", cropGreenGram: "मूँग", cropBlackGram: "उड़द", cropBanana: "केला", cropMango: "आम", cropApple: "सेब", cropFruits: "फल", cropOther: "अन्य फसल" },
+  kn: { categoryAll: "ಎಲ್ಲಾ", categoryCereals: "ಧಾನ್ಯಗಳು", categoryFibre: "ನಾರಿನ ಬೆಳೆಗಳು", categorySpices: "ಮಸಾಲೆಗಳು", categoryVegetables: "ತರಕಾರಿಗಳು", categoryOther: "ಇತರೆ", categoryOilseeds: "ಎಣ್ಣೆಕಾಳುಗಳು", categoryPulses: "ಬೇಳೆಕಾಳುಗಳು", categoryFruits: "ಹಣ್ಣುಗಳು", cropPaddy: "ಭತ್ತ", cropWheat: "ಗೋಧಿ", cropMaize: "ಮೆಕ್ಕೆಜೋಳ", cropCotton: "ಹತ್ತಿ", cropChilli: "ಮೆಣಸಿನಕಾಯಿ", cropTurmeric: "ಅರಿಶಿನ", cropTomato: "ಟೊಮೇಟೊ", cropPotato: "ಆಲೂಗಡ್ಡೆ", cropOnion: "ಈರುಳ್ಳಿ", cropBrinjal: "ಬದನೆಕಾಯಿ", cropVegetables: "ತರಕಾರಿಗಳು", cropSugarcane: "ಕಬ್ಬು", cropGroundnut: "ನೆಲಗಡಲೆ", cropSoybean: "ಸೋಯಾಬೀನ್", cropRedGram: "ತೊಗರಿ", cropGreenGram: "ಹೆಸರುಕಾಳು", cropBlackGram: "ಉದ್ದಿನಕಾಳು", cropBanana: "ಬಾಳೆಹಣ್ಣು", cropMango: "ಮಾವು", cropApple: "ಸೇಬು", cropFruits: "ಹಣ್ಣುಗಳು", cropOther: "ಇತರೆ ಬೆಳೆ" },
+};
+for (const [languageCode, copy] of Object.entries(cropSelectorTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+const schemeAndStateTranslations = {
+  te: { showingLikelySchemes: "మీ ప్రొఫైల్ ఆధారంగా అర్హత ఉండే పథకాలు చూపుతున్నాం. సరిపోలిక కారణం తెలుసుకోవడానికి పథకాన్ని తెరవండి.", filterSchemesEligibility: "అర్హత ప్రకారం పథకాలను వడపోసండి", eligibilitySummaryUnverified: "పూర్తి అర్హత వివరాలు ధృవీకరించబడలేదు. అధికారిక మార్గదర్శకాలను చూడండి.", noLikelySchemesHelp: "స్థానం, పంటలు మరియు సాగు భూమి వివరాలతో రైతు ప్రొఫైల్ పూర్తి చేయండి లేదా అన్ని పథకాల్లో సరిపోలికలను పరిశీలించండి.", saving: "భద్రపరుస్తోంది…", on: "ఆన్", off: "ఆఫ్", completed: "పూర్తయింది", cancelled: "రద్దయింది", rejected: "తిరస్కరించబడింది", expired: "గడువు ముగిసింది", liveMapTimeout: "ప్రత్యక్ష మ్యాప్ సేవకు సమయం మించిపోయింది. అధికారిక డైరెక్టరీ వివరాలు కింద చూపిస్తున్నాం.", liveMapUnavailable: "ప్రత్యక్ష మ్యాప్ వివరాలు అందుబాటులో లేవు. అధికారిక డైరెక్టరీ వివరాలు కింద చూపిస్తున్నాం.", showingNearbyDevice: "మీ పరికరం స్థానం దగ్గర సేవలను చూపిస్తున్నాం.", locationUnavailableSearch: "స్థానం అందుబాటులో లేదు. తెలంగాణ గ్రామం లేదా పట్టణం ద్వారా వెతకండి.", showingServicesNearPlace: "{{place}} సమీపంలోని సేవలను చూపిస్తోంది.", findingPlace: "ఆ స్థలాన్ని తెలంగాణలో వెతుకుతోంది…", placeSearchTimeout: "స్థల శోధనకు సమయం మించిపోయింది. మళ్లీ ప్రయత్నించండి లేదా జిల్లాను చేర్చండి.", placeSearchFailed: "ఆ స్థలం కనుగొనలేకపోయాం. గ్రామం లేదా పట్టణం పేరును తనిఖీ చేసి మళ్లీ ప్రయత్నించండి." },
+  hi: { showingLikelySchemes: "आपकी प्रोफ़ाइल के आधार पर संभावित पात्र योजनाएँ दिखाई जा रही हैं। मेल का कारण देखने के लिए योजना खोलें।", filterSchemesEligibility: "पात्रता के अनुसार योजनाएँ छाँटें", eligibilitySummaryUnverified: "पात्रता का पूरा सार सत्यापित नहीं है। आधिकारिक दिशा-निर्देश देखें।", noLikelySchemesHelp: "स्थान, फसल और खेती की भूमि की जानकारी से किसान प्रोफ़ाइल पूरी करें या सभी योजनाओं में संभावित मेल देखें।", saving: "सहेजा जा रहा है…", on: "चालू", off: "बंद", completed: "पूरा हुआ", cancelled: "रद्द", rejected: "अस्वीकृत", expired: "समय समाप्त", liveMapTimeout: "लाइव नक्शा सेवा का समय समाप्त हुआ। आधिकारिक निर्देशिका की जानकारी नीचे दिखाई गई है।", liveMapUnavailable: "लाइव नक्शे की जानकारी उपलब्ध नहीं है। आधिकारिक निर्देशिका की जानकारी नीचे दिखाई गई है।", showingNearbyDevice: "आपके डिवाइस की जगह के पास की सेवाएँ दिखाई जा रही हैं।", locationUnavailableSearch: "जगह उपलब्ध नहीं है। तेलंगाना के गाँव या शहर से खोजें।", showingServicesNearPlace: "{{place}} के पास की सेवाएँ दिखाई जा रही हैं।", findingPlace: "तेलंगाना में यह जगह खोजी जा रही है…", placeSearchTimeout: "जगह खोजने का समय समाप्त हुआ। फिर कोशिश करें या जिला जोड़ें।", placeSearchFailed: "जगह नहीं मिली। गाँव या शहर का नाम जाँचकर फिर कोशिश करें।" },
+  kn: { showingLikelySchemes: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಆಧರಿಸಿ ಅರ್ಹತೆ ಇರಬಹುದಾದ ಯೋಜನೆಗಳನ್ನು ತೋರಿಸಲಾಗಿದೆ. ಹೊಂದಾಣಿಕೆಯ ಕಾರಣ ತಿಳಿಯಲು ಯೋಜನೆ ತೆರೆಯಿರಿ.", filterSchemesEligibility: "ಅರ್ಹತೆಯಂತೆ ಯೋಜನೆಗಳನ್ನು ವಿಂಗಡಿಸಿ", eligibilitySummaryUnverified: "ಅರ್ಹತೆಯ ಸಂಪೂರ್ಣ ಸಾರಾಂಶ ಪರಿಶೀಲಿಸಿಲ್ಲ. ಅಧಿಕೃತ ಮಾರ್ಗಸೂಚಿಗಳನ್ನು ನೋಡಿ.", noLikelySchemesHelp: "ಸ್ಥಳ, ಬೆಳೆಗಳು ಮತ್ತು ಕೃಷಿ ಭೂಮಿಯ ವಿವರಗಳಿಂದ ರೈತ ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ ಅಥವಾ ಎಲ್ಲಾ ಯೋಜನೆಗಳಲ್ಲಿ ಹೊಂದಾಣಿಕೆ ನೋಡಿ.", saving: "ಉಳಿಸಲಾಗುತ್ತಿದೆ…", on: "ಆನ್", off: "ಆಫ್", completed: "ಪೂರ್ಣಗೊಂಡಿದೆ", cancelled: "ರದ್ದಾಗಿದೆ", rejected: "ತಿರಸ್ಕರಿಸಲಾಗಿದೆ", expired: "ಅವಧಿ ಮುಗಿದಿದೆ", liveMapTimeout: "ನೇರ ನಕ್ಷೆ ಸೇವೆಯ ಸಮಯ ಮುಗಿದಿದೆ. ಅಧಿಕೃತ ಡೈರೆಕ್ಟರಿ ವಿವರಗಳನ್ನು ಕೆಳಗೆ ತೋರಿಸಲಾಗಿದೆ.", liveMapUnavailable: "ನೇರ ನಕ್ಷೆ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ. ಅಧಿಕೃತ ಡೈರೆಕ್ಟರಿ ವಿವರಗಳನ್ನು ಕೆಳಗೆ ತೋರಿಸಲಾಗಿದೆ.", showingNearbyDevice: "ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಹತ್ತಿರದ ಸೇವೆಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.", locationUnavailableSearch: "ಸ್ಥಳ ಲಭ್ಯವಿಲ್ಲ. ತೆಲಂಗಾಣದ ಗ್ರಾಮ ಅಥವಾ ಪಟ್ಟಣದಿಂದ ಹುಡುಕಿ.", showingServicesNearPlace: "{{place}} ಬಳಿಯ ಸೇವೆಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.", findingPlace: "ತೆಲಂಗಾಣದಲ್ಲಿ ಆ ಸ್ಥಳವನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…", placeSearchTimeout: "ಸ್ಥಳ ಹುಡುಕುವ ಸಮಯ ಮುಗಿದಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಜಿಲ್ಲೆಯನ್ನು ಸೇರಿಸಿ.", placeSearchFailed: "ಆ ಸ್ಥಳ ಕಂಡುಬಂದಿಲ್ಲ. ಗ್ರಾಮ ಅಥವಾ ಪಟ್ಟಣದ ಹೆಸರನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." },
+};
+for (const [languageCode, copy] of Object.entries(schemeAndStateTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+const directoryTranslations = {
+  te: { districtAgricultureOfficer: "జిల్లా వ్యవసాయ అధికారి", districtHorticultureOfficer: "జిల్లా ఉద్యాన మరియు పట్టు పరిశ్రమల అధికారి", districtAgricultureOffice: "జిల్లా వ్యవసాయ కార్యాలయం", horticultureOffice: "ఉద్యానవన కార్యాలయం", soilTestingLaboratory: "నేల పరీక్ష ప్రయోగశాల", agricultureMarketSoilLab: "వ్యవసాయ మార్కెట్ కమిటీ నేల పరీక్ష కేంద్రం", agricultureDepartmentSoilLab: "వ్యవసాయ శాఖ నేల పరీక్ష కేంద్రం", districtLevelContact: "జిల్లా స్థాయి సంప్రదింపు.", exactAddressNotListed: "ఖచ్చితమైన కార్యాలయ చిరునామా ఇవ్వలేదు.", districtContactSeeDirectory: "జిల్లా సంప్రదింపు; కార్యాలయ చిరునామా కోసం అధికారిక డైరెక్టరీ చూడండి." },
+  hi: { districtAgricultureOfficer: "जिला कृषि अधिकारी", districtHorticultureOfficer: "जिला बागवानी और रेशम अधिकारी", districtAgricultureOffice: "जिला कृषि कार्यालय", horticultureOffice: "बागवानी कार्यालय", soilTestingLaboratory: "मिट्टी जाँच प्रयोगशाला", agricultureMarketSoilLab: "कृषि मंडी समिति मिट्टी जाँच केंद्र", agricultureDepartmentSoilLab: "कृषि विभाग मिट्टी जाँच केंद्र", districtLevelContact: "जिला स्तर का संपर्क।", exactAddressNotListed: "कार्यालय का सटीक पता उपलब्ध नहीं।", districtContactSeeDirectory: "जिला संपर्क; कार्यालय के पते के लिए आधिकारिक निर्देशिका देखें।" },
+  kn: { districtAgricultureOfficer: "ಜಿಲ್ಲಾ ಕೃಷಿ ಅಧಿಕಾರಿ", districtHorticultureOfficer: "ಜಿಲ್ಲಾ ತೋಟಗಾರಿಕೆ ಮತ್ತು ರೇಷ್ಮೆ ಅಧಿಕಾರಿ", districtAgricultureOffice: "ಜಿಲ್ಲಾ ಕೃಷಿ ಕಚೇರಿ", horticultureOffice: "ತೋಟಗಾರಿಕೆ ಕಚೇರಿ", soilTestingLaboratory: "ಮಣ್ಣಿನ ಪರೀಕ್ಷಾ ಪ್ರಯೋಗಾಲಯ", agricultureMarketSoilLab: "ಕೃಷಿ ಮಾರುಕಟ್ಟೆ ಸಮಿತಿ ಮಣ್ಣಿನ ಪರೀಕ್ಷಾ ಕೇಂದ್ರ", agricultureDepartmentSoilLab: "ಕೃಷಿ ಇಲಾಖೆ ಮಣ್ಣಿನ ಪರೀಕ್ಷಾ ಕೇಂದ್ರ", districtLevelContact: "ಜಿಲ್ಲಾ ಮಟ್ಟದ ಸಂಪರ್ಕ.", exactAddressNotListed: "ಕಚೇರಿಯ ನಿಖರ ವಿಳಾಸ ನೀಡಿಲ್ಲ.", districtContactSeeDirectory: "ಜಿಲ್ಲಾ ಸಂಪರ್ಕ; ಕಚೇರಿ ವಿಳಾಸಕ್ಕಾಗಿ ಅಧಿಕೃತ ಡೈರೆಕ್ಟರಿ ನೋಡಿ." },
+};
+for (const [languageCode, copy] of Object.entries(directoryTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+const nearbyInteractionTranslations = {
+  te: { voiceInputUnsupported: "ఈ పరికరంలో వాయిస్ ఇన్‌పుట్‌కు మద్దతు లేదు. గ్రామం పేరును టైప్ చేయండి.", listeningPrompt: "వింటోంది… తెలంగాణ గ్రామం లేదా పట్టణం పేరు చెప్పండి.", listeningTimedOut: "వినడానికి సమయం ముగిసింది. మళ్లీ ప్రయత్నించండి లేదా స్థలం పేరు టైప్ చేయండి.", speechConverted: "మాటను వచనంగా మార్చాం. సరిచూసి శోధించండి.", noSpeechDetected: "మాట వినిపించలేదు. మైక్రోఫోన్ అనుమతిని తనిఖీ చేయండి.", microphonePermissionHelp: "బ్రౌజర్ సెట్టింగ్‌లలో మైక్రోఫోన్ అనుమతించి మళ్లీ ప్రయత్నించండి.", speechBlocked: "ఈ బ్రౌజర్‌లో వాయిస్ గుర్తింపు నిలిపివేయబడింది.", microphoneMissing: "మైక్రోఫోన్ కనబడలేదు. దాన్ని కనెక్ట్ చేసి లేదా ఆన్ చేసి మళ్లీ ప్రయత్నించండి.", speechInternetNeeded: "వాయిస్ గుర్తింపుకు ఇంటర్నెట్ కనెక్షన్ అవసరం.", voiceLanguageUnsupported: "ఈ బ్రౌజర్‌లో ఈ వాయిస్ భాషకు మద్దతు లేదు. మరో భాష ఎంచుకోండి లేదా స్థలం పేరు టైప్ చేయండి.", voiceInputStopped: "వాయిస్ ఇన్‌పుట్ ఆగిపోయింది. మైక్రోఫోన్ అనుమతిని తనిఖీ చేయండి లేదా స్థలం పేరు టైప్ చేయండి.", microphoneStartFailed: "మైక్రోఫోన్ ప్రారంభం కాలేదు. బ్రౌజర్ అనుమతిని తనిఖీ చేయండి లేదా స్థలం పేరు టైప్ చేయండి.", locationAccessNeeded: "ప్రస్తుత స్థానం నుండి దిశలు పొందడానికి స్థాన అనుమతి ఇవ్వండి.", verifiedServiceLocationRequired: "ఈ సేవ యొక్క ఖచ్చితమైన స్థానాన్ని నిర్ధారించలేకపోయాం. చిరునామా కోసం సేవకు కాల్ చేయండి.", directoryAddressUnverified: "ఈ డైరెక్టరీలో సేవ చిరునామా ధృవీకరించబడలేదు. దిశల కోసం కార్యాలయానికి కాల్ చేయండి.", routingUnavailable: "మార్గ సేవ అందుబాటులో లేదు. తర్వాత మళ్లీ ప్రయత్నించండి.", roadRouteNotFound: "ఈ సేవకు రహదారి మార్గం కనబడలేదు.", routeSearchTimedOut: "మార్గ శోధనకు సమయం మించిపోయింది. కనెక్షన్ బాగున్నప్పుడు మళ్లీ ప్రయత్నించండి.", directionsFailed: "దిశలను లెక్కించలేకపోయాం.", routeSummary: "మార్గం: {{distance}} కి.మీ. · రహదారిపై సుమారు {{minutes}} నిమిషాలు." },
+  hi: { voiceInputUnsupported: "इस डिवाइस पर आवाज़ से इनपुट उपलब्ध नहीं है। गाँव का नाम लिखें।", listeningPrompt: "सुन रहे हैं… तेलंगाना के गाँव या शहर का नाम बोलें।", listeningTimedOut: "सुनने का समय समाप्त हुआ। फिर कोशिश करें या जगह का नाम लिखें।", speechConverted: "आवाज़ को टेक्स्ट में बदला गया। जाँचकर खोजें।", noSpeechDetected: "आवाज़ नहीं मिली। माइक्रोफ़ोन की अनुमति जाँचें।", microphonePermissionHelp: "ब्राउज़र सेटिंग में माइक्रोफ़ोन की अनुमति दें और फिर कोशिश करें।", speechBlocked: "इस ब्राउज़र में आवाज़ पहचानने की सुविधा बंद है।", microphoneMissing: "माइक्रोफ़ोन नहीं मिला। उसे जोड़ें या चालू करें और फिर कोशिश करें।", speechInternetNeeded: "आवाज़ पहचानने के लिए इंटरनेट कनेक्शन चाहिए।", voiceLanguageUnsupported: "इस ब्राउज़र में चुनी गई आवाज़ की भाषा उपलब्ध नहीं है। दूसरी भाषा चुनें या जगह का नाम लिखें।", voiceInputStopped: "आवाज़ इनपुट रुक गया। माइक्रोफ़ोन की अनुमति जाँचें या जगह का नाम लिखें।", microphoneStartFailed: "माइक्रोफ़ोन शुरू नहीं हुआ। ब्राउज़र की अनुमति जाँचें या जगह का नाम लिखें।", locationAccessNeeded: "मौजूदा जगह से रास्ता पाने के लिए स्थान की अनुमति दें।", verifiedServiceLocationRequired: "सेवा की सटीक जगह की पुष्टि नहीं हो सकी। पते के लिए सेवा को कॉल करें।", directoryAddressUnverified: "निर्देशिका में सेवा का सत्यापित पता नहीं है। रास्ते के लिए कार्यालय को कॉल करें।", routingUnavailable: "रास्ता सेवा उपलब्ध नहीं है। बाद में फिर कोशिश करें।", roadRouteNotFound: "इस सेवा तक सड़क का रास्ता नहीं मिला।", routeSearchTimedOut: "रास्ता खोजने का समय समाप्त हुआ। बेहतर कनेक्शन पर फिर कोशिश करें।", directionsFailed: "रास्ता नहीं निकाला जा सका।", routeSummary: "रास्ता: {{distance}} किमी · सड़क से लगभग {{minutes}} मिनट।" },
+  kn: { voiceInputUnsupported: "ಈ ಸಾಧನದಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಬೆಂಬಲಿತವಲ್ಲ. ಗ್ರಾಮದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.", listeningPrompt: "ಆಲಿಸಲಾಗುತ್ತಿದೆ… ತೆಲಂಗಾಣದ ಗ್ರಾಮದ ಅಥವಾ ಪಟ್ಟಣದ ಹೆಸರನ್ನು ಹೇಳಿ.", listeningTimedOut: "ಆಲಿಸುವ ಸಮಯ ಮುಗಿದಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಸ್ಥಳದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.", speechConverted: "ಮಾತನ್ನು ಪಠ್ಯಕ್ಕೆ ಬದಲಾಯಿಸಲಾಗಿದೆ. ಪರಿಶೀಲಿಸಿ ಹುಡುಕಿ.", noSpeechDetected: "ಧ್ವನಿ ಕೇಳಿಸಲಿಲ್ಲ. ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.", microphonePermissionHelp: "ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ನೀಡಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", speechBlocked: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.", microphoneMissing: "ಮೈಕ್ರೊಫೋನ್ ಕಂಡುಬಂದಿಲ್ಲ. ಸಂಪರ್ಕಿಸಿ ಅಥವಾ ಸಕ್ರಿಯಗೊಳಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", speechInternetNeeded: "ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆಗೆ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕ ಅಗತ್ಯವಿದೆ.", voiceLanguageUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಆಯ್ದ ಧ್ವನಿ ಭಾಷೆ ಬೆಂಬಲಿತವಲ್ಲ. ಬೇರೆ ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಸ್ಥಳದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.", voiceInputStopped: "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ನಿಂತಿದೆ. ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಪರಿಶೀಲಿಸಿ ಅಥವಾ ಸ್ಥಳದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.", microphoneStartFailed: "ಮೈಕ್ರೊಫೋನ್ ಪ್ರಾರಂಭವಾಗಲಿಲ್ಲ. ಬ್ರೌಸರ್ ಅನುಮತಿ ಪರಿಶೀಲಿಸಿ ಅಥವಾ ಸ್ಥಳದ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.", locationAccessNeeded: "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸ್ಥಳದಿಂದ ದಾರಿ ಪಡೆಯಲು ಸ್ಥಳ ಅನುಮತಿ ನೀಡಿ.", verifiedServiceLocationRequired: "ಸೇವೆಯ ನಿಖರ ಸ್ಥಳವನ್ನು ಖಚಿತಪಡಿಸಲಾಗಲಿಲ್ಲ. ವಿಳಾಸಕ್ಕಾಗಿ ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ.", directoryAddressUnverified: "ಈ ಡೈರೆಕ್ಟರಿಯಲ್ಲಿ ಸೇವೆಯ ಪರಿಶೀಲಿತ ವಿಳಾಸವಿಲ್ಲ. ದಾರಿಗಾಗಿ ಕಚೇರಿಗೆ ಕರೆ ಮಾಡಿ.", routingUnavailable: "ಮಾರ್ಗ ಸೇವೆ ಲಭ್ಯವಿಲ್ಲ. ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", roadRouteNotFound: "ಈ ಸೇವೆಗೆ ರಸ್ತೆ ಮಾರ್ಗ ಕಂಡುಬಂದಿಲ್ಲ.", routeSearchTimedOut: "ಮಾರ್ಗ ಹುಡುಕುವ ಸಮಯ ಮುಗಿದಿದೆ. ಉತ್ತಮ ಸಂಪರ್ಕವಿದ್ದಾಗ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", directionsFailed: "ದಾರಿಯನ್ನು ಲೆಕ್ಕಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.", routeSummary: "ಮಾರ್ಗ: {{distance}} ಕಿ.ಮೀ. · ರಸ್ತೆಯಲ್ಲಿ ಸುಮಾರು {{minutes}} ನಿಮಿಷಗಳು." },
+};
+for (const [languageCode, copy] of Object.entries(nearbyInteractionTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+const profileMessageTranslations = {
+  te: { farmerAccountNotFound: "రైతు ఖాతా కనబడలేదు.", profileAccessDenied: "Firebase నియమాల వల్ల ప్రొఫైల్‌ను చూడలేరు.", profileLoadFailed: "ప్రొఫైల్‌ను లోడ్ చేయలేకపోయాం.", enterFarmerName: "రైతు పేరును నమోదు చేయండి.", enterPhoneNumber: "ఫోన్ నంబర్ నమోదు చేయండి.", enterValidPhone: "చెల్లుబాటు అయ్యే 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.", enterDistrict: "జిల్లాను నమోదు చేయండి.", enterState: "రాష్ట్రాన్ని నమోదు చేయండి.", selectOneCrop: "కనీసం ఒక పంటను ఎంచుకోండి.", enterValidLandSize: "చెల్లుబాటు అయ్యే భూమి విస్తీర్ణాన్ని నమోదు చేయండి.", profileUpdated: "ప్రొఫైల్ నవీకరించబడింది.", profileUpdateDenied: "Firebase నియమాల వల్ల ప్రొఫైల్‌ను నవీకరించలేరు.", profileUpdateFailed: "ప్రొఫైల్‌ను నవీకరించలేకపోయాం.", validPhoneRequired: "ముందుగా మీ ప్రొఫైల్‌లో చెల్లుబాటు అయ్యే 10 అంకెల మొబైల్ నంబర్ జోడించండి.", whatsappEnabled: "వాట్సాప్ ఆర్డర్ అప్‌డేట్‌లు ప్రారంభించబడ్డాయి.", whatsappDisabled: "వాట్సాప్ ఆర్డర్ అప్‌డేట్‌లు నిలిపివేయబడ్డాయి.", whatsappUpdateFailed: "వాట్సాప్ ఎంపికను నవీకరించలేకపోయాం." },
+  hi: { farmerAccountNotFound: "किसान खाता नहीं मिला।", profileAccessDenied: "Firebase नियमों के कारण प्रोफ़ाइल नहीं देखी जा सकती।", profileLoadFailed: "प्रोफ़ाइल लोड नहीं हो सकी।", enterFarmerName: "किसान का नाम लिखें।", enterPhoneNumber: "फ़ोन नंबर लिखें।", enterValidPhone: "10 अंकों का मान्य मोबाइल नंबर लिखें।", enterDistrict: "ज़िला लिखें।", enterState: "राज्य लिखें।", selectOneCrop: "कम से कम एक फसल चुनें।", enterValidLandSize: "भूमि का मान्य आकार लिखें।", profileUpdated: "प्रोफ़ाइल अपडेट हो गई।", profileUpdateDenied: "Firebase नियमों के कारण प्रोफ़ाइल अपडेट नहीं हो सकी।", profileUpdateFailed: "प्रोफ़ाइल अपडेट नहीं हो सकी।", validPhoneRequired: "पहले अपनी प्रोफ़ाइल में 10 अंकों का मान्य मोबाइल नंबर जोड़ें।", whatsappEnabled: "WhatsApp ऑर्डर अपडेट चालू किए गए।", whatsappDisabled: "WhatsApp ऑर्डर अपडेट बंद किए गए।", whatsappUpdateFailed: "WhatsApp विकल्प अपडेट नहीं हो सका।" },
+  kn: { farmerAccountNotFound: "ರೈತರ ಖಾತೆ ಕಂಡುಬಂದಿಲ್ಲ.", profileAccessDenied: "Firebase ನಿಯಮಗಳಿಂದ ಪ್ರೊಫೈಲ್ ಪ್ರವೇಶ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.", profileLoadFailed: "ಪ್ರೊಫೈಲ್ ಲೋಡ್ ಆಗಲಿಲ್ಲ.", enterFarmerName: "ರೈತರ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.", enterPhoneNumber: "ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.", enterValidPhone: "ಮಾನ್ಯವಾದ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.", enterDistrict: "ಜಿಲ್ಲೆಯನ್ನು ನಮೂದಿಸಿ.", enterState: "ರಾಜ್ಯವನ್ನು ನಮೂದಿಸಿ.", selectOneCrop: "ಕನಿಷ್ಠ ಒಂದು ಬೆಳೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.", enterValidLandSize: "ಮಾನ್ಯ ಭೂಮಿ ಗಾತ್ರವನ್ನು ನಮೂದಿಸಿ.", profileUpdated: "ಪ್ರೊಫೈಲ್ ನವೀಕರಿಸಲಾಗಿದೆ.", profileUpdateDenied: "Firebase ನಿಯಮಗಳಿಂದ ಪ್ರೊಫೈಲ್ ನವೀಕರಣ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.", profileUpdateFailed: "ಪ್ರೊಫೈಲ್ ನವೀಕರಿಸಲಾಗಲಿಲ್ಲ.", validPhoneRequired: "ಮೊದಲು ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನಲ್ಲಿ ಮಾನ್ಯವಾದ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಿ.", whatsappEnabled: "WhatsApp ಆರ್ಡರ್ ಮಾಹಿತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ.", whatsappDisabled: "WhatsApp ಆರ್ಡರ್ ಮಾಹಿತಿಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ.", whatsappUpdateFailed: "WhatsApp ಆಯ್ಕೆಯನ್ನು ನವೀಕರಿಸಲಾಗಲಿಲ್ಲ." },
+};
+for (const [languageCode, copy] of Object.entries(profileMessageTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
+Object.assign(translations.te, {
+  completedRejectedWillAppear: "పూర్తైన మరియు తిరస్కరించిన ఆర్డర్లు ఇక్కడ కనిపిస్తాయి.",
+  locationServicesOff: "స్థాన సేవలు ఆఫ్‌లో ఉన్నాయి. GPS/స్థాన సేవలను ఆన్ చేసి మళ్లీ ప్రయత్నించండి.",
+  locationApproximate: "మీ పరికరం సుమారు స్థానాన్ని చూపిస్తోంది. ఖచ్చితమైన స్థానాన్ని ఆన్ చేసి బయట మళ్లీ ప్రయత్నించండి.",
+  conditionLightSnow: "తేలికపాటి మంచు", conditionSnow: "మంచు", conditionHeavySnow: "భారీ మంచు",
+});
+Object.assign(translations.hi, {
+  completedRejectedWillAppear: "पूरे और अस्वीकृत ऑर्डर यहाँ दिखाई देंगे।",
+  locationServicesOff: "स्थान सेवाएँ बंद हैं। GPS/स्थान सेवा चालू करके फिर कोशिश करें।",
+  locationApproximate: "आपके डिवाइस ने अनुमानित जगह बताई है। बेहतर सटीकता के लिए सटीक स्थान चालू करें और बाहर कोशिश करें।",
+  conditionLightSnow: "हल्की बर्फ़", conditionSnow: "बर्फ़", conditionHeavySnow: "भारी बर्फ़",
+  activeOrdersLabel: "चालू ऑर्डर", acceptedOrdersLabel: "स्वीकृत ऑर्डर", orderHistoryLabel: "ऑर्डर इतिहास", completedLabel: "पूरे हुए", cancelledLabel: "रद्द", rejectedLabel: "अस्वीकृत", expiredLabel: "समय समाप्त", farmerPurchasesLabel: "किसान की खरीद", trackOrdersDescription: "अनुरोधित ऑर्डर देखें या पूरे हुए ऑर्डर की समीक्षा करें।", activeLabel: "चालू", historyLabel: "इतिहास", browseProductsLabel: "उत्पाद देखें",
+  takeCropPhotoLabel: "फसल की फ़ोटो लें", chooseCropPhotoLabel: "फसल की फ़ोटो चुनें", takeLandPhotoLabel: "ज़मीन की फ़ोटो लें", chooseLandPhotoLabel: "ज़मीन की फ़ोटो चुनें", landPhotoDetectionLabel: "ज़मीन की फ़ोटो से आकलन", soilEstimateDisclaimer: "यह केवल फ़ोटो पर आधारित अनुमान है, प्रयोगशाला जाँच नहीं।", detectLandLabel: "ज़मीन पहचानें", detectingLandLabel: "ज़मीन का आकलन हो रहा है…", fertilizerGuidanceLabel: "उर्वरक सलाह", pestControlLabel: "कीट नियंत्रण", landPhotoInstruction: "मिट्टी और खेत साफ़ दिखाने वाली फ़ोटो लें या अपलोड करें।", capturePhotoLabel: "फ़ोटो लें",
+  noCurrentPricesForCrop: "इस फसल के लिए अभी कोई मंडी भाव उपलब्ध नहीं है।", blackSoilLabel: "काली मिट्टी", redSoilLabel: "लाल मिट्टी", sandySoilLabel: "रेतीली मिट्टी", loamySoilLabel: "दोमट मिट्टी", claySoilLabel: "चिकनी मिट्टी", lowLabel: "कम", moderateLabel: "मध्यम", highLabel: "अधिक", dryLabel: "शुष्क", semiAridLabel: "अर्ध-शुष्क", humidLabel: "आर्द्र", coastalLabel: "तटीय", temperateLabel: "समशीतोष्ण", irrigatedLabel: "सिंचित", rainfedLabel: "वर्षा आधारित", lowlandLabel: "निचली भूमि", uplandLabel: "ऊँची भूमि", featureWeatherDescription: "मौजूदा मौसम और अगले 12 घंटों का स्थानीय पूर्वानुमान देखें।",
+});
+Object.assign(translations.kn, {
+  completedRejectedWillAppear: "ಪೂರ್ಣಗೊಂಡ ಮತ್ತು ತಿರಸ್ಕೃತ ಆರ್ಡರ್‌ಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
+  nearbyServices: "ಹತ್ತಿರದ ಕೃಷಿ ಸೇವೆಗಳು", dashboardLink: "← ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", myProfile: "ನನ್ನ ಪ್ರೊಫೈಲ್", personalFarmInformation: "ರೈತ ಮತ್ತು ಕೃಷಿ ಮಾಹಿತಿ", governmentSchemesTitle: "🏛️ ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು", governmentSchemesIntro: "ರೈತರಿಗೆ ಉಪಯುಕ್ತ ಸರ್ಕಾರಿ ಯೋಜನೆಗಳನ್ನು ಹುಡುಕಿ.", speakScheme: "🔊 ಯೋಜನೆ ಬಗ್ಗೆ ಹೇಳಿ", searchSchemesPlaceholder: "ಯೋಜನೆ, ವಿಮೆ, ಸಾಲ, ನೀರಾವರಿ ಹುಡುಕಿ…", noSchemesFound: "ಯೋಜನೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ", searchSchemesHint: "ಸಾಲ, ವಿಮೆ, ನೀರಾವರಿ, ಮಾರುಕಟ್ಟೆ ಅಥವಾ ಮಣ್ಣಿನ ಪದಗಳಿಂದ ಹುಡುಕಿ.", schemeBenefitLabel: "ಪ್ರಯೋಜನ:", schemeEligibilityLabel: "ಅರ್ಹತೆ:", schemeDocumentsLabel: "ದಾಖಲೆಗಳು:", speechGenerationFailed: "ಧ್ವನಿ ರಚಿಸಲಾಗಲಿಲ್ಲ. ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕ ಮತ್ತು Gemini API ಪ್ರವೇಶ ಪರಿಶೀಲಿಸಿ.", speechOutputUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಔಟ್‌ಪುಟ್ ಬೆಂಬಲಿತವಲ್ಲ.", speechVoiceUnavailable: "ಈ ಸಾಧನದಲ್ಲಿ ಆಯ್ದ ಭಾಷೆಯ ಧ್ವನಿ ಲಭ್ಯವಿಲ್ಲ. ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಭಾಷಾ ಧ್ವನಿಯನ್ನು ಸ್ಥಾಪಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+});
+
+const knownSchemeNameTranslations = {
+  te: { schemeTitleAif: "వ్యవసాయ మౌలిక సదుపాయాల నిధి (AIF)", schemeTitleNmnf: "సహజ వ్యవసాయంపై జాతీయ మిషన్ (NMNF)", schemeTitlePmkmy: "ప్రధాన మంత్రి కిసాన్ మాన్‌ధన్ యోజన (PM-KMY)", schemeTitleKusum: "ప్రధాన మంత్రి కుసుమ్ పథకం (PM-KUSUM)", schemeTitleSmam: "వ్యవసాయ యాంత్రీకరణ ఉప మిషన్ (SMAM)", schemeTitleRythuBharosa: "తెలంగాణ రైతు భరోసా", centralGovernment: "కేంద్ర ప్రభుత్వం" },
+  hi: { schemeTitleAif: "कृषि अवसंरचना निधि (AIF)", schemeTitleNmnf: "प्राकृतिक खेती पर राष्ट्रीय मिशन (NMNF)", schemeTitlePmkmy: "प्रधानमंत्री किसान मानधन योजना (PM-KMY)", schemeTitleKusum: "प्रधानमंत्री कुसुम योजना (PM-KUSUM)", schemeTitleSmam: "कृषि यंत्रीकरण उप-मिशन (SMAM)", schemeTitleRythuBharosa: "तेलंगाना रायथु भरोसा", centralGovernment: "केंद्र सरकार" },
+  kn: { schemeTitleAif: "ಕೃಷಿ ಮೂಲಸೌಕರ್ಯ ನಿಧಿ (AIF)", schemeTitleNmnf: "ನೈಸರ್ಗಿಕ ಕೃಷಿ ರಾಷ್ಟ್ರೀಯ ಮಿಷನ್ (NMNF)", schemeTitlePmkmy: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಮಾನ್‌ಧನ್ ಯೋಜನೆ (PM-KMY)", schemeTitleKusum: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕುಸುಮ್ ಯೋಜನೆ (PM-KUSUM)", schemeTitleSmam: "ಕೃಷಿ ಯಾಂತ್ರೀಕರಣ ಉಪ-ಮಿಷನ್ (SMAM)", schemeTitlePmkisan: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ", schemeTitleInsurance: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಫಸಲ್ ಬಿಮಾ ಯೋಜನೆ", schemeTitleCredit: "ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್", schemeTitleSoil: "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಯೋಜನೆ", schemeTitleIrrigation: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕೃಷಿ ಸಿಂಚಾಯಿ ಯೋಜನೆ", schemeTitleEnam: "ಇ-ನಾಮ್", schemeTitleRythuBharosa: "ತೆಲಂಗಾಣ ರೈತು ಭರೋಸಾ", centralGovernment: "ಕೇಂದ್ರ ಸರ್ಕಾರ" },
+};
+for (const [languageCode, copy] of Object.entries(knownSchemeNameTranslations)) {
+  Object.assign(translations[languageCode], copy);
+}
+
 function isBrowser() {
   return typeof window !== "undefined";
 }
@@ -2673,6 +2873,15 @@ export function t(
   const translatedValue =
     translations[language]?.[key] ??
     translations[DEFAULT_LANGUAGE]?.[key];
+
+  if (language !== DEFAULT_LANGUAGE && translations[language]?.[key] === undefined) {
+    recordMissingTranslation(language, key);
+    if (typeof console !== "undefined" && !globalThis.__agrisathiMissingTranslationWarnings?.has(`${language}:${key}`)) {
+      globalThis.__agrisathiMissingTranslationWarnings ||= new Set();
+      globalThis.__agrisathiMissingTranslationWarnings.add(`${language}:${key}`);
+      console.warn(`[AgriSaathi i18n] Missing ${language} translation: ${key}`);
+    }
+  }
 
   if (translatedValue === undefined) {
     return key;

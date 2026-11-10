@@ -1,3 +1,5 @@
+import { getMarketplaceCategory } from "./marketplaceCategories";
+
 const COMMANDS = [
   {
     action: "weather",
@@ -348,6 +350,11 @@ export function getVoiceActionRoute(action, searchQuery = "") {
     return route;
   }
 
+  const category = getMarketplaceCategory(searchQuery);
+  if (category) {
+    return `${route}?category=${encodeURIComponent(category)}`;
+  }
+
   return `${route}?search=${encodeURIComponent(searchQuery.trim())}`;
 }
 
@@ -506,7 +513,7 @@ function getProductSearchQuery(normalizedTranscript) {
 }
 
 const PRODUCT_SEARCH_TERMS =
-  /(?:\b(?:seed|seeds|fertili[sz]er|urea|pesticide|fungicide|insecticide|feed|tool|tools|sprayer)\b|సీడ్స్|విత్తన|ఎరువ|యూరియా|పురుగుమంద|बीज|खाद|उर्वरक|यूरिया|कीटनाशक|விதை|உரம்|கருவி|ಬೀಜ|ಗೊಬ್ಬರ|ಕೀಟನಾಶಕ|വിത്ത്|വളം|കീടനാശിനി|बियाणे|खत|कीटकनाशक|বীজ|সার|কীটনাশক|બીજ|ખાતર|જંતુનાશક|ਬੀਜ|ਖਾਦ|ਕੀਟਨਾਸ਼ਕ|بیج|کھاد|زرعی دوا|ବିହନ|ସାର|କୀଟନାଶକ)/u;
+  /(?:\b(?:seeds?|fertili[sz]ers?|urea|pesticides?|fungicides?|insecticides?|herbicides?|animal\s+feeds?|cattle\s+feeds?|livestock\s+feeds?|feeds?|fodder|tools?|equipment|sprayers?|implements?)\b|సీడ్స్|విత్తన|ఎరువ|యూరియా|పురుగుమంద|बीज|खाद|उर्वरक|यूरिया|कीटनाशक|விதை|உரம்|கருவி|ಬೀಜ|ಗೊಬ್ಬರ|ಕೀಟನಾಶಕ|വിത്ത്|വളം|കീടനാശിനി|बियाणे|खत|कीटकनाशक|বীজ|সার|কীটনাশক|બીજ|ખાતર|જંતુનાશક|ਬੀਜ|ਖਾਦ|ਕੀਟਨાશਕ|بیج|کھاد|زرعی دوا|ବିହନ|ସାର|କୀଟନାଶକ)/u;
 
 function findIntentMatches(normalizedTranscript) {
   const matches = new Map();
@@ -533,7 +540,7 @@ function findIntentMatches(normalizedTranscript) {
   }
 
   if (
-    /\b(?:search|find|look for|show me|i need|i want(?: to buy)?)\b/u.test(
+    /\b(?:search|find|look for|show(?: me)?|i need|i want(?: to buy)?)\b/u.test(
       normalizedTranscript
     ) &&
     PRODUCT_SEARCH_TERMS.test(normalizedTranscript)
@@ -610,6 +617,22 @@ export function detectLocalVoiceCommand(
   }
 
   const [action] = rankedMatches[0];
+  // Weather questions such as "how is the weather today?" should be
+  // answered with live forecast data. Navigate only for an explicit request
+  // to open the weather page.
+  if (
+    action === "weather" &&
+    !/\b(?:open|go to|navigate to|take me to)\b.*\b(?:weather|forecast)\b|\b(?:weather|forecast)\s+page\b|వాతావరణం.*(?:తెరువు|చూపించు)|मौसम.*(?:खोलो|दिखाओ)/u.test(normalizedTranscript)
+  ) {
+    return null;
+  }
+  if (
+    action === "market_prices" &&
+    !/\b(?:open|go to|navigate to|take me to)\b.*\b(?:market|mandi|price)|\b(?:market|mandi)\s+prices?\s+page\b|మార్కెట్ ధరలు.*(?:తెరువు|చూపించు)|मंडी भाव.*(?:खोलो|दिखाओ)|बाजार भाव.*(?:खोलो|दिखाओ)/u.test(normalizedTranscript)
+  ) {
+    return null;
+  }
+
   const searchQuery =
     ["dealer_products", "product_details"].includes(action)
       ? getProductSearchQuery(normalizedTranscript)

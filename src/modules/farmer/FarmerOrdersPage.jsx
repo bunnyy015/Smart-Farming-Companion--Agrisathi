@@ -18,11 +18,13 @@ import StatusMessage from "../../components/StatusMessage";
 import OrderAcceptanceTimer from "../../components/OrderAcceptanceTimer";
 import { expirePendingOrders, getOrderAcceptanceDeadline } from "../../utils/orderAcceptanceTimer";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
+import useLanguage from "../../utils/useLanguage";
+import { t } from "../../utils/language";
 
 const FILTERS = [
-  { value: "active", label: "Active Orders" },
-  { value: "accepted", label: "Accepted Orders" },
-  { value: "history", label: "Order History" },
+  { value: "active", key: "activeOrders", fallback: "Active Orders" },
+  { value: "accepted", key: "acceptedOrders", fallback: "Accepted Orders" },
+  { value: "history", key: "orderHistory", fallback: "Order History" },
 ];
 
 const ACCEPTED_STATUSES = [
@@ -35,10 +37,10 @@ const ACCEPTED_STATUSES = [
 
 const TERMINAL_STATUSES = ["completed", "complete", "rejected", "reject", "cancelled", "canceled", "expired"];
 const HISTORY_STATUS_FILTERS = [
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "rejected", label: "Rejected" },
-  { value: "expired", label: "Expired" },
+  { value: "completed", key: "completed", fallback: "Completed" },
+  { value: "cancelled", key: "cancelled", fallback: "Cancelled" },
+  { value: "rejected", key: "rejected", fallback: "Rejected" },
+  { value: "expired", key: "expired", fallback: "Expired" },
 ];
 
 function isPaidOrder(order) {
@@ -58,6 +60,10 @@ function isPaidOrder(order) {
   );
 }
 
+function isFarmerCompletedOrder(order) {
+  return order.farmerReceived === true || order.completedBy === "farmer";
+}
+
 function getNormalizedOrderStatus(order) {
   return String(order?.status || order?.orderStatus || "pending")
     .trim()
@@ -73,6 +79,7 @@ function isHistoryOrder(order) {
 
   return (
     isPaidOrder(order) ||
+    isFarmerCompletedOrder(order) ||
     order.farmerArchived === true ||
     TERMINAL_STATUSES.includes(normalizedStatus)
   );
@@ -86,6 +93,7 @@ function isEligibleHistoryOrder(order) {
 
   return (
     isPaidOrder(order) ||
+    isFarmerCompletedOrder(order) ||
     TERMINAL_STATUSES.includes(status)
   );
 }
@@ -115,19 +123,37 @@ function formatDate(value) {
   });
 }
 
+function getOrderDateLabel(order, selectedFilter) {
+  if (selectedFilter === "history" && getHistoryStatus(order) === "completed") {
+    return {
+      label: "Completed",
+      value:
+        order.completedAt ||
+        order.orderReceivedAt ||
+        order.farmerReceivedAt ||
+        order.paymentReceivedAt ||
+        order.updatedAt ||
+        order.createdAt,
+    };
+  }
+
+  return { label: "Ordered", value: order.orderPlacedAt || order.createdAt };
+}
+
 function getHistoryStatus(order) {
   const status = getNormalizedOrderStatus(order);
   if (order.cancellationReason === "dealer_acceptance_timeout" || status === "expired") return "expired";
   if (["cancelled", "canceled"].includes(status)) return "cancelled";
   if (["rejected", "reject"].includes(status)) return "rejected";
   if (["completed", "complete"].includes(status)) return "completed";
+  if (isFarmerCompletedOrder(order)) return "completed";
   if (isPaidOrder(order)) return "completed";
   return "";
 }
 
 function matchesHistoryDateRange(order, startDate, endDate) {
   const dateValue = getHistoryStatus(order) === "completed"
-    ? order.completedAt || order.paymentReceivedAt || order.updatedAt || order.createdAt
+    ? order.completedAt || order.orderReceivedAt || order.farmerReceivedAt || order.paymentReceivedAt || order.updatedAt || order.createdAt
     : order.updatedAt || order.cancelledAt || order.rejectedAt || order.createdAt;
   const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
   const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity;
@@ -186,14 +212,6 @@ function getStatusDetails(status) {
       className: "bg-orange-100 text-orange-800",
       progress: 90,
       message: "Collection is confirmed. The dealer is completing the payment step.",
-    },
-
-    payment_received: {
-      icon: "💵",
-      label: "Payment received",
-      className: "bg-orange-100 text-orange-800",
-      progress: 95,
-      message: "Payment was recorded. The dealer will complete the order.",
     },
 
     payment_received: {
@@ -274,6 +292,7 @@ function getStatusDetails(status) {
 }
 
 export default function FarmerOrdersPage() {
+  const language = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -308,13 +327,13 @@ export default function FarmerOrdersPage() {
 
   function showPaymentCompletedNotice(uid, order) {
     const storageKey = `farmerPaymentNoticeOrderIds_${uid}`;
-    let shownOrderIds = [];
-
-    try {
-      shownOrderIds = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    } catch {
-      shownOrderIds = [];
-    }
+    const shownOrderIds = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey) || "[]");
+      } catch {
+        return [];
+      }
+    })();
 
     if (shownOrderIds.includes(order.id)) {
       return;
@@ -338,12 +357,13 @@ export default function FarmerOrdersPage() {
   function showTimeoutNotice(uid, order) {
     if (order.cancellationReason !== "dealer_acceptance_timeout") return;
     const storageKey = `farmerOrderTimeoutNoticeIds_${uid}`;
-    let shownIds = [];
-    try {
-      shownIds = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    } catch {
-      shownIds = [];
-    }
+    const shownIds = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey) || "[]");
+      } catch {
+        return [];
+      }
+    })();
     if (shownIds.includes(order.id) || shownTimeoutOrderIds.current.has(order.id)) return;
     shownTimeoutOrderIds.current.add(order.id);
     try {
@@ -900,14 +920,15 @@ export default function FarmerOrdersPage() {
 
       const now = new Date().toISOString();
 
-      await update(ref(database), {
-        [`dealerOrders/${order.id}/farmerReceived`]: true,
-        [`dealerOrders/${order.id}/farmerReceivedAt`]: now,
-        [`dealerOrders/${order.id}/completedBy`]: "farmer",
-        [`dealerOrders/${order.id}/completedByUid`]: user.uid,
-        [`dealerOrders/${order.id}/completedAt`]: now,
-        [`dealerOrders/${order.id}/status`]: "completed",
-        [`dealerOrders/${order.id}/updatedAt`]: now,
+      await update(ref(database, `dealerOrders/${order.id}`), {
+        farmerReceived: true,
+        orderReceivedAt: now,
+        farmerReceivedAt: now,
+        completedBy: "farmer",
+        completedByUid: user.uid,
+        completedAt: now,
+        status: "completed",
+        updatedAt: now,
       });
 
       setReceiptConfirmation(null);
@@ -938,7 +959,7 @@ export default function FarmerOrdersPage() {
         permissionDenied
           ? "Firebase blocked this update. Its rules must allow the order owner to confirm receipt and move their accepted or delivered order to completed."
           : validationFailed
-            ? "Firebase rejected the completion fields. Check the dealerOrders rules for farmerReceived, farmerReceivedAt, completedBy, completedByUid, completedAt, status, and updatedAt."
+            ? "Firebase rejected the completion fields. Check the dealerOrders rules for farmerReceived, orderReceivedAt, farmerReceivedAt, completedBy, completedByUid, completedAt, status, and updatedAt."
             : "The order update failed. Check your connection and try again."
       );
     } finally {
@@ -974,7 +995,7 @@ export default function FarmerOrdersPage() {
               type="button"
               onClick={() => navigate("/dashboard")}
               className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center"
-              aria-label="Back to dashboard"
+              aria-label={t("dashboardLink", {}, language)}
             >
               ←
             </button>
@@ -985,21 +1006,21 @@ export default function FarmerOrdersPage() {
               onClick={refreshOrders}
               className="bg-white/15 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
             >
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? t("refreshing", {}, language) : t("refresh", {}, language)}
             </button>
           </div>
 
           <div className="mt-5">
             <p className="text-green-100 text-sm">
-              Farmer purchases
+              {t("farmerPurchases", {}, language)}
             </p>
 
             <h1 className="text-3xl font-bold mt-1">
-              🛒 My Orders
+              🛒 {t("myOrders", {}, language)}
             </h1>
 
             <p className="text-green-100 text-sm mt-2">
-              Track requested orders or review completed orders.
+              {t("trackOrdersIntro", {}, language)}
             </p>
           </div>
 
@@ -1009,7 +1030,7 @@ export default function FarmerOrdersPage() {
                 {counts.active}
               </p>
               <p className="text-xs text-green-100 mt-1">
-                Active
+                {t("active", {}, language)}
               </p>
             </div>
 
@@ -1020,7 +1041,7 @@ export default function FarmerOrdersPage() {
             >
               <p className="text-xl font-bold">{historyOrders.length}</p>
               <p className="text-xs text-green-100 mt-1">
-                History
+                {t("history", {}, language)}
               </p>
             </button>
           </div>
@@ -1058,7 +1079,7 @@ export default function FarmerOrdersPage() {
                     : "bg-white border border-green-200 text-green-800"
                 }`}
               >
-                {filter.label} ({counts[filter.value]})
+                {t(filter.key, {}, language)} ({counts[filter.value]})
               </button>
             ))}
           </section>
@@ -1074,7 +1095,7 @@ export default function FarmerOrdersPage() {
                     onClick={() => { cancelSelection(); setHistoryStatusFilter(value); }}
                     className={`rounded-2xl border p-4 text-left transition ${historyStatusFilter === value ? "border-green-700 bg-green-700 text-white shadow-md" : "border-green-100 bg-white text-gray-800 hover:border-green-300 hover:shadow-sm"}`}
                   >
-                    <span className={`block text-xs font-semibold ${historyStatusFilter === value ? "text-green-50" : "text-gray-500"}`}>{label}</span>
+                    <span className={`block text-xs font-semibold ${historyStatusFilter === value ? "text-green-50" : "text-gray-500"}`}>{t(HISTORY_STATUS_FILTERS.find((item) => item.value === value)?.key || "", {}, language) || label}</span>
                     <span className="mt-1 block text-2xl font-bold">{counts.historyStatuses[value]}</span>
                   </button>
                 ))}
@@ -1167,20 +1188,20 @@ export default function FarmerOrdersPage() {
               <div className="text-6xl">📦</div>
 
               <h2 className="text-xl font-bold text-green-900 mt-4">
-                No orders found
+                {t("noOrdersFoundLabel", {}, language)}
               </h2>
 
               <p className="text-gray-600 text-sm mt-2">
                 {selectedFilter === "history"
-                  ? "Completed and rejected orders will appear here."
-                  : "Your current orders will appear here."}
+                  ? t("completedRejectedWillAppear", {}, language)
+                  : t("currentOrdersWillAppear", {}, language)}
               </p>
               {selectedFilter === "active" && <button
                 type="button"
                 onClick={() => navigate("/farmer/dealer-products")}
                 className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold mt-5"
               >
-                Browse Products
+                {t("browseProducts", {}, language)}
               </button>}
             </section>
           ) : (
@@ -1196,6 +1217,7 @@ export default function FarmerOrdersPage() {
                 const canContactDealer = auth.currentUser?.uid === order.farmerUid && ["accepted", "delivered_by_dealer"].includes(orderStatus) && !order.farmerReceived;
                 const dealerPhone = String(order.dealerPhone || "").replace(/[^\d+]/g, "");
                 const amount = order.totalAmount ?? (Number(order.price || 0) * Number(order.quantity || 0));
+                const orderDate = getOrderDateLabel(order, selectedFilter);
 
                 return (
                   <article
@@ -1238,7 +1260,7 @@ export default function FarmerOrdersPage() {
                       <span className="text-xs text-gray-600">{order.quantity || 0} {order.unit || "units"}</span>
                       <span className="text-xs font-semibold text-gray-700">{formatMoney(amount)}</span>
                       <span className={`${status.className} shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold`}>{status.icon} {status.label}</span>
-                      <span className="w-full text-xs text-gray-500 sm:w-auto">Ordered {formatDate(order.createdAt)}</span>
+                      <span className="w-full text-xs text-gray-500 sm:w-auto">{orderDate.label} {formatDate(orderDate.value)}</span>
                     </div>
                     {orderStatus === "pending" && <div className="pointer-events-none mt-2"><OrderAcceptanceTimer order={order} /></div>}
                     {orderStatus === "pending" && (
@@ -1276,8 +1298,9 @@ export default function FarmerOrdersPage() {
                         <InfoCard label="Quantity" value={`${selectedOrder.quantity || 0} ${selectedOrder.unit || "units"}`} />
                         <InfoCard label="Price per unit" value={formatMoney(selectedOrder.price)} />
                         <InfoCard label="Total amount" value={formatMoney(selectedOrder.totalAmount ?? (Number(selectedOrder.price || 0) * Number(selectedOrder.quantity || 0)))} />
-                        <InfoCard label="Order date" value={formatDate(selectedOrder.createdAt)} />
-                        {selectedOrder.completedAt && <InfoCard label="Completed date" value={formatDate(selectedOrder.completedAt)} />}
+                        <InfoCard label="Order date" value={formatDate(selectedOrder.orderPlacedAt || selectedOrder.createdAt)} />
+                        {(selectedOrder.orderReceivedAt || selectedOrder.farmerReceivedAt) && <InfoCard label="Order received date" value={formatDate(selectedOrder.orderReceivedAt || selectedOrder.farmerReceivedAt)} />}
+                        {getHistoryStatus(selectedOrder) === "completed" && <InfoCard label="Completed date" value={formatDate(selectedOrder.completedAt || selectedOrder.orderReceivedAt || selectedOrder.farmerReceivedAt || selectedOrder.paymentReceivedAt || selectedOrder.updatedAt)} />}
                       </div>
                       {getNormalizedOrderStatus(selectedOrder) === "pending" && <OrderAcceptanceTimer order={selectedOrder} />}
                       {getNormalizedOrderStatus(selectedOrder) === "pending" && <button type="button" onClick={() => openCancellationDialog(selectedOrder)} className="rounded-xl border border-red-200 px-4 py-3 font-semibold text-red-700 hover:bg-red-50">Cancel order</button>}

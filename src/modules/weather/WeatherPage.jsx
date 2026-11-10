@@ -39,6 +39,57 @@ const WEATHER_CONDITIONS = {
   99: ["conditionSevereThunderstorm", "⛈️"],
 };
 
+const MAX_WEATHER_LOCATION_ACCURACY_METERS = 25_000;
+
+function normalizeLocationPart(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+async function geocodeSavedFarmArea(profile) {
+  const state = String(profile?.state || "").trim();
+  const district = String(profile?.district || "").trim();
+  const village = String(profile?.village || "").trim();
+  const mandal = String(profile?.mandal || "").trim();
+  const queries = [...new Set([village, mandal, district].filter(Boolean))];
+
+  for (const name of queries) {
+    try {
+      const params = new URLSearchParams({ name, count: "10", language: "en", format: "json" });
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
+      if (!response.ok) continue;
+      const results = (await response.json()).results || [];
+      const matches = results.filter((result) => {
+        if (String(result.country_code || "").toUpperCase() !== "IN") return false;
+        const administrative = [result.admin1, result.admin2, result.admin3, result.admin4, result.admin5]
+          .map(normalizeLocationPart)
+          .filter(Boolean);
+        const stateKey = normalizeLocationPart(state);
+        const districtKey = normalizeLocationPart(district);
+        const stateMatches = !stateKey || administrative.some((part) => part.includes(stateKey) || stateKey.includes(part));
+        const districtMatches = !districtKey || administrative.some((part) => part.includes(districtKey) || districtKey.includes(part));
+        return stateMatches && districtMatches;
+      });
+      if (matches.length) return matches[0];
+    } catch {
+      // Try the next saved area name; weather can still use a precise device fix.
+    }
+  }
+
+  return null;
+}
+
+function locationFromSavedFarmArea(result, profile) {
+  return {
+    latitude: result.latitude,
+    longitude: result.longitude,
+    source: "profile",
+    village: profile.village || result.name,
+    mandal: profile.mandal || result.admin3 || "",
+    district: profile.district || result.admin2 || "",
+    state: profile.state || result.admin1 || "",
+  };
+}
+
 function weatherDetails(code, language, isDay) {
   const [labelKey, icon] = WEATHER_CONDITIONS[Number(code)] || ["conditionWeather", "🌤️"];
   const nightIcons = { 0: "🌙", 1: "🌙", 2: "☁️🌙" };
@@ -117,34 +168,44 @@ export default function WeatherPage() {
         return;
       }
 
-      const deviceLocation = await getCurrentLocation({
-        onProgress: (fix) => {
-          if (isActive()) {
-            setLocation(locationFromCoordinates(null, fix, language));
-          }
-        },
-      });
+      let deviceLocation = await getCurrentLocation();
       if (!isActive()) return;
 
-      setLocation(locationFromCoordinates(null, deviceLocation, language));
+      const accuracy = Number(deviceLocation.accuracy);
+      const hasPreciseDeviceLocation = deviceLocation.source !== "ip" &&
+        Number.isFinite(accuracy) && accuracy <= MAX_WEATHER_LOCATION_ACCURACY_METERS;
+      if (!hasPreciseDeviceLocation) {
+        const savedArea = await geocodeSavedFarmArea(profileSnapshot.val());
+        if (!isActive()) return;
+        if (!savedArea) {
+          const error = new Error(t("locationApproximate", {}, language));
+          error.code = "LOW_ACCURACY";
+          throw error;
+        }
+        deviceLocation = locationFromSavedFarmArea(savedArea, profileSnapshot.val());
+      }
 
-      const [weatherResult, placeResult] = await Promise.allSettled([
-        fetchWeatherForecast(deviceLocation),
-        reverseGeocodeCoordinates(deviceLocation),
-      ]);
+      setLocation(deviceLocation.source === "profile"
+        ? deviceLocation
+        : locationFromCoordinates(null, deviceLocation, language));
+
+      const weatherResult = await Promise.allSettled([fetchWeatherForecast(deviceLocation)]);
       if (!isActive()) return;
-      if (weatherResult.status === "rejected") throw weatherResult.reason;
+      if (weatherResult[0].status === "rejected") throw weatherResult[0].reason;
 
-      const weatherData = weatherResult.value;
+      const weatherData = weatherResult[0].value;
       setForecast(weatherData);
 
-      if (placeResult.status === "fulfilled") {
-        setLocation(locationFromCoordinates(placeResult.value, deviceLocation, language));
+      if (deviceLocation.source === "profile") {
+        setLocation(deviceLocation);
+        setMessage({ type: "warning", text: t("locationApproximate", {}, language) });
       } else {
-        setMessage({
-          type: "warning",
-          text: t("locationCoordinatesOnly", {}, language),
-        });
+        try {
+          const place = await reverseGeocodeCoordinates(deviceLocation);
+          if (isActive()) setLocation(locationFromCoordinates(place, deviceLocation, language));
+        } catch {
+          if (isActive()) setMessage({ type: "warning", text: t("locationCoordinatesOnly", {}, language) });
+        }
       }
     } catch (error) {
       if (!isActive()) return;
@@ -206,7 +267,7 @@ export default function WeatherPage() {
             <div>📍 {location
               ? [location.village, location.mandal, location.district, location.state].filter(Boolean).join(", ")
               : t("locationNotDetected", {}, language)}</div>
-            {location && (
+            {location && location.accuracy != null && (
               <p className="mt-1 text-xs text-blue-100">
                 {t("coordinatesLocationLabel", {
                   latitude: Number(location.latitude).toFixed(5),

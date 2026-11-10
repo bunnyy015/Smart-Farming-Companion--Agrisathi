@@ -106,7 +106,7 @@ export default function FarmerProfilePage() {
 
       if (!userSnapshot.exists()) {
         setFarmer(null);
-        showMessage("error", "Farmer account was not found.");
+        showMessage("error", t("farmerAccountNotFound", {}, language));
         return;
       }
 
@@ -135,8 +135,8 @@ export default function FarmerProfilePage() {
         String(error?.message || "")
           .toLowerCase()
           .includes("permission denied")
-          ? "Profile access is blocked by Firebase rules."
-          : "Profile could not be loaded."
+          ? t("profileAccessDenied", {}, language)
+          : t("profileLoadFailed", {}, language)
       );
     } finally {
       setLoading(false);
@@ -202,38 +202,38 @@ export default function FarmerProfilePage() {
     const mainCrop = selectedCrops[0] || form.mainCrop.trim();
 
     if (!name) {
-      showMessage("warning", "Enter farmer name.");
+      showMessage("warning", t("enterFarmerName", {}, language));
       return;
     }
 
     if (!phone) {
-      showMessage("warning", "Enter phone number.");
+      showMessage("warning", t("enterPhoneNumber", {}, language));
       return;
     }
 
     if (!/^[6-9]\d{9}$/.test(phone)) {
-      showMessage("warning", "Enter a valid 10-digit mobile number.");
+      showMessage("warning", t("enterValidPhone", {}, language));
       return;
     }
 
     if (!district) {
-      showMessage("warning", "Enter district.");
+      showMessage("warning", t("enterDistrict", {}, language));
       return;
     }
 
     if (!state) {
-      showMessage("warning", "Enter state.");
+      showMessage("warning", t("enterState", {}, language));
       return;
     }
 
     if (!mainCrop) {
-      showMessage("warning", "Select at least one crop.");
+      showMessage("warning", t("selectOneCrop", {}, language));
       return;
     }
 
     const landSize = form.landSize ? Number(form.landSize) : 0;
     if (form.landSize && (!Number.isFinite(landSize) || landSize < 0)) {
-      showMessage("warning", "Enter a valid land size.");
+      showMessage("warning", t("enterValidLandSize", {}, language));
       return;
     }
 
@@ -290,7 +290,7 @@ export default function FarmerProfilePage() {
       setFarmer(updatedProfile);
       setForm(buildForm(updatedProfile));
       setEditing(false);
-      showMessage("success", "Profile updated successfully.");
+      showMessage("success", t("profileUpdated", {}, language));
     } catch (error) {
       console.error("Profile update error:", error);
       showMessage(
@@ -298,8 +298,8 @@ export default function FarmerProfilePage() {
         String(error?.message || "")
           .toLowerCase()
           .includes("permission denied")
-          ? "Profile update is blocked by Firebase rules."
-          : "Profile could not be updated."
+          ? t("profileUpdateDenied", {}, language)
+          : t("profileUpdateFailed", {}, language)
       );
     } finally {
       setSaving(false);
@@ -310,7 +310,7 @@ export default function FarmerProfilePage() {
     const currentUser = auth.currentUser;
     if (!currentUser || !farmer) return;
     if (enabled && !/^[6-9]\d{9}$/.test(String(farmer.phone || farmer.mobile || farmer.phoneNumber || "").trim())) {
-      showMessage("warning", "Add a valid 10-digit mobile number to your profile first.");
+      showMessage("warning", t("validPhoneRequired", {}, language));
       return;
     }
     setWhatsappSaving(true);
@@ -326,10 +326,10 @@ export default function FarmerProfilePage() {
         [`farmers/${currentUser.uid}/whatsappConsentAt`]: updates.whatsappConsentAt,
       });
       setFarmer((current) => ({ ...current, ...updates }));
-      showMessage("success", enabled ? "WhatsApp order updates enabled." : "WhatsApp order updates disabled.");
+      showMessage("success", t(enabled ? "whatsappEnabled" : "whatsappDisabled", {}, language));
     } catch (error) {
       console.error("WhatsApp preference update error:", error);
-      showMessage("error", "WhatsApp preference could not be updated.");
+      showMessage("error", t("whatsappUpdateFailed", {}, language));
     } finally {
       setWhatsappSaving(false);
     }
@@ -337,7 +337,15 @@ export default function FarmerProfilePage() {
 
   function getProfileValue(...values) {
     const value = values.find((item) => String(item || "").trim());
-    return value || "Not added";
+    return value || t("notAdded", {}, language);
+  }
+
+  function localizeProfileTerm(value) {
+    const keyByValue = {
+      paddy: "cropPaddy", rice: "cropPaddy", wheat: "cropWheat", maize: "cropMaize", cotton: "cropCotton", chilli: "cropChilli", chili: "cropChilli", turmeric: "cropTurmeric", tomato: "cropTomato", potato: "cropPotato", onion: "cropOnion", brinjal: "cropBrinjal", vegetables: "cropVegetables", sugarcane: "cropSugarcane", groundnut: "cropGroundnut", soybean: "cropSoybean", "red gram": "cropRedGram", "green gram": "cropGreenGram", "black gram": "cropBlackGram", banana: "cropBanana", mango: "cropMango", apple: "cropApple", rainfed: "rainfed", borewell: "borewell", canal: "canal", drip: "drip", sprinkler: "sprinkler", tank: "tank", "black soil": "blackSoil", "red soil": "redSoil", "sandy soil": "sandySoil", "loamy soil": "loamySoil", "clay soil": "claySoil", acres: "acres", hectares: "hectares",
+    };
+    const key = keyByValue[String(value || "").trim().toLowerCase()];
+    return key ? t(key, {}, language) : value;
   }
 
   if (loading) {
@@ -388,7 +396,7 @@ export default function FarmerProfilePage() {
             onClick={() => navigate("/dashboard")}
             className="text-green-100 font-semibold hover:text-white transition"
           >
-            ← Dashboard
+            {t("dashboardLink", {}, language)}
           </button>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-3">
             <div>
@@ -403,7 +411,7 @@ export default function FarmerProfilePage() {
                 onClick={startEditing}
                 className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold self-start hover:bg-green-50 transition"
               >
-                ✏️ Edit Profile
+                ✏️ {t("editProfile", {}, language)}
               </button>
             )}
           </div>
@@ -420,7 +428,7 @@ export default function FarmerProfilePage() {
                 {getProfileValue(farmer.name, farmer.fullName, farmer.farmerName)}
               </h2>
               <p className="text-gray-600 mt-1">
-                {getProfileValue(farmer.mainCrop)} Farmer
+                {localizeProfileTerm(getProfileValue(farmer.mainCrop))} {t("farmer", {}, language)}
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 📍 {getProfileValue(farmer.village, farmer.district, farmer.state)}
@@ -430,7 +438,7 @@ export default function FarmerProfilePage() {
 
           <div className="mt-5">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-800">Profile Completion</p>
+              <p className="font-semibold text-gray-800">{t("profileCompletion", {}, language)}</p>
               <p className="font-bold text-green-700">{profileCompletion}%</p>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
@@ -443,7 +451,7 @@ export default function FarmerProfilePage() {
             </div>
             {profileCompletion < 100 && (
               <p className="text-sm text-gray-500 mt-2">
-                Add complete farm details for better crop and product recommendations.
+                {t("profileCompletionHelp", {}, language)}
               </p>
             )}
           </div>
@@ -452,12 +460,12 @@ export default function FarmerProfilePage() {
         <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-green-900">WhatsApp order updates</h2>
-              <p className="text-sm text-gray-600 mt-1">Receive important reservation status updates on your registered mobile number. You can turn this off at any time.</p>
-              <p className="text-xs text-gray-500 mt-2">Messages are sent only for important order events and use WhatsApp approved templates.</p>
+              <h2 className="text-lg font-bold text-green-900">{t("whatsappOrderUpdates", {}, language)}</h2>
+              <p className="text-sm text-gray-600 mt-1">{t("whatsappOrderUpdatesHelp", {}, language)}</p>
+              <p className="text-xs text-gray-500 mt-2">{t("whatsappApprovedTemplates", {}, language)}</p>
             </div>
             <button type="button" role="switch" aria-checked={farmer.whatsappNotificationsEnabled === true} disabled={whatsappSaving} onClick={() => setWhatsAppNotifications(farmer.whatsappNotificationsEnabled !== true)} className={`shrink-0 rounded-xl px-4 py-2 font-semibold disabled:opacity-50 ${farmer.whatsappNotificationsEnabled === true ? "bg-green-700 text-white" : "bg-gray-100 text-gray-700"}`}>
-              {whatsappSaving ? "Saving…" : farmer.whatsappNotificationsEnabled === true ? "On" : "Off"}
+              {whatsappSaving ? t("saving", {}, language) : farmer.whatsappNotificationsEnabled === true ? t("on", {}, language) : t("off", {}, language)}
             </button>
           </div>
         </section>
@@ -465,38 +473,38 @@ export default function FarmerProfilePage() {
         {/* Edit Mode */}
         {editing ? (
           <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
-            <h2 className="text-xl font-bold text-green-900">✏️ Edit Profile</h2>
+            <h2 className="text-xl font-bold text-green-900">✏️ {t("editProfile", {}, language)}</h2>
             <form onSubmit={saveProfile} className="space-y-4 mt-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Farmer Name
+                    {t("farmerName", {}, language)}
                   </label>
                   <input
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                    placeholder="Farmer name"
+                    placeholder={t("farmerName", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Phone Number
+                    {t("phoneNumber", {}, language)}
                   </label>
                   <input
                     name="phone"
                     type="tel"
                     value={form.phone}
                     onChange={handleChange}
-                    placeholder="Phone number"
+                    placeholder={t("phoneNumber", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-gray-700">Email</label>
+                <label className="text-sm font-semibold text-gray-700">{t("email", {}, language)}</label>
                 <input
                   value={farmer.email || ""}
                   disabled
@@ -507,25 +515,25 @@ export default function FarmerProfilePage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Village
+                    {t("village", {}, language)}
                   </label>
                   <input
                     name="village"
                     value={form.village}
                     onChange={handleChange}
-                    placeholder="Village"
+                    placeholder={t("village", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Mandal
+                    {t("mandal", {}, language)}
                   </label>
                   <input
                     name="mandal"
                     value={form.mandal}
                     onChange={handleChange}
-                    placeholder="Mandal"
+                    placeholder={t("mandal", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
@@ -534,25 +542,25 @@ export default function FarmerProfilePage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    District
+                    {t("district", {}, language)}
                   </label>
                   <input
                     name="district"
                     value={form.district}
                     onChange={handleChange}
-                    placeholder="District"
+                    placeholder={t("district", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    State
+                    {t("state", {}, language)}
                   </label>
                   <input
                     name="state"
                     value={form.state}
                     onChange={handleChange}
-                    placeholder="State"
+                    placeholder={t("state", {}, language)}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
@@ -560,13 +568,13 @@ export default function FarmerProfilePage() {
 
               <div>
                 <label className="text-sm font-semibold text-gray-700">
-                  Address
+                    {t("address", {}, language)}
                 </label>
                 <textarea
                   name="address"
                   value={form.address}
                   onChange={handleChange}
-                  placeholder="House, village or delivery address"
+                  placeholder={t("addressPlaceholder", {}, language)}
                   rows="3"
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                 />
@@ -575,29 +583,29 @@ export default function FarmerProfilePage() {
               <CropSelector selectedCrops={form.selectedCrops || []} onChange={(selectedCrops) => setForm((current) => ({ ...current, selectedCrops, mainCrop: selectedCrops[0] || "", cropAreas: Object.fromEntries(Object.entries(current.cropAreas || {}).filter(([crop]) => selectedCrops.includes(crop))) }))} disabled={saving} />
 
               <div className="rounded-xl border border-green-100 p-3">
-                <p className="text-sm font-semibold text-gray-800">Area by crop <span className="font-normal text-gray-500">(optional · {form.landUnit})</span></p>
+                <p className="text-sm font-semibold text-gray-800">{t("areaByCrop", {}, language)} <span className="font-normal text-gray-500">({t("optional", {}, language)} · {t(form.landUnit, {}, language)})</span></p>
                 <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {(form.selectedCrops || []).map((crop) => <label key={crop} className="text-sm text-gray-700">{crop}<input type="number" min="0" step="0.01" value={form.cropAreas?.[crop] || ""} onChange={(event) => setForm((current) => ({ ...current, cropAreas: { ...(current.cropAreas || {}), [crop]: event.target.value } }))} disabled={saving} placeholder={`Area in ${form.landUnit}`} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>)}
+                  {(form.selectedCrops || []).map((crop) => <label key={crop} className="text-sm text-gray-700">{localizeProfileTerm(crop)}<input type="number" min="0" step="0.01" value={form.cropAreas?.[crop] || ""} onChange={(event) => setForm((current) => ({ ...current, cropAreas: { ...(current.cropAreas || {}), [crop]: event.target.value } }))} disabled={saving} placeholder={`${t("areaByCrop", {}, language)} · ${t(form.landUnit, {}, language)}`} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>)}
                 </div>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-gray-700">Land / cultivation status</label>
+                  <label className="text-sm font-semibold text-gray-700">{t("landCultivationStatus", {}, language)}</label>
                   <select name="cultivationStatus" value={form.cultivationStatus} onChange={handleChange} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500">
-                    <option value="">Prefer not to say</option><option value="owner">I own the cultivated land</option><option value="tenant">I cultivate leased land</option><option value="sharecropper">I cultivate as a sharecropper</option><option value="other">Other arrangement</option>
+                    <option value="">{t("preferNotToSay", {}, language)}</option><option value="owner">{t("ownLand", {}, language)}</option><option value="tenant">{t("leasedLand", {}, language)}</option><option value="sharecropper">{t("sharecropper", {}, language)}</option><option value="other">{t("otherArrangement", {}, language)}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-700">Age (optional)</label>
-                  <input name="age" type="number" min="1" max="120" value={form.age} onChange={handleChange} placeholder="Age in years" className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500" />
+                  <label className="text-sm font-semibold text-gray-700">{t("ageOptional", {}, language)}</label>
+                  <input name="age" type="number" min="1" max="120" value={form.age} onChange={handleChange} placeholder={t("ageYears", {}, language)} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500" />
                 </div>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Land Size
+                    {t("landSize", {}, language)}
                   </label>
                   <div className="flex gap-2 mt-1">
                     <input
@@ -607,7 +615,7 @@ export default function FarmerProfilePage() {
                       step="0.01"
                       value={form.landSize}
                       onChange={handleChange}
-                      placeholder="Land size"
+                      placeholder={t("landSize", {}, language)}
                       className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                     />
                     <select
@@ -616,14 +624,14 @@ export default function FarmerProfilePage() {
                       onChange={handleChange}
                       className="border border-gray-300 rounded-xl px-3 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                     >
-                      <option value="acres">Acres</option>
-                      <option value="hectares">Hectares</option>
+                      <option value="acres">{t("acres", {}, language)}</option>
+                      <option value="hectares">{t("hectares", {}, language)}</option>
                     </select>
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Irrigation Type
+                    {t("irrigationType", {}, language)}
                   </label>
                   <select
                     name="irrigationType"
@@ -631,13 +639,13 @@ export default function FarmerProfilePage() {
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   >
-                    <option value="">Select irrigation</option>
-                    <option value="Rainfed">Rainfed</option>
-                    <option value="Borewell">Borewell</option>
-                    <option value="Canal">Canal</option>
-                    <option value="Drip">Drip</option>
-                    <option value="Sprinkler">Sprinkler</option>
-                    <option value="Tank">Tank</option>
+                    <option value="">{t("selectIrrigation", {}, language)}</option>
+                    <option value="Rainfed">{t("rainfed", {}, language)}</option>
+                    <option value="Borewell">{t("borewell", {}, language)}</option>
+                    <option value="Canal">{t("canal", {}, language)}</option>
+                    <option value="Drip">{t("drip", {}, language)}</option>
+                    <option value="Sprinkler">{t("sprinkler", {}, language)}</option>
+                    <option value="Tank">{t("tank", {}, language)}</option>
                   </select>
                 </div>
               </div>
@@ -645,7 +653,7 @@ export default function FarmerProfilePage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700">
-                    Soil Type
+                    {t("soilType", {}, language)}
                   </label>
                   <select
                     name="soilType"
@@ -653,12 +661,12 @@ export default function FarmerProfilePage() {
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   >
-                    <option value="">Select soil type</option>
-                    <option value="Black Soil">Black Soil</option>
-                    <option value="Red Soil">Red Soil</option>
-                    <option value="Sandy Soil">Sandy Soil</option>
-                    <option value="Loamy Soil">Loamy Soil</option>
-                    <option value="Clay Soil">Clay Soil</option>
+                    <option value="">{t("selectSoil", {}, language)}</option>
+                    <option value="Black Soil">{t("blackSoil", {}, language)}</option>
+                    <option value="Red Soil">{t("redSoil", {}, language)}</option>
+                    <option value="Sandy Soil">{t("sandySoil", {}, language)}</option>
+                    <option value="Loamy Soil">{t("loamySoil", {}, language)}</option>
+                    <option value="Clay Soil">{t("claySoil", {}, language)}</option>
                   </select>
                 </div>
               </div>
@@ -669,7 +677,7 @@ export default function FarmerProfilePage() {
                   disabled={saving}
                   className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold disabled:bg-gray-400 hover:bg-green-800 transition"
                 >
-                  {saving ? "Saving..." : "💾 Save Profile"}
+                  {saving ? t("saving", {}, language) : `💾 ${t("saveProfile", {}, language)}`}
                 </button>
                 <button
                   type="button"
@@ -677,7 +685,7 @@ export default function FarmerProfilePage() {
                   onClick={cancelEditing}
                   className="border border-gray-300 text-gray-700 px-5 py-3 rounded-xl font-semibold hover:bg-gray-50 transition"
                 >
-                  Cancel
+                  {t("cancel", {}, language)}
                 </button>
               </div>
             </form>
@@ -688,23 +696,23 @@ export default function FarmerProfilePage() {
             <section className="grid sm:grid-cols-2 gap-4 mt-5">
               <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
                 <h2 className="text-lg font-bold text-green-900">
-                  📞 Contact Details
+                  📞 {t("contactDetails", {}, language)}
                 </h2>
                 <div className="space-y-4 mt-4">
                   <div>
-                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="text-sm text-gray-500">{t("email", {}, language)}</p>
                     <p className="font-semibold break-words">
                       {getProfileValue(farmer.email)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="text-sm text-gray-500">{t("phoneNumber", {}, language)}</p>
                     <p className="font-semibold">
                       {getProfileValue(farmer.phone, farmer.mobile, farmer.phoneNumber)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Address</p>
+                    <p className="text-sm text-gray-500">{t("address", {}, language)}</p>
                     <p className="font-semibold">
                       {getProfileValue(farmer.address, farmer.village)}
                     </p>
@@ -714,23 +722,23 @@ export default function FarmerProfilePage() {
 
               <article className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
                 <h2 className="text-lg font-bold text-green-900">
-                  📍 Location
+                  📍 {t("location", {}, language)}
                 </h2>
                 <div className="space-y-4 mt-4">
                   <div>
-                    <p className="text-sm text-gray-500">Village</p>
+                    <p className="text-sm text-gray-500">{t("village", {}, language)}</p>
                     <p className="font-semibold">
                       {getProfileValue(farmer.village)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Mandal</p>
+                    <p className="text-sm text-gray-500">{t("mandal", {}, language)}</p>
                     <p className="font-semibold">
                       {getProfileValue(farmer.mandal)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">District and State</p>
+                    <p className="text-sm text-gray-500">{t("districtAndState", {}, language)}</p>
                     <p className="font-semibold">
                       {getProfileValue(farmer.district)} • {getProfileValue(farmer.state)}
                     </p>
@@ -740,36 +748,36 @@ export default function FarmerProfilePage() {
             </section>
 
             <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
-              <h2 className="text-lg font-bold text-green-900">🌾 Farm Details</h2>
+              <h2 className="text-lg font-bold text-green-900">🌾 {t("farmDetails", {}, language)}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 <div className="bg-green-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Selected Crops</p>
+                  <p className="text-sm text-gray-500">{t("selectedCrops", {}, language)}</p>
                   <p className="font-bold text-green-900 mt-1">
-                    {getProfileValue((farmer.selectedCrops || [farmer.mainCrop, ...String(farmer.otherCrops || "").split(",")]).filter(Boolean).join(", "))}
+                    {(farmer.selectedCrops || [farmer.mainCrop, ...String(farmer.otherCrops || "").split(",")]).filter(Boolean).map(localizeProfileTerm).join(", ") || t("notAdded", {}, language)}
                   </p>
                 </div>
                 <div className="bg-blue-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Land Size</p>
+                  <p className="text-sm text-gray-500">{t("landSize", {}, language)}</p>
                   <p className="font-bold text-blue-900 mt-1">
                     {farmer.landSize
-                      ? `${farmer.landSize} ${farmer.landUnit || "acres"}`
-                      : "Not added"}
+                      ? `${farmer.landSize} ${localizeProfileTerm(farmer.landUnit || "acres")}`
+                      : t("notAdded", {}, language)}
                   </p>
                 </div>
                 <div className="bg-blue-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Irrigation</p>
+                  <p className="text-sm text-gray-500">{t("irrigation", {}, language)}</p>
                   <p className="font-bold text-blue-900 mt-1">
-                    {getProfileValue(farmer.irrigationType)}
+                    {localizeProfileTerm(getProfileValue(farmer.irrigationType))}
                   </p>
                 </div>
                 <div className="bg-yellow-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Soil Type</p>
+                  <p className="text-sm text-gray-500">{t("soilType", {}, language)}</p>
                   <p className="font-bold text-yellow-900 mt-1">
-                    {getProfileValue(farmer.soilType)}
+                    {localizeProfileTerm(getProfileValue(farmer.soilType))}
                   </p>
                 </div>
                 <div className="bg-purple-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-500">Language</p>
+                  <p className="text-sm text-gray-500">{t("language", {}, language)}</p>
                   <p className="font-bold text-purple-900 mt-1">
                     {getLanguageName(language)}
                   </p>

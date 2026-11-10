@@ -19,6 +19,7 @@ let activeAudio = null;
 let activeAudioUrl = null;
 let activeTtsController = null;
 let activeAudioStop = null;
+let activeSpeechQueue = null;
 
 function stopActiveAudio(status = "cancelled") {
   activeAudioStop?.(status);
@@ -96,6 +97,8 @@ function waitForCompatibleVoice(synthesis, locale) {
 }
 
 export function cancelSpeech() {
+  activeSpeechQueue?.cancel();
+  activeSpeechQueue = null;
   speechRequestId += 1;
   activeTtsController?.abort();
   activeTtsController = null;
@@ -107,6 +110,104 @@ export function cancelSpeech() {
   } catch {
     // Ignore browser speech cancellation errors.
   }
+}
+
+/** Queue complete sentence utterances without cancelling the browser queue. */
+export function createSpeechQueue(selectedLanguage = "en", options = {}) {
+  activeSpeechQueue?.cancel();
+  activeSpeechQueue = null;
+  const requestId = ++speechRequestId;
+  const languageCode = getLanguageCode(selectedLanguage);
+  const locale = LANGUAGE_LOCALES[languageCode];
+  const synthesis = typeof window !== "undefined" ? window.speechSynthesis : null;
+  const queue = [];
+  let finished = false;
+  let cancelled = false;
+  let processing = false;
+  let resolveDone;
+  const done = new Promise((resolve) => { resolveDone = resolve; });
+
+  activeTtsController?.abort();
+  activeTtsController = null;
+  stopActiveAudio();
+  synthesis?.cancel();
+
+  const voiceReady = synthesis
+    ? waitForCompatibleVoice(synthesis, locale).catch(() => null)
+    : Promise.resolve(null);
+
+  const settle = (status) => {
+    if (resolveDone) {
+      resolveDone({ status, languageCode, locale });
+      resolveDone = null;
+    }
+  };
+
+  const processQueue = async () => {
+    if (processing || cancelled || requestId !== speechRequestId) return;
+    processing = true;
+    const voice = await voiceReady;
+    if (!voice || !synthesis) {
+      processing = false;
+      if (finished) settle("voice-unavailable");
+      return;
+    }
+    while (queue.length && !cancelled && requestId === speechRequestId) {
+      const text = queue.shift();
+      const result = await new Promise((resolve) => {
+        let utterance;
+        try {
+          utterance = new SpeechSynthesisUtterance(text);
+        } catch {
+          resolve("unsupported");
+          return;
+        }
+        utterance.lang = locale;
+        utterance.voice = voice;
+        utterance.rate = options.rate ?? 1;
+        utterance.pitch = options.pitch ?? 1;
+        utterance.volume = options.volume ?? 1;
+        utterance.onstart = () => options.onStart?.();
+        utterance.onend = () => resolve("spoken");
+        utterance.onerror = (event) => resolve(event?.error === "canceled" ? "cancelled" : "error");
+        try { synthesis.speak(utterance); } catch { resolve("error"); }
+      });
+      if (result !== "spoken") {
+        cancelled = result === "cancelled";
+        queue.length = 0;
+        processing = false;
+        if (finished) settle(result);
+        return;
+      }
+    }
+    processing = false;
+    if (finished && !queue.length) settle("spoken");
+  };
+
+  const controller = {
+    enqueue(text) {
+      const phrase = String(text || "").trim();
+      if (!phrase || finished || cancelled) return;
+      queue.push(phrase);
+      void processQueue();
+    },
+    finish() {
+      finished = true;
+      if (!queue.length && !processing) {
+        void voiceReady.then((voice) => settle(voice ? "spoken" : "voice-unavailable"));
+      } else {
+        void processQueue();
+      }
+      return done;
+    },
+    cancel() {
+      cancelled = true;
+      queue.length = 0;
+      settle("cancelled");
+    },
+  };
+  activeSpeechQueue = controller;
+  return controller;
 }
 
 function extractAudioData(responseData) {
