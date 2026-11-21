@@ -35,6 +35,7 @@ export default function MarketplaceProductCard({
   onQuantityChange,
   onRequestOrder,
   onViewDetails,
+  showDescription = true,
 }) {
   const language = useLanguage();
   const availableQuantity = Number(product.quantity || 0);
@@ -91,7 +92,7 @@ export default function MarketplaceProductCard({
           </span>
         </div>
 
-        {product.description && (
+        {showDescription && product.description && (
           <p className="mt-2 whitespace-pre-line text-sm leading-5 text-gray-600">
             {product.description}
           </p>

@@ -4,6 +4,7 @@ import { get, ref } from "firebase/database";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth, database } from "../../firebase";
+import "./AdminPageEffects.css";
 
 const EMPTY_STATS = {
   farmers: 0,
@@ -565,7 +566,7 @@ export default function AdminDashboardPage() {
    */
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-white p-4 md:p-6">
+    <div className="admin-page-effects admin-page-effects--dashboard min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}

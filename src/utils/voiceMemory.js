@@ -45,6 +45,17 @@ export function getVoiceMemory() {
   }));
 }
 
+export function replaceVoiceMemory(messages) {
+  conversationMemory = (Array.isArray(messages) ? messages : [])
+    .filter((item) => isValidRole(item?.role) && cleanText(item?.text))
+    .slice(-MAX_MESSAGES)
+    .map((item) => ({
+      role: item.role,
+      message: cleanText(item.text),
+      createdAt: Number(item.createdAt) || Date.now(),
+    }));
+}
+
 export function getVoiceMemoryForPrompt() {
   if (conversationMemory.length === 0) {
     return "No previous conversation in this session.";

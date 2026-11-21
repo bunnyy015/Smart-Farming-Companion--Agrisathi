@@ -8,6 +8,7 @@ import {
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
+import "./DealerPageEffects.css";
 
 const agricultureCategories = [
   "Seeds",
@@ -30,6 +31,10 @@ export default function DealerStockPage() {
     useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [adjustments, setAdjustments] = useState({});
+  const [walkInProductId, setWalkInProductId] = useState("");
+  const [walkInQuantity, setWalkInQuantity] = useState(1);
+  const [walkInCustomerName, setWalkInCustomerName] = useState("");
+  const [walkInCustomerPhone, setWalkInCustomerPhone] = useState("");
   const [updatingId, setUpdatingId] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -301,7 +306,7 @@ export default function DealerStockPage() {
               return;
             }
 
-            return {
+            const newProduct = {
               ...currentProduct,
 
               quantity: newQuantity,
@@ -321,6 +326,23 @@ export default function DealerStockPage() {
 
               updatedAt: new Date().toISOString(),
             };
+            const transactionId = `stock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            newProduct.inventoryTransactions = {
+              ...(currentProduct.inventoryTransactions || {}),
+              [transactionId]: {
+                transactionId,
+                dealerId: currentUser.uid,
+                productId: product.id,
+                transactionType: change > 0 ? "stock_added" : "stock_adjustment",
+                quantity: Math.abs(change),
+                previousPhysicalStock: currentQuantity,
+                newPhysicalStock: newQuantity,
+                reason: change < 0 ? "Manual stock reduction" : "Stock added",
+                createdAt: Date.now(),
+                createdBy: currentUser.uid,
+              },
+            };
+            return newProduct;
           }
         );
 
@@ -363,6 +385,40 @@ export default function DealerStockPage() {
     } finally {
       setUpdatingId("");
     }
+  }
+
+  async function recordWalkInSale() {
+    const currentUser = auth.currentUser;
+    const quantity = Number(walkInQuantity);
+    const product = products.find((item) => item.id === walkInProductId);
+    if (!currentUser || !product || !Number.isInteger(quantity) || quantity <= 0) {
+      showMessage("warning", "Select a product and enter a valid whole-number quantity.");
+      return;
+    }
+    setUpdatingId(product.id);
+    try {
+      let failureReason = "";
+      const result = await runTransaction(ref(database, `dealerProducts/${currentUser.uid}/${product.id}`), (currentProduct) => {
+        if (!currentProduct) { failureReason = "missing"; return; }
+        const physical = Number(currentProduct.quantity || 0);
+        const reserved = Number(currentProduct.reservedQuantity || 0);
+        if (quantity > physical - reserved) { failureReason = "insufficient"; return; }
+        const updated = { ...currentProduct, quantity: physical - quantity, soldQuantity: Number(currentProduct.soldQuantity || 0) + quantity, status: physical - quantity > 0 ? "available" : "out_of_stock", updatedAt: new Date().toISOString() };
+        const transactionId = `walkin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        updated.inventoryTransactions = { ...(currentProduct.inventoryTransactions || {}), [transactionId]: { transactionId, dealerId: currentUser.uid, productId: product.id, transactionType: "walk_in_sale", quantity, previousPhysicalStock: physical, newPhysicalStock: physical - quantity, customerName: walkInCustomerName.trim() || null, customerPhone: walkInCustomerPhone.trim() || null, createdAt: Date.now(), createdBy: currentUser.uid } };
+        return updated;
+      }, { applyLocally: false });
+      if (!result.committed) {
+        showMessage("warning", failureReason === "insufficient" ? "Sale exceeds available unreserved stock." : "Product could not be updated.");
+        return;
+      }
+      setWalkInQuantity(1); setWalkInCustomerName(""); setWalkInCustomerPhone("");
+      showMessage("success", `Walk-in sale recorded. Stock reduced by ${quantity} ${product.unit || "units"}.`);
+      await loadStock();
+    } catch (error) {
+      console.error("Walk-in sale error:", error);
+      showMessage("error", "Walk-in sale could not be recorded.");
+    } finally { setUpdatingId(""); }
   }
 
   function applyCustomAdjustment(
@@ -431,7 +487,7 @@ export default function DealerStockPage() {
 
   if (loading) {
     return (
-      <div className="dealer-theme min-h-screen bg-green-50 flex items-center justify-center p-4">
+      <div className="dealer-theme dealer-page-effects dealer-page-effects--stock min-h-screen bg-green-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
           <div className="text-5xl">📋</div>
 
@@ -444,7 +500,7 @@ export default function DealerStockPage() {
   }
 
   return (
-    <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="dealer-theme dealer-page-effects dealer-page-effects--stock min-h-screen bg-green-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}
@@ -565,6 +621,36 @@ export default function DealerStockPage() {
               {statistics.totalSoldUnits}
             </p>
           </article>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
+          <h2 className="text-xl font-bold text-green-900">Record Walk-in Sale</h2>
+          <p className="text-sm text-gray-600 mt-1">Records an in-store purchase and deducts only unreserved physical stock.</p>
+          <div className="grid gap-3 mt-4 sm:grid-cols-2 lg:grid-cols-5">
+            <select aria-label="Product for walk-in sale" value={walkInProductId} onChange={(event) => setWalkInProductId(event.target.value)} className="border rounded-xl px-3 py-2.5">
+              <option value="">Select product</option>
+              {products.map((product) => <option key={product.id} value={product.id}>{product.productName} · ₹{Number(product.price || 0)} / {product.unit || "unit"}</option>)}
+            </select>
+            <input aria-label="Walk-in sale quantity" type="number" min="1" step="1" value={walkInQuantity} onChange={(event) => setWalkInQuantity(event.target.value)} className="border rounded-xl px-3 py-2.5" placeholder="Quantity" />
+            <input aria-label="Optional customer name" value={walkInCustomerName} onChange={(event) => setWalkInCustomerName(event.target.value)} className="border rounded-xl px-3 py-2.5" placeholder="Customer name (optional)" />
+            <input aria-label="Optional customer phone" value={walkInCustomerPhone} onChange={(event) => setWalkInCustomerPhone(event.target.value)} className="border rounded-xl px-3 py-2.5" placeholder="Phone (optional)" />
+            <button type="button" disabled={!walkInProductId || updatingId === walkInProductId} onClick={recordWalkInSale} className="bg-green-700 text-white rounded-xl px-4 py-2.5 font-semibold disabled:opacity-50">{updatingId === walkInProductId ? "Saving…" : "Confirm Sale"}</button>
+          </div>
+          {walkInProductId && <p className="text-sm text-gray-600 mt-3">Sale total: ₹{Number(products.find((product) => product.id === walkInProductId)?.price || 0) * Number(walkInQuantity || 0)}</p>}
+        </section>
+
+        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
+          <h2 className="text-xl font-bold text-green-900">Inventory Transaction History</h2>
+          <div className="mt-3 divide-y">
+            {products.flatMap((product) => Object.values(product.inventoryTransactions || {}).map((transaction) => ({ ...transaction, productName: product.productName }))).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)).slice(0, 30).map((transaction) => (
+              <div key={transaction.transactionId} className="py-3 flex flex-wrap justify-between gap-2 text-sm">
+                <span className="font-semibold">{transaction.productName} · {String(transaction.transactionType || "stock_adjustment").replaceAll("_", " ")}</span>
+                <span>{transaction.quantity} units · {new Date(Number(transaction.createdAt || 0)).toLocaleString()}</span>
+                {transaction.reason && <span className="text-gray-500">{transaction.reason}</span>}
+              </div>
+            ))}
+            {products.every((product) => Object.keys(product.inventoryTransactions || {}).length === 0) && <p className="py-3 text-sm text-gray-500">No stock movements recorded yet.</p>}
+          </div>
         </section>
 
         <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">

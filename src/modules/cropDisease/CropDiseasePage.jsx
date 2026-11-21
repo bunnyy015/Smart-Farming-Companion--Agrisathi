@@ -5,6 +5,7 @@ import { get, push, ref, set } from "firebase/database";
 import { auth, database } from "../../firebase";
 import { getLanguage, t } from "../../utils/language";
 import useLanguage from "../../utils/useLanguage";
+import "./CropDiseasePage.css";
 
 const MODELS = [
   "gemini-3.5-flash-lite",
@@ -49,6 +50,67 @@ function getPythonApiUrl() {
     return "http://127.0.0.1:8000";
   }
   return `http://${hostname}:8000`;
+}
+
+async function assessCropPhotoClarity(file) {
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("The crop photo could not be opened."));
+      element.src = imageUrl;
+    });
+
+    const sampleSize = 320;
+    const scale = Math.min(1, sampleSize / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(3, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(3, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("The crop photo could not be checked.");
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    const gray = new Float32Array(canvas.width * canvas.height);
+    let brightnessTotal = 0;
+
+    for (let pixel = 0; pixel < gray.length; pixel += 1) {
+      const offset = pixel * 4;
+      const luminance = 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+      gray[pixel] = luminance;
+      brightnessTotal += luminance;
+    }
+
+    const meanBrightness = brightnessTotal / gray.length;
+    let luminanceVariance = 0;
+    let laplacianTotal = 0;
+    let laplacianSquaredTotal = 0;
+    let sampleCount = 0;
+
+    for (let y = 1; y < canvas.height - 1; y += 1) {
+      for (let x = 1; x < canvas.width - 1; x += 1) {
+        const index = y * canvas.width + x;
+        const value = gray[index];
+        const difference = value - meanBrightness;
+        luminanceVariance += difference * difference;
+        const laplacian = 4 * value - gray[index - 1] - gray[index + 1]
+          - gray[index - canvas.width] - gray[index + canvas.width];
+        laplacianTotal += laplacian;
+        laplacianSquaredTotal += laplacian * laplacian;
+        sampleCount += 1;
+      }
+    }
+
+    const contrast = Math.sqrt(luminanceVariance / Math.max(1, sampleCount));
+    const meanLaplacian = laplacianTotal / Math.max(1, sampleCount);
+    const sharpness = Math.max(0, laplacianSquaredTotal / Math.max(1, sampleCount) - meanLaplacian ** 2);
+    return {
+      needsEnhancement: meanBrightness < 45 || meanBrightness > 225 || contrast < 18 || sharpness < 75,
+    };
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
 }
 
 function extractJson(responseText) {
@@ -422,13 +484,13 @@ export default function CropDiseasePage() {
   const language = useLanguage();
   const navigate = useNavigate();
   const [photo, setPhoto] = useState(null);
+  const [preparedPhoto, setPreparedPhoto] = useState(null);
   const [preview, setPreview] = useState("");
   const [cropName, setCropName] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [processingStage, setProcessingStage] = useState("");
   const [error, setError] = useState("");
-  const [enhancementMessage, setEnhancementMessage] = useState("");
   const [dealerProducts, setDealerProducts] = useState([]);
   const [matchingPesticides, setMatchingPesticides] = useState([]);
   const [matchingFertilizers, setMatchingFertilizers] = useState([]);
@@ -578,12 +640,12 @@ export default function CropDiseasePage() {
     }
 
     setPhoto(file);
+    setPreparedPhoto(null);
     setPreview(URL.createObjectURL(file));
     setResult(null);
     setMatchingPesticides([]);
     setMatchingFertilizers([]);
     setError("");
-    setEnhancementMessage("");
     setProcessingStage("");
   }
 
@@ -777,22 +839,22 @@ export default function CropDiseasePage() {
     }
   }
 
-  async function prepareImage(file) {
-    setProcessingStage("Improving crop image...");
-    try {
-      const enhanced = await enhanceWithPython(file);
-      setEnhancementMessage("Image was improved automatically before disease detection.");
-      return enhanced;
-    } catch (enhancementError) {
-      console.warn("Python enhancement unavailable:", enhancementError);
-      setEnhancementMessage("Automatic image improvement was unavailable. The original photo was analyzed.");
-      const original = await fileToBase64(file);
-      return {
-        ...original,
-        enhanced: false,
-        information: null,
-      };
+  async function prepareImage(file, needsEnhancement) {
+    if (needsEnhancement) {
+      setProcessingStage("Improving crop image...");
+      try {
+        return await enhanceWithPython(file);
+      } catch (enhancementError) {
+        console.warn("Python enhancement unavailable; analyzing the original crop photo:", enhancementError);
+      }
     }
+
+    const original = await fileToBase64(file);
+    return {
+      ...original,
+      enhanced: false,
+      information: null,
+    };
   }
 
   async function loadDealerProducts() {
@@ -839,7 +901,10 @@ ${cropName.trim() || "Unknown"}
 
 Rules:
 - First determine whether the image contains a crop, leaf or plant.
-- If the image is unclear, do not invent a disease.
+- Inspect the crop, affected plant part, lesion shape, color, edges, distribution and surrounding visible symptoms before deciding.
+- Give the single best-supported likely diagnosis and explain the visible evidence in symptoms and expertAdvice. Do not return a generic "Uncertain" when the image supports a plausible diagnosis.
+- Do not claim certainty or invent symptoms. If the photo truly lacks enough evidence for a responsible diagnosis, state exactly what is missing and give the best-supported possibilities with low confidence.
+- When the farmer-entered crop is "Unknown", identify the crop only if visually clear; otherwise do not guess a crop-specific disease.
 - If the plant appears healthy, use "Healthy" as the disease value.
 - Recommend one commonly used pesticide active ingredient only when appropriate.
 - Recommend one commonly used fertilizer only when nutrient support is relevant.
@@ -878,14 +943,22 @@ Required JSON structure:
 
     let lastError = null;
     let sawTemporaryCapacityError = false;
+    let lastCapacityError = null;
+    // Leave enough time for backup models when the first one is overloaded.
+    const analysisDeadline = Date.now() + 90_000;
 
     for (let modelIndex = 0; modelIndex < DISEASE_MODELS.length; modelIndex += 1) {
+      const remainingTime = analysisDeadline - Date.now();
+      if (remainingTime <= 0) break;
+
       const model = DISEASE_MODELS[modelIndex];
-      const attempts = modelIndex === 0 ? 2 : 1;
+      const attempts = 1;
 
       for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const requestTimeout = Math.min(modelIndex === 0 ? 20_000 : 12_000, analysisDeadline - Date.now());
+        if (requestTimeout <= 0) break;
         const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+        const timeoutId = window.setTimeout(() => controller.abort(), requestTimeout);
 
         try {
           setProcessingStage(
@@ -908,7 +981,7 @@ Required JSON structure:
                   ],
                 }],
                 generationConfig: {
-                  temperature: 0.2,
+                  thinkingConfig: { thinkingLevel: "high" },
                   responseMimeType: "application/json",
                 },
               }),
@@ -918,20 +991,15 @@ Required JSON structure:
 
           if (!response.ok) {
             const message = data?.error?.message || `Disease service failed with status ${response.status}.`;
+            console.warn(`Disease model ${model} returned HTTP ${response.status}:`, message);
             const temporaryCapacityError = [408, 429, 500, 502, 503, 504].includes(response.status) ||
               /high demand|overloaded|temporarily unavailable|try again later/i.test(message);
             lastError = new Error(message);
-            if (temporaryCapacityError) sawTemporaryCapacityError = true;
-
-            if (temporaryCapacityError && modelIndex === 0 && attempt === 0) {
-              const retryAfter = Number(response.headers.get("Retry-After"));
-              const delay = Number.isFinite(retryAfter) && retryAfter > 0
-                ? Math.min(retryAfter * 1000, 1500)
-                : 700 + Math.floor(Math.random() * 400);
-              setProcessingStage("Crop service is busy; retrying once...");
-              await new Promise((resolve) => window.setTimeout(resolve, delay));
-              continue;
+            if (temporaryCapacityError) {
+              sawTemporaryCapacityError = true;
+              lastCapacityError = { status: response.status, message };
             }
+
             break;
           }
 
@@ -943,9 +1011,13 @@ Required JSON structure:
 
           return validateAnalysis(extractJson(responseText));
         } catch (modelError) {
-          console.error(`Disease model ${model} failed:`, modelError);
+          console.warn(`Disease model ${model} failed; trying the next available model:`, modelError);
           lastError = modelError;
-          if (modelError.name === "AbortError" || modelError instanceof TypeError) {
+          if (modelError.name === "AbortError") {
+            sawTemporaryCapacityError = true;
+            break;
+          }
+          if (modelError instanceof TypeError) {
             sawTemporaryCapacityError = true;
           }
         } finally {
@@ -955,7 +1027,9 @@ Required JSON structure:
     }
 
     if (sawTemporaryCapacityError) {
-      throw new Error("Crop analysis is temporarily busy. Your photo is still selected; please try again in a moment.");
+      const status = lastCapacityError?.status ? `HTTP ${lastCapacityError.status}: ` : "";
+      const details = lastCapacityError?.message || lastError?.message || "The model service is temporarily unavailable.";
+      throw new Error(`Crop analysis service error (${status}${details}). Your photo is still selected.`);
     }
     throw lastError || new Error("The image analysis service is unavailable.");
   }
@@ -993,10 +1067,20 @@ Required JSON structure:
       setResult(null);
       setMatchingPesticides([]);
       setMatchingFertilizers([]);
-      setEnhancementMessage("");
 
-      const preparedImage = await prepareImage(photo);
-      const analysis = await detectDisease(preparedImage);
+      let image = preparedPhoto?.file === photo ? preparedPhoto.image : null;
+      if (!image) {
+        setProcessingStage("Checking crop photo clarity...");
+        let needsEnhancement = false;
+        try {
+          ({ needsEnhancement } = await assessCropPhotoClarity(photo));
+        } catch (clarityError) {
+          console.warn("Crop photo clarity check failed; using the original photo:", clarityError);
+        }
+        image = await prepareImage(photo, needsEnhancement);
+        setPreparedPhoto({ file: photo, image });
+      }
+      const analysis = await detectDisease(image);
 
       if (!analysis.isPlant) {
         setError(
@@ -1017,7 +1101,7 @@ Required JSON structure:
         findMatchingProducts(products, analysis.fertilizer, "Fertilizer")
       );
 
-      await saveDiseaseReport(analysis, preparedImage.enhanced);
+      await saveDiseaseReport(analysis, image.enhanced);
 
     } catch (analysisError) {
       console.error("Crop disease detection error:", analysisError);
@@ -1033,10 +1117,10 @@ Required JSON structure:
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 pb-10">
-      <div className="max-w-xl mx-auto">
+    <div className="crop-disease-page min-h-screen p-4 pb-10 sm:p-6">
+      <div className="crop-disease-content mx-auto">
         {/* Header */}
-        <header className="bg-green-700 text-white rounded-2xl p-5 shadow-lg">
+        <header className="crop-disease-hero relative isolate overflow-hidden rounded-2xl p-5 text-white shadow-lg sm:rounded-3xl sm:p-7">
           <button
             type="button"
             onClick={() => navigate("/dashboard")}
@@ -1052,8 +1136,9 @@ Required JSON structure:
           </p>
         </header>
 
+        <div className="crop-disease-workspace mt-5">
         {/* Upload Section */}
-        <section className="bg-white rounded-2xl shadow p-5 mt-5">
+        <section className="crop-disease-card crop-disease-upload rounded-2xl p-5 sm:p-6">
           <label className="block font-semibold text-gray-700">
             {t("cropNameOptional", {}, language)}
           </label>
@@ -1070,8 +1155,8 @@ Required JSON structure:
             {t("cropOrLeafPhoto", {}, language)}
           </label>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={() => openCamera("crop")} disabled={loading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">{t("takeCropPhotoLabel", {}, language)}</button>
-            <button type="button" onClick={() => cropFileInput.current?.click()} disabled={loading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-60">{t("chooseCropPhotoLabel", {}, language)}</button>
+            <button type="button" onClick={() => openCamera("crop")} disabled={loading} className="crop-disease-action-button rounded-lg px-4 py-2.5 text-sm font-semibold">{t("takeCropPhotoLabel", {}, language)}</button>
+            <button type="button" onClick={() => cropFileInput.current?.click()} disabled={loading} className="crop-disease-secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">{t("chooseCropPhotoLabel", {}, language)}</button>
           </div>
           <input ref={cropFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={loading} onChange={selectPhoto} className="hidden" />
 
@@ -1079,18 +1164,47 @@ Required JSON structure:
             {t("imageAutoEnhancement", {}, language)}
           </p>
 
+          {!preview && !loading && (
+            <div className="crop-disease-visual-stage mt-5">
+              <div className="crop-disease-visual-copy">
+                <span className="crop-disease-visual-kicker">FIELD HEALTH · PHOTO ANALYSIS</span>
+                <h2>Give your crop a closer look</h2>
+                <p>Choose a clear leaf photo to get started with crop health guidance.</p>
+                <span className="crop-disease-visual-hint"><span aria-hidden="true">✦</span> Clear leaf photos work best</span>
+              </div>
+              <svg className="crop-disease-plant-art" viewBox="0 0 360 220" role="img" aria-label="A young crop growing in a field">
+                <defs>
+                  <linearGradient id="crop-leaf-gradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#8edc78" />
+                    <stop offset="1" stopColor="#16834e" />
+                  </linearGradient>
+                  <linearGradient id="crop-field-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#c2e9ad" />
+                    <stop offset="1" stopColor="#e9f6df" />
+                  </linearGradient>
+                </defs>
+                <circle className="crop-disease-sun" cx="278" cy="48" r="24" />
+                <path className="crop-disease-field" d="M0 151 Q80 126 164 151 T360 147 V220 H0Z" />
+                <path className="crop-disease-field-line crop-disease-field-line--one" d="M8 180 Q94 151 177 179 T352 173" />
+                <path className="crop-disease-field-line crop-disease-field-line--two" d="M-2 198 Q87 172 177 197 T362 193" />
+                <path className="crop-disease-stem" d="M180 177 C176 146 180 117 181 91 C182 76 180 64 178 53" />
+                <path className="crop-disease-leaf crop-disease-leaf--left" d="M180 132 C145 132 119 113 117 87 C145 86 171 100 180 132Z" />
+                <path className="crop-disease-leaf crop-disease-leaf--right" d="M181 106 C188 77 211 59 240 64 C235 91 212 108 181 106Z" />
+                <path className="crop-disease-leaf crop-disease-leaf--top" d="M179 77 C157 61 153 37 166 18 C188 33 195 55 179 77Z" />
+                <path className="crop-disease-leaf-vein" d="M180 129 Q153 107 129 92 M183 103 Q207 83 229 70 M179 76 Q173 51 168 27" />
+                <circle className="crop-disease-sparkle crop-disease-sparkle--one" cx="91" cy="56" r="3" />
+                <circle className="crop-disease-sparkle crop-disease-sparkle--two" cx="305" cy="112" r="4" />
+                <circle className="crop-disease-sparkle crop-disease-sparkle--three" cx="118" cy="129" r="2.5" />
+              </svg>
+            </div>
+          )}
+
           {preview && (
             <img
               src={preview}
               alt={t("detectedCrop", {}, language)}
               className="w-full max-h-80 object-contain bg-gray-50 rounded-xl mt-4"
             />
-          )}
-
-          {enhancementMessage && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-3 mt-4 text-sm">
-              🔄 {enhancementMessage}
-            </div>
           )}
 
           {error && (
@@ -1103,7 +1217,7 @@ Required JSON structure:
             type="button"
             onClick={analyze}
             disabled={loading || !photo}
-            className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-400 text-white rounded-xl py-3.5 mt-5 font-bold transition"
+            className="crop-disease-action-button crop-disease-detect-button mt-5 w-full rounded-xl py-3.5 font-bold"
           >
             {loading
               ? processingStage || t("processingPhoto", {}, language)
@@ -1111,7 +1225,7 @@ Required JSON structure:
           </button>
         </section>
 
-        <section className="bg-white rounded-2xl shadow p-5 mt-5">
+        <section className="crop-disease-card crop-disease-recommendation rounded-2xl p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-sm text-green-700 font-semibold uppercase tracking-wide">
@@ -1132,8 +1246,8 @@ Required JSON structure:
               {t("landPhotoDetectionLabel", {}, language)}
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" onClick={() => openCamera("land")} disabled={landAnalysisLoading} className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">{t("takeLandPhotoLabel", {}, language)}</button>
-              <button type="button" onClick={() => landFileInput.current?.click()} disabled={landAnalysisLoading} className="rounded-lg border border-green-700 px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-white disabled:opacity-60">{t("chooseLandPhotoLabel", {}, language)}</button>
+              <button type="button" onClick={() => openCamera("land")} disabled={landAnalysisLoading} className="crop-disease-action-button rounded-lg px-4 py-2.5 text-sm font-semibold">{t("takeLandPhotoLabel", {}, language)}</button>
+              <button type="button" onClick={() => landFileInput.current?.click()} disabled={landAnalysisLoading} className="crop-disease-secondary-button rounded-lg px-4 py-2.5 text-sm font-semibold">{t("chooseLandPhotoLabel", {}, language)}</button>
             </div>
             <input ref={landFileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={landAnalysisLoading} onChange={selectLandPhoto} className="hidden" />
             {landPhotoPreview && (
@@ -1152,7 +1266,7 @@ Required JSON structure:
               type="button"
               onClick={analyzeLandPhoto}
               disabled={!landPhoto || landAnalysisLoading}
-              className="mt-3 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800 disabled:bg-gray-400"
+              className="crop-disease-action-button mt-3 rounded-lg px-4 py-2.5 text-sm font-semibold"
             >
               {landAnalysisLoading ? (landAnalysisStage || t("detectingLandLabel", {}, language)) : t("detectLandLabel", {}, language)}
             </button>
@@ -1301,10 +1415,11 @@ Required JSON structure:
             </div>
           )}
         </section>
+        </div>
 
         {/* Results Section */}
         {result && (
-          <section className="bg-white rounded-2xl shadow p-5 mt-5">
+          <section className="crop-disease-card crop-disease-results mt-5 rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm text-gray-500">{t("detectedCrop", {}, language)}</p>

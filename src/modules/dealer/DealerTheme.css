@@ -25,3 +25,99 @@
 .dealer-theme.from-green-50 {
   background-image: linear-gradient(135deg, #eff6ff, #ffffff, #ecfeff) !important;
 }
+
+/* Motion accents for the existing dealer dashboard colors and layout. */
+.dealer-dashboard > .max-w-7xl > header {
+  isolation: isolate;
+  background-size: 160% 160%;
+  animation: dealer-header-drift 18s ease-in-out infinite alternate;
+}
+
+.dealer-dashboard > .max-w-7xl > header::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(112deg, transparent 28%, rgba(255, 255, 255, .10) 48%, transparent 68%);
+  background-size: 220% 100%;
+  animation: dealer-header-sheen 12s ease-in-out infinite;
+}
+
+.dealer-dashboard > .max-w-7xl > header > .absolute {
+  animation: dealer-orb-float 7s ease-in-out infinite alternate;
+}
+
+.dealer-dashboard > .max-w-7xl > header > .absolute.-bottom-20 {
+  animation-delay: -3.5s;
+}
+
+.dealer-dashboard > .max-w-7xl > header > .relative {
+  z-index: 1;
+}
+
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button {
+  animation: dealer-card-enter .55s cubic-bezier(.2, .7, .25, 1) both;
+  transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+  will-change: transform;
+}
+
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button:nth-child(2) { animation-delay: 70ms; }
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button:nth-child(3) { animation-delay: 140ms; }
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button:nth-child(4) { animation-delay: 210ms; }
+
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button:hover {
+  transform: translateY(-5px) scale(1.012);
+  box-shadow: 0 18px 34px rgba(15, 56, 79, .22);
+  filter: saturate(1.06);
+}
+
+.dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button:focus-visible,
+.dealer-dashboard > .max-w-7xl > header button:focus-visible {
+  outline: 3px solid #f7c85a;
+  outline-offset: 3px;
+}
+
+.dealer-dashboard > .max-w-7xl > header button {
+  transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
+.dealer-dashboard > .max-w-7xl > header button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(7, 35, 63, .16);
+}
+
+@keyframes dealer-header-drift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+@keyframes dealer-header-sheen {
+  0%, 28% { background-position: 140% 0; }
+  72%, 100% { background-position: -120% 0; }
+}
+
+@keyframes dealer-orb-float {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-12px, 10px, 0); }
+}
+
+@keyframes dealer-card-enter {
+  from { opacity: 0; transform: translateY(13px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealer-dashboard > .max-w-7xl > header,
+  .dealer-dashboard > .max-w-7xl > header::before,
+  .dealer-dashboard > .max-w-7xl > header > .absolute,
+  .dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button {
+    animation: none;
+    will-change: auto;
+  }
+
+  .dealer-dashboard > .max-w-7xl > section.mt-7 > .grid > button,
+  .dealer-dashboard > .max-w-7xl > header button {
+    transition: none;
+  }
+}

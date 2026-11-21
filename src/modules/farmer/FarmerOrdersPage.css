@@ -1,0 +1,404 @@
+.farmer-orders-page {
+  position: relative;
+  min-height: 100vh;
+  background-color: #f1f7f1;
+  background-image: linear-gradient(180deg, #f2f8f2 0%, #f7faf6 46%, #f0f7f1 100%);
+  color: #173c2d;
+}
+
+.farmer-orders-page::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 92% 8%, rgb(189 227 196 / 42%), transparent 28rem),
+    radial-gradient(ellipse at 5% 52%, rgb(219 241 222 / 40%), transparent 26rem),
+    radial-gradient(ellipse at 76% 94%, rgb(220 240 225 / 38%), transparent 30rem);
+  animation: farmer-orders-background-drift 24s ease-in-out infinite alternate;
+  content: "";
+  pointer-events: none;
+}
+
+.farmer-orders-content {
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+.farmer-orders-hero {
+  background: linear-gradient(112deg, #064d32 0%, #087246 58%, #16824f 100%);
+  box-shadow: 0 14px 34px rgb(9 75 46 / 17%);
+}
+
+.farmer-orders-hero::before,
+.farmer-orders-hero::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.farmer-orders-hero::before {
+  z-index: 0;
+  inset: -38% -6% -42% 40%;
+  background:
+    radial-gradient(ellipse at 64% 40%, rgb(211 242 157 / 21%), transparent 23%),
+    radial-gradient(ellipse at 92% 78%, rgb(129 211 137 / 17%), transparent 38%);
+  animation: farmer-orders-hero-atmosphere 13s ease-in-out infinite alternate;
+}
+
+.farmer-orders-hero::after {
+  z-index: 0;
+  inset: -30% auto -30% -30%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 10%), transparent);
+  transform: skewX(-18deg);
+  animation: farmer-orders-hero-sweep 18s ease-in-out infinite;
+}
+
+.farmer-orders-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.farmer-orders-back,
+.farmer-orders-refresh {
+  border: 1px solid rgb(255 255 255 / 22%);
+  background: rgb(255 255 255 / 12%);
+  color: white;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.farmer-orders-back:hover,
+.farmer-orders-refresh:hover:not(:disabled) {
+  background: rgb(255 255 255 / 22%);
+}
+
+.farmer-orders-back:focus-visible,
+.farmer-orders-refresh:focus-visible,
+.farmer-orders-page button:focus-visible,
+.farmer-orders-page input:focus-visible,
+.farmer-orders-page select:focus-visible,
+.farmer-orders-page textarea:focus-visible {
+  outline: 3px solid #80c86d;
+  outline-offset: 3px;
+}
+
+/* Apply one consistent interaction feel to every Orders-page control. */
+.farmer-orders-page button {
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.farmer-orders-page button:hover:not(:disabled) {
+  filter: brightness(1.035);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgb(24 70 43 / 11%);
+}
+
+.farmer-orders-page button:active:not(:disabled) {
+  filter: brightness(0.98);
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 2px 6px rgb(24 70 43 / 9%);
+}
+
+.farmer-orders-page button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.72);
+}
+
+.farmer-orders-page .farmer-orders-action-button {
+  border: 1px solid rgb(255 255 255 / 24%);
+  background: linear-gradient(120deg, #087b43 0%, #056139 55%, #064f35 100%);
+  color: #fff;
+  box-shadow: 0 7px 16px rgb(6 95 53 / 19%), inset 0 1px 0 rgb(255 255 255 / 14%);
+  transition: background-position 220ms ease, box-shadow 180ms ease, transform 180ms ease;
+  background-size: 150% 150%;
+}
+
+.farmer-orders-page .farmer-orders-action-button:hover:not(:disabled) {
+  background-position: 100% 50%;
+  box-shadow: 0 10px 22px rgb(6 95 53 / 25%), inset 0 1px 0 rgb(255 255 255 / 18%);
+}
+
+.farmer-orders-page .farmer-orders-action-button:active:not(:disabled) {
+  background-position: 100% 50%;
+  box-shadow: 0 4px 10px rgb(6 95 53 / 20%);
+}
+
+.farmer-orders-page a:focus-visible,
+.farmer-orders-page [role="button"]:focus-visible {
+  outline: 3px solid #80c86d;
+  outline-offset: 3px;
+}
+
+.farmer-orders-page [aria-pressed="true"] {
+  box-shadow: 0 6px 16px rgb(7 89 52 / 17%);
+}
+
+.farmer-orders-page [role="alert"] {
+  border-radius: 1rem;
+  box-shadow: 0 8px 22px rgb(24 70 43 / 8%);
+}
+
+.farmer-orders-stats {
+  max-width: 440px;
+}
+
+.farmer-orders-stat {
+  border: 1px solid rgb(255 255 255 / 19%);
+  background: rgb(255 255 255 / 12%);
+  backdrop-filter: blur(8px);
+}
+
+.farmer-orders-history-stat {
+  text-align: left;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.farmer-orders-history-stat:hover {
+  transform: translateY(-1px);
+  background: rgb(255 255 255 / 20%);
+}
+
+.farmer-orders-paid-note,
+.farmer-orders-date-filter,
+.farmer-orders-selection-toolbar,
+.farmer-orders-empty {
+  border-color: #d7e8dc;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 7px 20px rgb(25 74 45 / 5%);
+}
+
+.farmer-orders-paid-note {
+  background: linear-gradient(120deg, #eff9f0, #fbfefb);
+}
+
+.farmer-orders-filters {
+  scrollbar-width: thin;
+  scrollbar-color: #a7cdb0 transparent;
+}
+
+.farmer-orders-filter {
+  border: 1px solid #d8e8dc;
+  background: #fff;
+  color: #315b43;
+  box-shadow: 0 3px 10px rgb(25 74 45 / 4%);
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.farmer-orders-filter:hover {
+  transform: translateY(-1px);
+  border-color: #b7d8c0;
+  background: #f8fcf8;
+}
+
+.farmer-orders-filter.bg-green-700 {
+  border-color: #087143;
+  background: linear-gradient(135deg, #087b43, #056139);
+  color: white;
+  box-shadow: 0 6px 15px rgb(6 95 53 / 17%);
+}
+
+.farmer-orders-history-filter {
+  min-height: 92px;
+  border-color: #dcebe0;
+  background: rgb(255 255 255 / 93%);
+}
+
+.farmer-orders-history-filter.border-green-700 {
+  border-color: #087143;
+  background: linear-gradient(135deg, #087b43, #056139);
+  box-shadow: 0 8px 18px rgb(6 95 53 / 17%);
+}
+
+.farmer-orders-date-filter {
+  border: 1px solid #d8e8dc;
+}
+
+.farmer-orders-date-filter label {
+  color: #365746;
+}
+
+.farmer-orders-date-filter input {
+  min-height: 44px;
+  border-color: #d3e2d7;
+  background: #fbfefb;
+  color: #173c2d;
+}
+
+.farmer-orders-date-filter input:focus-visible,
+.farmer-orders-dialog select:focus-visible,
+.farmer-orders-dialog textarea:focus-visible {
+  border-color: #16804b;
+  box-shadow: 0 0 0 3px rgb(22 128 75 / 13%);
+}
+
+.farmer-orders-selection-toolbar {
+  border-color: #cde4d3;
+  backdrop-filter: blur(14px);
+}
+
+.farmer-orders-empty {
+  border: 1px solid #d8e9dd;
+}
+
+.farmer-orders-list > .farmer-order-card {
+  position: relative;
+  overflow: hidden;
+  border-color: #d8e9dd;
+  background: linear-gradient(110deg, #fff 0%, #fff 76%, #f7fbf7 100%);
+  box-shadow: 0 5px 16px rgb(26 73 44 / 5%);
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease, background-color 170ms ease;
+}
+
+.farmer-orders-list > .farmer-order-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, #9ccf84, #078542);
+  content: "";
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.farmer-orders-list > .farmer-order-card:hover {
+  transform: translateY(-1px);
+  border-color: #b9dbc3;
+  background: linear-gradient(110deg, #fff 0%, #fff 74%, #f1f9f2 100%);
+  box-shadow: 0 10px 22px rgb(26 73 44 / 9%);
+}
+
+.farmer-orders-list > .farmer-order-card--selected {
+  border-color: #32935b;
+  background: linear-gradient(110deg, #f1faf2, #fff);
+  box-shadow: 0 0 0 2px rgb(50 147 91 / 16%), 0 8px 20px rgb(26 73 44 / 8%);
+}
+
+.farmer-orders-list > .farmer-order-card a,
+.farmer-orders-list > .farmer-order-card > button {
+  min-height: 40px;
+}
+
+.farmer-order-info-card {
+  border-color: #dcebe0;
+  background: linear-gradient(140deg, #f3faf4, #fbfefb);
+}
+
+.farmer-orders-dialog {
+  border: 1px solid #dbe9df;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 25%);
+}
+
+.farmer-orders-dialog-header {
+  background: linear-gradient(110deg, #075537, #087b48);
+}
+
+.farmer-orders-dialog input,
+.farmer-orders-dialog select,
+.farmer-orders-dialog textarea {
+  border-color: #d4e2d8;
+  background-color: #fbfefb;
+}
+
+.farmer-orders-page--loading > div {
+  animation: farmer-orders-loading-glow 1.8s ease-in-out infinite alternate;
+}
+
+.farmer-orders-list div[class~="mt-3"][class~="rounded-xl"][class~="text-sm"] {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #f0dba7;
+  background: linear-gradient(105deg, #fff9e9, #fffdf6);
+  padding-right: 2.25rem;
+  box-shadow: 0 4px 12px rgb(121 84 17 / 6%);
+}
+
+.farmer-orders-list div[class~="mt-3"][class~="rounded-xl"][class~="text-sm"][class~="bg-red-50"] {
+  border-color: #f0caca;
+  background: linear-gradient(105deg, #fff2f2, #fffafa);
+}
+
+.farmer-orders-list div[class~="mt-3"][class~="rounded-xl"][class~="text-sm"]::after {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #e3a52e;
+  box-shadow: 0 0 0 4px rgb(227 165 46 / 13%);
+  animation: farmer-orders-timer-pulse 1.8s ease-in-out infinite;
+  content: "";
+  pointer-events: none;
+}
+
+.farmer-orders-list div[class~="mt-3"][class~="rounded-xl"][class~="text-sm"][class~="bg-red-50"]::after {
+  background: #d95757;
+  box-shadow: 0 0 0 4px rgb(217 87 87 / 12%);
+  animation: none;
+}
+
+.farmer-orders-details-dialog .farmer-order-info-card {
+  min-height: 72px;
+}
+
+@keyframes farmer-orders-background-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); opacity: 0.72; }
+  to { transform: translate3d(-10px, 10px, 0) scale(1.025); opacity: 1; }
+}
+
+@keyframes farmer-orders-hero-atmosphere {
+  from { transform: translate3d(0, 0, 0) scale(0.96); opacity: 0.68; }
+  to { transform: translate3d(-14px, 9px, 0) scale(1.04); opacity: 1; }
+}
+
+@keyframes farmer-orders-hero-sweep {
+  0%, 28% { left: -30%; opacity: 0; }
+  40% { opacity: 0.58; }
+  70%, 100% { left: 112%; opacity: 0; }
+}
+
+@keyframes farmer-orders-loading-glow {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+@keyframes farmer-orders-timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgb(227 165 46 / 12%); opacity: 0.72; }
+  50% { box-shadow: 0 0 0 6px rgb(227 165 46 / 6%); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .farmer-orders-page > main {
+    padding-inline: 0.85rem;
+  }
+
+  .farmer-orders-hero {
+    margin-inline: -0.85rem;
+    border-radius: 0 0 1.5rem 1.5rem;
+  }
+
+  .farmer-orders-list > .farmer-order-card:hover {
+    transform: none;
+  }
+
+  .farmer-orders-page button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farmer-orders-page *,
+  .farmer-orders-page *::before,
+  .farmer-orders-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

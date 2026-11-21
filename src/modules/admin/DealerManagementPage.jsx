@@ -4,6 +4,7 @@ import { get, ref, update } from "firebase/database";
 
 import { database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import "./AdminPageEffects.css";
 
 const ACTIVE_STATUSES = ["approved", "active"];
 const INACTIVE_STATUSES = ["suspended", "deactivated", "blocked"];
@@ -301,7 +302,7 @@ export default function DealerManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="admin-page-effects admin-page-effects--dealers min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <StatusMessage
           message={message}

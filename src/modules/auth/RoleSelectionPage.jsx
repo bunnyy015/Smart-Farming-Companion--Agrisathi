@@ -7,6 +7,7 @@ import {
   subscribeLanguageChange,
   t,
 } from "../../utils/language";
+import "./RoleSelectionPage.css";
 
 const roles = [
   {
@@ -60,6 +61,21 @@ export default function RoleSelectionPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const page = document.querySelector(".role-selection-page");
+    const pointerQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+    if (!page || !pointerQuery.matches) return undefined;
+
+    function moveLandscape(event) {
+      const x = (event.clientX / window.innerWidth - 0.5) * 2;
+      page.style.setProperty("--pointer-x", `${x.toFixed(3)}`);
+      const y = (event.clientY / window.innerHeight - 0.5) * 2;
+      page.style.setProperty("--pointer-y", `${y.toFixed(3)}`);
+    }
+    window.addEventListener("pointermove", moveLandscape, { passive: true });
+    return () => window.removeEventListener("pointermove", moveLandscape);
+  }, []);
+
   function handleLanguageChange(event) {
     setCurrentLanguage(setLanguage(event.target.value));
   }
@@ -75,23 +91,25 @@ export default function RoleSelectionPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-emerald-50 to-green-100 flex items-center justify-center p-4 sm:p-6">
-      {/* Background decorative elements */}
-      <div className="absolute -top-24 -left-24 w-72 h-72 bg-green-300/20 rounded-full blur-3xl animate-pulse" />
-
-      <div
-        className="absolute -bottom-24 -right-24 w-80 h-80 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-        style={{ animationDelay: "700ms" }}
-      />
-
-      <div
-        className="absolute top-1/3 right-10 w-20 h-20 bg-yellow-200/30 rounded-full blur-2xl animate-pulse"
-        style={{ animationDelay: "1200ms" }}
-      />
+    <div className="role-selection-page min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-emerald-50 to-green-100 flex items-center justify-center p-4 sm:p-6">
+      <div className="role-landscape" aria-hidden="true">
+        <div className="landscape-sun" />
+        <div className="landscape-cloud cloud-one" />
+        <div className="landscape-cloud cloud-two" />
+        <div className="landscape-field field-far" />
+        <div className="landscape-field field-mid" />
+        <div className="landscape-field field-near" />
+        <div className="landscape-crops" />
+        <span className="nature-speck speck-one" />
+        <span className="nature-speck speck-two" />
+        <span className="nature-speck speck-three" />
+        <span className="nature-leaf leaf-one" />
+        <span className="nature-leaf leaf-two" />
+      </div>
 
       {/* Main container */}
       <main
-        className={`relative z-10 w-full max-w-6xl transition-all duration-700 ease-out ${
+        className={`relative z-10 w-full max-w-6xl role-content transition-all duration-700 ease-out ${
           isVisible
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-8"
@@ -102,10 +120,10 @@ export default function RoleSelectionPage() {
           <img
             src="/agrisathi-logo.png"
             alt="AgriSaathi — Smart Farming Companion"
-            className="mx-auto mb-4 block w-[min(260px,75vw)] sm:w-[300px] h-auto object-contain"
+            className="role-logo mx-auto mb-4 block w-[min(260px,75vw)] sm:w-[300px] h-auto object-contain"
           />
 
-          <label className="inline-flex items-center gap-3 mt-5 rounded-2xl border border-green-200 bg-white px-4 py-3 shadow-sm">
+          <label className="role-language inline-flex items-center gap-3 mt-5 rounded-2xl border border-green-200 bg-white px-4 py-3 shadow-sm">
             <span className="font-semibold text-gray-700">🌐 {t("selectLanguage", {}, language)}</span>
             <select
               value={language}
@@ -146,6 +164,7 @@ export default function RoleSelectionPage() {
                 disabled={Boolean(selectedRole)}
                 aria-label={t("continueAsRole", { role: roleTitle }, language)}
                 className={`
+                  role-card
                   group relative text-left
                   bg-white
                   rounded-3xl
@@ -171,9 +190,7 @@ export default function RoleSelectionPage() {
                       : ""
                   }
                 `}
-                style={{
-                  animationDelay: `${index * 120}ms`,
-                }}
+                style={{ "--card-index": index }}
               >
                 {/* Top gradient */}
                 <div

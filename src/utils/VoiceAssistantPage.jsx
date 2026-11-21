@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   equalTo,
@@ -30,7 +31,9 @@ import {
   addAssistantMessage,
   getVoiceMemoryForPrompt,
   clearVoiceMemory,
+  replaceVoiceMemory,
 } from "./voiceMemory";
+import { useFarmerVoiceConversation } from "../components/FarmerVoiceConversationContext";
 
 import {
   detectLocalVoiceCommand,
@@ -118,6 +121,9 @@ const interfaceText = {
     voiceUnavailable:
       "No voice for the selected language is available in this browser or device. Install that language's speech voice in your system settings, then retry.",
     speechUnsupported: "Speech output is not supported in this browser.",
+    clearConversation: "Clear conversation",
+    clearConfirm: "Clear the complete voice conversation? This cannot be undone.",
+    back: "Back",
   },
 
   te: {
@@ -139,6 +145,9 @@ const interfaceText = {
     voiceUnavailable:
       "ఈ బ్రౌజర్ లేదా పరికరంలో ఎంచుకున్న భాషకు వాయిస్ అందుబాటులో లేదు. పరికర సెట్టింగుల్లో ఆ భాష స్పీచ్ వాయిస్‌ను ఇన్‌స్టాల్ చేసి మళ్లీ ప్రయత్నించండి.",
     speechUnsupported: "ఈ బ్రౌజర్‌లో స్పీచ్ అవుట్‌పుట్‌కు మద్దతు లేదు.",
+    clearConversation: "సంభాషణను తొలగించండి",
+    clearConfirm: "పూర్తి వాయిస్ సంభాషణను తొలగించాలా? దీన్ని తిరిగి పొందలేరు.",
+    back: "వెనుకకు",
   },
 
   hi: {
@@ -160,6 +169,9 @@ const interfaceText = {
     voiceUnavailable:
       "इस ब्राउज़र या डिवाइस में चुनी गई भाषा की आवाज़ उपलब्ध नहीं है। डिवाइस सेटिंग में उस भाषा की स्पीच आवाज़ इंस्टॉल करके फिर कोशिश करें।",
     speechUnsupported: "इस ब्राउज़र में स्पीच आउटपुट समर्थित नहीं है।",
+    clearConversation: "बातचीत मिटाएँ",
+    clearConfirm: "पूरी वॉइस बातचीत मिटाएँ? इसे वापस नहीं किया जा सकेगा।",
+    back: "वापस",
   },
   ta: { title: "அக்ரிசாத்தி குரல் உதவியாளர்", subtitle: "பயிர்கள், வானிலை, சந்தை விலைகள், திட்டங்கள் மற்றும் ஆர்டர்கள் பற்றி கேளுங்கள்.", start: "கேட்கத் தொடங்கு", stop: "உரையாடலை நிறுத்து", listening: "கேட்கிறது...", thinking: "சிந்திக்கிறது...", speaking: "பேசுகிறது...", idle: "தயார்", speechNotSupported: "இந்த உலாவியில் குரல் அறிதல் ஆதரிக்கப்படவில்லை.", tapToSpeak: "மைக்ரோஃபோனைத் தட்டி பேசுங்கள்.", permission: "மைக்ரோஃபோன் அனுமதி தடுக்கப்பட்டுள்ளது. உலாவி அமைப்புகளில் அனுமதித்து மீண்டும் முயற்சிக்கவும்." },
   kn: { title: "ಅಗ್ರಿಸಾಥಿ ಧ್ವನಿ ಸಹಾಯಕ", subtitle: "ಬೆಳೆ, ಹವಾಮಾನ, ಮಾರುಕಟ್ಟೆ ಬೆಲೆ, ಯೋಜನೆಗಳು ಮತ್ತು ಆರ್ಡರ್‌ಗಳ ಬಗ್ಗೆ ಕೇಳಿ.", start: "ಕೇಳಲು ಪ್ರಾರಂಭಿಸಿ", stop: "ಸಂಭಾಷಣೆ ನಿಲ್ಲಿಸಿ", listening: "ಕೇಳುತ್ತಿದೆ...", thinking: "ಯೋಚಿಸುತ್ತಿದೆ...", speaking: "ಮಾತನಾಡುತ್ತಿದೆ...", idle: "ಸಿದ್ಧ", speechNotSupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.", tapToSpeak: "ಮೈಕ್ರೊಫೋನ್ ಒತ್ತಿ ಮಾತನಾಡಿ.", permission: "ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ. ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಅನುಮತಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", voiceUnavailable: "ಈ ಭಾಷೆಯ ಧ್ವನಿ ಈ ಸಾಧನದಲ್ಲಿ ಲಭ್ಯವಿಲ್ಲ. ಸಾಧನದ ಭಾಷಣ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಧ್ವನಿಯನ್ನು ಸ್ಥಾಪಿಸಿ.", speechUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಮಾತಿನ ಔಟ್‌ಪುಟ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ." },
@@ -340,6 +352,14 @@ async function getSpokenMarketPriceSummary(languageCode, farmer) {
 export default function VoiceAssistantPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const {
+    messages,
+    setMessages,
+    farmerUid,
+    conversationLanguage,
+    setConversationLanguage,
+    clearConversation: clearStoredConversation,
+  } = useFarmerVoiceConversation();
 
   const [language, setLanguageState] = useState(
     () => {
@@ -356,12 +376,13 @@ export default function VoiceAssistantPage() {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [active, setActive] = useState(false);
-  const [messages, setMessages] = useState([]);
   const [farmer, setFarmer] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   const recognitionRef = useRef(null);
   const processedRecognitionRef = useRef(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   const activeRef = useRef(false);
 
@@ -384,7 +405,7 @@ export default function VoiceAssistantPage() {
      LANGUAGE
   ======================================================= */
 
-  function setLanguage(nextLanguage) {
+  const setLanguage = useCallback((nextLanguage) => {
     if (!speechLocales[nextLanguage]) {
       return;
     }
@@ -392,6 +413,7 @@ export default function VoiceAssistantPage() {
     languageRef.current = nextLanguage;
 
     setLanguageState(nextLanguage);
+    setConversationLanguage(nextLanguage);
 
     try {
       setPreferredLanguage(nextLanguage);
@@ -406,7 +428,7 @@ export default function VoiceAssistantPage() {
         error
       );
     }
-  }
+  }, [setConversationLanguage]);
 
   /* =======================================================
      REFS
@@ -415,6 +437,17 @@ export default function VoiceAssistantPage() {
   useEffect(() => {
     languageRef.current = language;
   }, [language]);
+
+  useEffect(() => {
+    if (!farmerUid) return;
+    replaceVoiceMemory(messagesRef.current);
+    if (
+      speechLocales[conversationLanguage] &&
+      conversationLanguage !== languageRef.current
+    ) {
+      setLanguage(conversationLanguage);
+    }
+  }, [conversationLanguage, farmerUid, setLanguage]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -964,7 +997,7 @@ export default function VoiceAssistantPage() {
     const id = `${Date.now()}-${Math.random()}`;
     setMessages((current) => [
       ...current,
-      { id, role, text: cleaned },
+      { id, role, text: cleaned, createdAt: Date.now() },
     ].slice(-40));
     return id;
   }
@@ -1766,6 +1799,9 @@ ${userText}
   }
 
   function clearConversation() {
+    const confirmation = interfaceText[languageRef.current]?.clearConfirm || interfaceText.en.clearConfirm;
+    if (!window.confirm(confirmation)) return;
+    clearStoredConversation();
     setMessages([]);
     clearVoiceMemory();
     setError("");
@@ -1826,6 +1862,13 @@ ${userText}
       languageRef.current
     ] ||
     interfaceText.en;
+  const requestedReturnTo = location.state?.returnTo;
+  const returnTo = typeof requestedReturnTo === "string" &&
+    requestedReturnTo.startsWith("/") &&
+    !requestedReturnTo.startsWith("//")
+    ? requestedReturnTo
+    : "/dashboard";
+  const messageLocale = language === "te" ? "te-IN" : language === "hi" ? "hi-IN" : "en-IN";
 
   /* =======================================================
      UI
@@ -1845,6 +1888,25 @@ ${userText}
           <div className="absolute -bottom-24 -left-16 w-56 h-56 bg-white/10 rounded-full" />
 
           <div className="relative">
+
+            <div className="mb-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(returnTo, { replace: true })}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <ArrowLeft size={16} aria-hidden="true" />
+                {currentInterface.back || interfaceText.en.back}
+              </button>
+              <button
+                type="button"
+                onClick={clearConversation}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                {currentInterface.clearConversation || interfaceText.en.clearConversation}
+              </button>
+            </div>
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
@@ -2142,6 +2204,11 @@ ${userText}
                           {message.role === "farmer" ? "You" : "AgriSaathi"}
                         </p>
                         <p className="whitespace-pre-wrap leading-6">{message.text}</p>
+                        {message.createdAt && (
+                          <p className={`mt-2 text-[11px] ${message.role === "farmer" ? "text-blue-100" : "text-slate-500"}`}>
+                            {new Date(message.createdAt).toLocaleTimeString(messageLocale, { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}

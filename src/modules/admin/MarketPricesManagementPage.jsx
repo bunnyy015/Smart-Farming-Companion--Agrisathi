@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { database } from "../../firebase";
+import "./AdminPageEffects.css";
 import StatusMessage from "../../components/StatusMessage";
 import {
   fetchGovernmentMarketPrices,
@@ -885,7 +886,7 @@ export default function MarketPriceManagementPage() {
    */
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="admin-page-effects admin-page-effects--markets min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white rounded-3xl border border-indigo-100 shadow-xl p-8 text-center">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 flex items-center justify-center">
             <Wheat
@@ -912,7 +913,7 @@ export default function MarketPriceManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="admin-page-effects admin-page-effects--markets min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <StatusMessage
           message={message}
@@ -1352,6 +1353,7 @@ export default function MarketPriceManagementPage() {
         >
           <MarketDetails
             market={selectedMarket}
+            onMarketClick={(nextMarket) => setSelectedMarket(nextMarket)}
             records={
               selectedMarket.name === "__ALL__"
                 ? records
@@ -1915,10 +1917,7 @@ function CropDetails({
       <div className="space-y-3 mt-6">
         {records.map((record, index) => (
           <PriceRecordCard
-            key={
-              record._id ||
-              `${getCropName(record)}-${index}`
-            }
+            key={record._id || `${getCropName(record)}-${index}`}
             record={record}
             onClick={() => {}}
           />
@@ -1936,6 +1935,7 @@ function CropDetails({
 
 function MarketDetails({
   market,
+  onMarketClick,
   records,
 }) {
   if (records.length === 0) {
@@ -1965,39 +1965,58 @@ function MarketDetails({
     ),
   ];
 
+  const markets = [...records.reduce((map, record) => {
+    const name = getMarketName(record);
+    const district = getDistrictName(record);
+    if (!name) return map;
+    const key = `${normalize(name)}|${normalizeDistrict(district)}`;
+    if (!map.has(key)) map.set(key, { name, district, records: [] });
+    map.get(key).records.push(record);
+    return map;
+  }, new Map()).values()].sort((a, b) =>
+    a.name.localeCompare(b.name) || a.district.localeCompare(b.district)
+  );
+  const showAllMarkets = market.name === "__ALL__";
+
   return (
     <div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <DetailStat
-          label="Records"
-          value={records.length}
-          icon={Database}
+          label={showAllMarkets ? "Markets" : "Records"}
+          value={showAllMarkets ? markets.length : records.length}
+          icon={showAllMarkets ? Store : Database}
         />
-
-        <DetailStat
-          label="Crops"
-          value={uniqueCrops.size}
-          icon={Wheat}
-        />
-
-        <DetailStat
-          label="Districts"
-          value={districts.length}
-          icon={MapPin}
-        />
-
-        <DetailStat
-          label="Market"
-          value={
-            market.name === "__ALL__"
-              ? "All"
-              : "1"
-          }
-          icon={Store}
-        />
+        <DetailStat label="Crops" value={uniqueCrops.size} icon={Wheat} />
+        <DetailStat label="Districts" value={districts.length} icon={MapPin} />
+        <DetailStat label="Market records" value={records.length} icon={Database} />
       </div>
 
-      {districts.length > 0 && (
+      {showAllMarkets ? (
+        <section className="mt-6" aria-label="Markets and districts">
+          <h3 className="mb-3 text-lg font-bold text-slate-900">Markets by district</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {markets.map((item) => (
+              <button
+                key={`${normalize(item.name)}|${normalizeDistrict(item.district)}`}
+                type="button"
+                onClick={() => onMarketClick?.({ name: item.name, district: item.district })}
+                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                <span className="flex items-start justify-between gap-3">
+                  <span>
+                    <span className="block font-bold text-slate-900">{item.name}</span>
+                    <span className="mt-1 block text-sm text-slate-600">{item.district || "District not listed"}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-800">
+                    {item.records.length} {item.records.length === 1 ? "record" : "records"}
+                  </span>
+                </span>
+                <span className="mt-3 block text-sm font-semibold text-indigo-700">View market prices →</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : districts.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-5">
           {districts.map((district) => (
             <span
@@ -2010,18 +2029,17 @@ function MarketDetails({
         </div>
       )}
 
-      <div className="space-y-3 mt-6">
-        {records.map((record, index) => (
-          <PriceRecordCard
-            key={
-              record._id ||
-              `${getCropName(record)}-${index}`
-            }
-            record={record}
-            onClick={() => {}}
-          />
-        ))}
-      </div>
+      {!showAllMarkets && (
+        <div className="space-y-3 mt-6">
+          {records.map((record, index) => (
+            <PriceRecordCard
+              key={record._id || `${getCropName(record)}-${index}`}
+              record={record}
+              onClick={() => {}}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

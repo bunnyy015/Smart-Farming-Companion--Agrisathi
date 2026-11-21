@@ -10,6 +10,9 @@ const CURRENT_FIELDS = [
   "is_day",
   "wind_speed_10m",
   "wind_gusts_10m",
+  "surface_pressure",
+  "cloud_cover",
+  "uv_index",
 ];
 
 const HOURLY_FIELDS = [
@@ -20,6 +23,19 @@ const HOURLY_FIELDS = [
   "weather_code",
   "is_day",
   "wind_speed_10m",
+  "uv_index",
+  "visibility",
+];
+
+const DAILY_FIELDS = [
+  "weather_code",
+  "temperature_2m_max",
+  "temperature_2m_min",
+  "sunrise",
+  "sunset",
+  "precipitation_probability_max",
+  "precipitation_sum",
+  "uv_index_max",
 ];
 
 export async function fetchWeatherForecast({ latitude, longitude, signal } = {}) {
@@ -41,8 +57,9 @@ export async function fetchWeatherForecast({ latitude, longitude, signal } = {})
     longitude: String(lon),
     current: CURRENT_FIELDS.join(","),
     hourly: HOURLY_FIELDS.join(","),
+    daily: DAILY_FIELDS.join(","),
     timezone: "auto",
-    forecast_days: "2",
+    forecast_days: "7",
   });
 
   const response = await fetch(`${FORECAST_URL}?${params}`, signal ? { signal } : undefined);
@@ -59,6 +76,26 @@ export async function fetchWeatherForecast({ latitude, longitude, signal } = {})
     throw error;
   }
   return forecast;
+}
+
+export function selectNextTwentyFourHours(forecast) {
+  const hourly = forecast?.hourly;
+  if (!Array.isArray(hourly?.time)) return [];
+  const currentTime = String(forecast?.current?.time || "");
+  let startIndex = hourly.time.findIndex((time) => time >= currentTime);
+  if (startIndex < 0) startIndex = 0;
+  return hourly.time.slice(startIndex, startIndex + 24).map((time, offset) => {
+    const index = startIndex + offset;
+    return {
+      time,
+      temperature: hourly.temperature_2m?.[index],
+      precipitationProbability: hourly.precipitation_probability?.[index],
+      weatherCode: hourly.weather_code?.[index],
+      isDay: hourly.is_day?.[index],
+      windSpeed: hourly.wind_speed_10m?.[index],
+      uvIndex: hourly.uv_index?.[index],
+    };
+  });
 }
 
 export function selectNextTwelveHours(forecast) {

@@ -14,6 +14,7 @@ import {
   getLocationErrorTranslationKey,
   reverseGeocodeCoordinates,
 } from "../../services/currentLocationService";
+import "./MarketPricesPage.css";
 
 const LGD_API_ROOT =
   "https://lgd-json-api.vercel.app/api";
@@ -213,6 +214,7 @@ function getCropCategory(commodity) {
 
   const vegetables = [
     "tomato",
+    "beetroot",
     "onion",
     "potato",
     "brinjal",
@@ -507,6 +509,223 @@ const CROP_IMAGES = {
     `
   ),
 
+  okra: buildCircleImage(
+    "#e6f7df",
+    `
+      <path d="M44 81 C37 67 39 44 54 28 C61 21 68 20 76 23 C77 44 68 67 54 83 C50 87 46 86 44 81Z" fill="#20a558"/>
+      <path d="M53 78 C56 59 62 40 72 25 M49 68 L43 57 M54 57 L48 46 M60 45 L56 35 M58 63 L68 57 M63 48 L73 43" stroke="#a7e58e" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M67 24 Q72 15 82 18 Q78 25 70 28" fill="#16834b"/>
+    `
+  ),
+
+  bitterGourd: buildCircleImage(
+    "#e5f5df",
+    `
+      <path d="M29 62 C32 42 46 35 62 39 C77 42 91 52 90 64 C88 77 73 84 57 80 C40 77 27 75 29 62Z" fill="#278d48"/>
+      <path d="M36 54 L43 49 L48 55 L54 47 L60 54 L67 48 L73 57 L81 54 M35 66 L43 61 L49 68 L56 60 L62 68 L69 61 L76 70 L84 65" stroke="#75c66a" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M29 60 L23 56 M89 63 L96 60" stroke="#146b3d" stroke-width="4" stroke-linecap="round"/>
+    `
+  ),
+
+  bottleGourd: buildCircleImage(
+    "#edf8e5",
+    `
+      <path d="M53 32 C48 26 51 19 60 18 C69 17 72 24 67 31 C81 43 86 57 80 73 C75 87 45 91 38 75 C31 59 39 43 53 32Z" fill="#a5ce79"/>
+      <path d="M59 20 L60 13 M49 43 C45 54 45 68 50 79 M67 42 C74 55 74 69 69 80" stroke="#d8edb7" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M60 15 Q69 8 76 14 Q70 21 61 20" fill="#25864a"/>
+    `
+  ),
+
+  cabbage: buildCircleImage(
+    "#e8f6df",
+    `
+      <circle cx="60" cy="60" r="32" fill="#79c85c"/>
+      <path d="M34 62 C32 43 48 31 62 36 C78 31 91 46 85 62 C86 77 70 88 58 82 C44 87 31 76 34 62Z" fill="#a6dc7d" stroke="#5aa746" stroke-width="2"/>
+      <path d="M60 39 C49 48 46 67 60 81 M60 39 C73 48 76 66 60 81 M39 58 Q59 56 81 58 M43 73 Q59 67 77 73" fill="none" stroke="#e3f5c9" stroke-width="3" stroke-linecap="round"/>
+    `
+  ),
+
+  cucumber: buildCircleImage(
+    "#e3f5df",
+    `
+      <path d="M38 82 C34 72 37 45 47 32 C53 24 67 24 74 33 C83 46 85 70 78 82 C70 91 46 91 38 82Z" fill="#25894b"/>
+      <path d="M47 35 C43 49 43 68 47 82 M59 29 C55 47 56 69 60 86 M71 34 C68 49 70 68 73 81" stroke="#8bd26d" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="50" cy="43" r="1.5" fill="#d4efad"/><circle cx="68" cy="54" r="1.5" fill="#d4efad"/><circle cx="50" cy="69" r="1.5" fill="#d4efad"/><circle cx="70" cy="75" r="1.5" fill="#d4efad"/>
+    `
+  ),
+
+  beans: buildCircleImage(
+    "#e9f7df",
+    `
+      <path d="M36 80 C47 67 58 49 77 34 C86 27 93 33 86 42 C69 58 52 73 38 85Z" fill="#2c9b50"/>
+      <path d="M33 60 C46 51 58 39 71 27 C79 21 86 27 78 35 C66 48 49 61 36 66Z" fill="#66bc52"/>
+      <path d="M42 77 Q57 61 80 39 M39 59 Q54 45 74 31" stroke="#b7e58b" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="50" cy="68" r="2" fill="#b7e58b"/><circle cx="60" cy="57" r="2" fill="#b7e58b"/><circle cx="52" cy="48" r="2" fill="#d7f2a8"/><circle cx="64" cy="39" r="2" fill="#d7f2a8"/>
+    `
+  ),
+
+  orange: buildCircleImage(
+    "#fff1dc",
+    `
+      <circle cx="60" cy="61" r="30" fill="#f68a22"/>
+      <circle cx="50" cy="51" r="7" fill="#ffb54c" opacity=".75"/>
+      <circle cx="60" cy="61" r="25" fill="none" stroke="#ffd17c" stroke-width="2" opacity=".8"/>
+      <path d="M60 31 Q62 20 72 18 Q72 28 63 34" fill="#278d4b"/>
+    `
+  ),
+
+  grapes: buildCircleImage(
+    "#f0eaff",
+    `
+      <path d="M58 24 Q67 17 76 24" stroke="#218247" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M65 24 C63 32 61 36 57 40" stroke="#218247" stroke-width="3" fill="none"/>
+      <g fill="#7651b5"><circle cx="48" cy="45" r="10"/><circle cx="67" cy="43" r="10"/><circle cx="39" cy="62" r="10"/><circle cx="58" cy="61" r="11"/><circle cx="77" cy="61" r="10"/><circle cx="49" cy="79" r="10"/><circle cx="67" cy="79" r="10"/><circle cx="58" cy="94" r="8"/></g>
+      <g fill="#c8b5ef"><circle cx="45" cy="42" r="3"/><circle cx="64" cy="40" r="3"/><circle cx="36" cy="59" r="3"/><circle cx="55" cy="57" r="3"/></g>
+    `
+  ),
+
+  carrot: buildCircleImage(
+    "#fff0df",
+    `
+      <path d="M48 40 C62 35 77 41 78 53 C77 66 68 81 58 95 C54 101 49 97 48 91 C45 75 40 57 42 48Z" fill="#f17c24"/>
+      <path d="M47 41 Q37 28 42 17 Q53 23 54 39 M54 39 Q55 22 68 16 Q72 29 60 42 M52 39 Q47 27 50 16" fill="#31a255"/>
+      <path d="M49 55 L60 52 M51 68 L62 64 M54 80 L61 77" stroke="#ffbd6c" stroke-width="3" stroke-linecap="round"/>
+    `
+  ),
+
+  beetroot: buildCircleImage(
+    "#f8e8ef",
+    `
+      <path d="M60 38 C77 34 87 48 80 65 C75 78 66 86 60 96 C54 86 44 78 39 65 C32 48 43 34 60 38Z" fill="#a62653"/>
+      <path d="M60 89 C59 98 56 103 53 108" stroke="#a62653" stroke-width="3" stroke-linecap="round"/>
+      <path d="M59 41 C47 31 45 20 51 13 C61 21 63 29 61 39 M62 40 C68 27 78 23 86 28 C79 37 71 41 62 43 M57 39 C45 39 36 33 37 25 C48 25 55 30 59 38" fill="#4c9b4e" stroke="#358848" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M47 58 C49 50 56 47 63 49" stroke="#df6b8d" stroke-width="3" fill="none" stroke-linecap="round" opacity=".75"/>
+    `
+  ),
+
+  cauliflower: buildCircleImage(
+    "#f0f7df",
+    `
+      <path d="M36 66 C29 53 39 42 49 44 C51 31 70 31 74 45 C90 43 96 61 84 70 C85 85 69 90 60 81 C47 91 32 82 36 66Z" fill="#fffdf0" stroke="#d8dfb6" stroke-width="3"/>
+      <path d="M47 77 L40 88 L53 84 M73 78 L81 88 L67 84 M57 81 L57 94 L64 94 L64 81" fill="#65ad50"/>
+      <path d="M49 49 Q55 42 61 49 M70 53 Q77 48 81 55 M46 65 Q51 59 56 65" stroke="#ece8cc" stroke-width="2" fill="none"/>
+    `
+  ),
+
+  pumpkin: buildCircleImage(
+    "#fff1dc",
+    `
+      <path d="M60 35 C42 29 31 43 33 62 C33 81 43 89 60 84 C77 90 88 78 87 60 C87 42 76 30 60 35Z" fill="#ef8b28"/>
+      <path d="M60 36 C52 47 52 72 60 84 M60 36 C69 48 69 73 60 84 M43 40 C50 51 50 70 44 81 M77 40 C70 51 70 70 76 81" stroke="#ffbd60" stroke-width="3" fill="none"/>
+      <path d="M58 36 Q58 25 68 22 L72 25 L64 39" fill="#438d3c"/>
+    `
+  ),
+
+  guava: buildCircleImage(
+    "#edf7df",
+    `
+      <path d="M60 34 C80 34 91 48 85 68 C80 86 69 92 57 86 C42 91 31 78 34 60 C36 43 46 34 60 34Z" fill="#78ba48"/>
+      <path d="M60 41 C75 42 82 53 77 68 C73 80 66 84 58 80 C47 84 40 75 43 61 C45 49 50 41 60 41Z" fill="#f4a4a1"/>
+      <g fill="#f8e6a2"><circle cx="54" cy="55" r="2"/><circle cx="65" cy="52" r="2"/><circle cx="60" cy="64" r="2"/><circle cx="69" cy="68" r="2"/><circle cx="53" cy="72" r="2"/></g>
+      <path d="M59 35 Q65 25 76 28 Q72 37 61 39" fill="#218247"/>
+    `
+  ),
+
+  pomegranate: buildCircleImage(
+    "#fff0e9",
+    `
+      <path d="M60 34 L67 27 L73 34 L82 35 L78 44 C90 61 83 84 61 88 C39 86 31 65 43 45 L39 36 L51 35 L56 28Z" fill="#c92c4a"/>
+      <path d="M60 34 L55 25 L62 29 L68 23 L69 34" fill="#258448"/>
+      <path d="M48 54 C51 47 56 45 60 50 C65 44 72 49 72 56 C72 66 66 71 60 70 C53 72 47 65 48 54Z" fill="#f06b77"/>
+      <g fill="#ffd0a0"><circle cx="55" cy="56" r="2"/><circle cx="64" cy="55" r="2"/><circle cx="60" cy="63" r="2"/></g>
+    `
+  ),
+
+  papaya: buildCircleImage(
+    "#fff2df",
+    `
+      <path d="M47 27 C63 21 79 30 82 47 C85 65 73 84 60 96 C49 85 37 66 38 49 C38 39 40 31 47 27Z" fill="#f49a35"/>
+      <path d="M49 35 C60 31 71 38 73 51 C75 65 66 78 59 85 C50 75 44 62 44 50 C44 43 45 38 49 35Z" fill="#f7c564"/>
+      <g fill="#5c3d2e"><ellipse cx="54" cy="47" rx="2.4" ry="3.3"/><ellipse cx="62" cy="45" rx="2.4" ry="3.3"/><ellipse cx="55" cy="57" rx="2.4" ry="3.3"/><ellipse cx="64" cy="56" rx="2.4" ry="3.3"/><ellipse cx="59" cy="67" rx="2.4" ry="3.3"/></g>
+      <path d="M48 28 Q42 21 45 16 M53 26 Q55 17 63 14" stroke="#278d4b" stroke-width="4" fill="none" stroke-linecap="round"/>
+    `
+  ),
+
+  watermelon: buildCircleImage(
+    "#e4f6df",
+    `
+      <path d="M27 67 A34 34 0 0 0 94 67Z" fill="#27894b"/>
+      <path d="M34 67 A27 27 0 0 0 87 67Z" fill="#ff7371"/>
+      <path d="M30 68 A30 30 0 0 0 91 68" fill="none" stroke="#a8da72" stroke-width="5"/>
+      <g fill="#5d3030"><ellipse cx="50" cy="57" rx="2" ry="4"/><ellipse cx="62" cy="51" rx="2" ry="4"/><ellipse cx="73" cy="59" rx="2" ry="4"/></g>
+    `
+  ),
+
+  lemon: buildCircleImage(
+    "#f5f8dc",
+    `
+      <path d="M34 60 C42 44 55 35 70 38 C82 40 91 51 86 64 C80 78 64 84 49 80 C35 77 28 70 34 60Z" fill="#f2d83d"/>
+      <path d="M37 60 C49 48 67 43 82 48" stroke="#fff28a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M42 44 Q34 36 39 29 Q48 33 49 42" fill="#308d48"/>
+    `
+  ),
+
+  jowar: buildCircleImage(
+    "#fff3d3",
+    `
+      <path d="M59 86 L59 34 M59 52 C45 42 38 34 36 25 M59 58 C73 47 81 37 84 27" stroke="#5b9e42" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M35 26 Q30 20 34 16 M42 32 Q37 25 42 20 M49 39 Q44 31 49 26 M83 28 Q90 21 87 16 M76 36 Q84 29 80 22 M68 43 Q77 35 73 29" stroke="#d1a62f" stroke-width="5" stroke-linecap="round"/>
+      <path d="M59 67 C44 59 35 58 27 62 C36 73 47 76 59 75 M60 73 C74 63 85 62 94 66 C85 78 72 81 60 80" fill="#80c85c"/>
+    `
+  ),
+
+  vegetableMix: buildCircleImage(
+    "#e7f6e2",
+    `
+      <circle cx="44" cy="65" r="20" fill="#ef514d"/><path d="M43 45 L48 52 L58 49 L53 58 L61 64 L50 64 L43 74 L38 64 L29 64 L36 57 L33 50 L41 52Z" fill="#268747"/>
+      <path d="M69 81 C63 68 66 48 76 38 C84 30 91 34 91 45 C92 61 83 75 75 83Z" fill="#328f4b"/><path d="M74 78 Q79 58 87 40" stroke="#b9e796" stroke-width="3" fill="none"/>
+      <circle cx="66" cy="43" r="12" fill="#a9d97f"/><circle cx="82" cy="47" r="12" fill="#8fcd69"/><circle cx="73" cy="60" r="14" fill="#c2e79a"/><path d="M60 49 Q73 42 86 52 M63 60 Q74 54 84 62" stroke="#eef9d9" stroke-width="2" fill="none"/>
+    `
+  ),
+
+  fruitMix: buildCircleImage(
+    "#fff2df",
+    `
+      <circle cx="43" cy="63" r="20" fill="#ef5148"/><path d="M43 42 Q49 32 58 35 Q54 43 45 46" fill="#258648"/><path d="M40 49 Q43 61 42 78" stroke="#ff9c7b" stroke-width="3" fill="none"/>
+      <circle cx="78" cy="67" r="19" fill="#f28c27"/><circle cx="72" cy="60" r="5" fill="#ffc45e" opacity=".8"/><path d="M78 48 Q82 38 91 39 Q88 48 80 51" fill="#258648"/>
+      <path d="M55 85 C57 69 69 58 83 59 C82 76 71 89 58 91Z" fill="#f2cf42"/>
+    `
+  ),
+
+  pulseMix: buildCircleImage(
+    "#eff6df",
+    `
+      <path d="M28 70 C42 53 61 40 84 32 C94 29 97 37 88 44 C70 58 49 72 32 77Z" fill="#5cae4c"/>
+      <path d="M34 70 Q56 51 85 37" stroke="#c8e994" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <g fill="#e2bd68"><circle cx="48" cy="59" r="5"/><circle cx="59" cy="52" r="5"/><circle cx="71" cy="46" r="5"/><circle cx="52" cy="79" r="8"/><circle cx="69" cy="75" r="8"/><circle cx="84" cy="67" r="8"/></g>
+      <path d="M57 79 Q65 90 78 86" stroke="#238047" stroke-width="3" fill="none" stroke-linecap="round"/>
+    `
+  ),
+
+  oilseedMix: buildCircleImage(
+    "#fff5d8",
+    `
+      <circle cx="60" cy="57" r="14" fill="#80521e"/>
+      <g fill="#f4c83e"><ellipse cx="60" cy="27" rx="7" ry="14"/><ellipse cx="60" cy="87" rx="7" ry="14"/><ellipse cx="30" cy="57" rx="14" ry="7"/><ellipse cx="90" cy="57" rx="14" ry="7"/><ellipse cx="39" cy="36" rx="7" ry="14" transform="rotate(-45 39 36)"/><ellipse cx="81" cy="78" rx="7" ry="14" transform="rotate(-45 81 78)"/><ellipse cx="81" cy="36" rx="7" ry="14" transform="rotate(45 81 36)"/><ellipse cx="39" cy="78" rx="7" ry="14" transform="rotate(45 39 78)"/></g>
+      <path d="M59 72 L59 101 M59 85 Q44 78 37 84 M60 91 Q73 82 82 86" stroke="#39884a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    `
+  ),
+
+  spiceMix: buildCircleImage(
+    "#fff1df",
+    `
+      <path d="M33 67 C42 46 70 40 87 52 C80 74 57 87 39 81 C32 79 30 73 33 67Z" fill="#e0a122"/>
+      <path d="M40 68 Q56 56 79 53 M45 76 Q62 66 78 62" stroke="#ffd56e" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M44 50 C39 37 49 28 60 29 C64 42 57 51 44 50Z" fill="#ca4538"/><path d="M44 49 Q38 42 39 35" stroke="#358549" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="75" cy="80" r="5" fill="#84502c"/><circle cx="87" cy="75" r="4" fill="#493722"/><circle cx="81" cy="88" r="4" fill="#9a6e35"/>
+    `
+  ),
+
   generic: buildCircleImage(
     "#dcfce7",
     `
@@ -518,8 +737,62 @@ const CROP_IMAGES = {
   ),
 };
 
+const LOCAL_CROP_PHOTOS = [
+  { terms: ["paddy", "rice"], path: "/crops/paddy.webp" },
+  { terms: ["wheat"], path: "/crops/wheat.webp" },
+  { terms: ["tomato"], path: "/crops/tomato.webp" },
+  { terms: ["onion"], path: "/crops/onion.webp" },
+  { terms: ["potato"], path: "/crops/potato.webp" },
+  { terms: ["chilli", "chili"], path: "/crops/chilli.webp" },
+  { terms: ["maize", "corn"], path: "/crops/maize.webp" },
+  { terms: ["cotton"], path: "/crops/cotton.webp" },
+  { terms: ["banana"], path: "/crops/banana.webp" },
+  { terms: ["turmeric"], path: "/crops/turmeric.webp" },
+  { terms: ["groundnut", "peanut"], path: "/crops/groundnut.webp" },
+  { terms: ["brinjal", "eggplant", "aubergine"], path: "/crops/brinjal.webp" },
+  { terms: ["mango"], path: "/crops/mango.webp" },
+  { terms: ["apple"], path: "/crops/apple.webp" },
+];
+
 function getCropImage(commodity) {
   const value = normalizeText(commodity);
+
+  const localPhoto = LOCAL_CROP_PHOTOS.find(({ terms }) =>
+    terms.some((term) => value.includes(term))
+  );
+  if (localPhoto) return localPhoto.path;
+
+  if (value.includes("bhindi") || value.includes("okra") || value.includes("ladies finger")) {
+    return CROP_IMAGES.okra;
+  }
+
+  if (value.includes("bitter gourd") || value.includes("bitterguard") || value.includes("karela")) {
+    return CROP_IMAGES.bitterGourd;
+  }
+
+  if (value.includes("bottle gourd") || value.includes("bottlegourd") || value.includes("lauki")) {
+    return CROP_IMAGES.bottleGourd;
+  }
+
+  if (value.includes("cabbage")) return CROP_IMAGES.cabbage;
+  if (value.includes("beetroot") || value.includes("beet root")) return CROP_IMAGES.beetroot;
+  if (value.includes("cauliflower")) return CROP_IMAGES.cauliflower;
+  if (value.includes("carrot")) return CROP_IMAGES.carrot;
+  if (value.includes("cucumber")) return CROP_IMAGES.cucumber;
+  if (value.includes("french bean") || value.includes("frasbean") || value.includes("green bean")) {
+    return CROP_IMAGES.beans;
+  }
+  if (value.includes("pumpkin")) return CROP_IMAGES.pumpkin;
+
+  if (value.includes("orange")) return CROP_IMAGES.orange;
+  if (value.includes("grape")) return CROP_IMAGES.grapes;
+  if (value.includes("papaya")) return CROP_IMAGES.papaya;
+  if (value.includes("watermelon")) return CROP_IMAGES.watermelon;
+  if (value.includes("guava")) return CROP_IMAGES.guava;
+  if (value.includes("pomegranate")) return CROP_IMAGES.pomegranate;
+  if (value.includes("lemon")) return CROP_IMAGES.lemon;
+
+  if (value.includes("jowar") || value.includes("sorghum")) return CROP_IMAGES.jowar;
 
   if (value.includes("paddy") || value.includes("rice")) {
     return CROP_IMAGES.paddy;
@@ -566,19 +839,27 @@ function getCropImage(commodity) {
   const category = getCropCategory(commodity);
 
   if (category === "cereals") {
-    return CROP_IMAGES.paddy;
+    return CROP_IMAGES.jowar;
+  }
+
+  if (category === "pulses") {
+    return CROP_IMAGES.pulseMix;
   }
 
   if (category === "vegetables") {
-    return CROP_IMAGES.tomato;
+    return CROP_IMAGES.vegetableMix;
   }
 
   if (category === "fruits") {
-    return CROP_IMAGES.banana;
+    return CROP_IMAGES.fruitMix;
   }
 
   if (category === "spices") {
-    return CROP_IMAGES.turmeric;
+    return CROP_IMAGES.spiceMix;
+  }
+
+  if (category === "oilseeds") {
+    return CROP_IMAGES.oilseedMix;
   }
 
   if (category === "fibre") {
@@ -1652,8 +1933,8 @@ out center tags;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
+      <div className="market-prices-page market-prices-loading min-h-screen flex items-center justify-center p-4">
+        <div className="market-prices-loading-card rounded-2xl p-7 text-center">
           <div className="text-5xl">📈</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
@@ -1667,20 +1948,20 @@ out center tags;
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-3 sm:p-5">
-      <div className="mx-auto max-w-7xl">
+    <div className="market-prices-page min-h-screen p-3 sm:p-5">
+      <div className="market-prices-shell mx-auto max-w-7xl">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
-        <header className="bg-gradient-to-r from-green-800 to-emerald-600 text-white rounded-2xl shadow p-5">
+        <header className="market-prices-hero relative isolate overflow-hidden rounded-2xl p-5 text-white shadow sm:rounded-3xl sm:p-7">
           <button
             type="button"
             onClick={() =>
               navigate("/dashboard")
             }
-            className="text-green-100 font-semibold"
+            className="market-prices-back font-semibold"
           >
             {t("dashboardLink", {}, language)}
           </button>
@@ -1704,7 +1985,7 @@ out center tags;
                   { forceRefresh: true }
                 )
               }
-              className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold disabled:opacity-60 self-start"
+              className="market-prices-refresh self-start rounded-xl px-4 py-2.5 font-semibold disabled:opacity-60"
             >
               {detectingLocation
                 ? t("detecting", {}, language)
@@ -1712,7 +1993,7 @@ out center tags;
             </button>
           </div>
 
-          <div className="bg-white/15 rounded-xl p-3 mt-4 text-sm">
+          <div className="market-prices-location mt-4 rounded-xl p-3 text-sm">
             📍{" "}
             {detectedPlace
               ? [detectedPlace.mandal, detectedPlace.district, detectedPlace.state]
@@ -1731,8 +2012,8 @@ out center tags;
           </div>
         </header>
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
+        <section className="market-prices-stats mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <article className="market-prices-stat rounded-xl border p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("cropCount", {}, language)}
             </p>
@@ -1742,7 +2023,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
+          <article className="market-prices-stat rounded-xl border p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("marketCount", {}, language)}
             </p>
@@ -1752,7 +2033,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
+          <article className="market-prices-stat rounded-xl border p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("priceRecords", {}, language)}
             </p>
@@ -1762,7 +2043,7 @@ out center tags;
             </p>
           </article>
 
-          <article className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4">
+          <article className="market-prices-stat rounded-xl border p-3 sm:p-4">
             <p className="text-sm text-gray-500">
               {t("averagePrice", {}, language)}
             </p>
@@ -1780,20 +2061,22 @@ out center tags;
         </section>
 
         {farmer?.mainCrop && (
-          <section className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 sm:p-4 mt-4">
+          <section className="market-prices-featured mt-4 rounded-2xl border p-3 sm:p-4">
             <div className="flex items-center gap-3">
               <img
                 src={getCropImage(farmer.mainCrop)}
                 alt={farmer.mainCrop}
-                className="w-14 h-14 rounded-xl object-cover bg-white border border-yellow-200"
+                loading="lazy"
+                decoding="async"
+                className="market-prices-featured-image h-14 w-14 rounded-xl border object-cover"
               />
 
               <div className="flex-1">
-                <p className="text-sm text-yellow-800">
+                <p className="text-sm text-amber-800">
                   {t("yourMainCrop", {}, language)}
                 </p>
 
-                <h2 className="text-xl font-bold text-yellow-900 mt-1">
+                <h2 className="mt-1 text-xl font-bold text-amber-950">
                   {farmer.mainCrop}
                 </h2>
               </div>
@@ -1805,12 +2088,12 @@ out center tags;
                 setFeaturedPricesExpanded((expanded) => !expanded);
               }}
               aria-expanded={featuredPricesExpanded}
-              className="bg-yellow-700 hover:bg-yellow-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-800 text-white px-4 py-2 rounded-lg font-semibold mt-3"
+              className="market-prices-featured-toggle mt-3 rounded-lg px-4 py-2 font-semibold"
             >
               {featuredPricesExpanded ? "Hide Prices" : t("showPrices", {}, language)}
             </button>
             {featuredPricesExpanded && (
-              <div className="mt-3 rounded-lg border border-yellow-200 bg-white p-3" aria-live="polite">
+              <div className="market-prices-featured-results mt-3 rounded-lg border p-3" aria-live="polite">
                 {featuredCropPrices.length ? (
                   <>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1833,7 +2116,7 @@ out center tags;
           </section>
         )}
 
-        <section className="bg-white rounded-xl border border-green-100 shadow-sm p-3 sm:p-4 mt-4">
+        <section className="market-prices-filter-panel mt-4 rounded-2xl border p-3 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-gray-800">
@@ -1861,7 +2144,7 @@ out center tags;
               setSearchText(event.target.value)
             }
             placeholder={t("cropSearchPlaceholder", {}, language)}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2 outline-none focus:ring-2 focus:ring-green-600"
+            className="market-prices-search mt-2 w-full rounded-xl border px-4 py-3 outline-none"
           />
           <datalist id="crop-price-options">
             {cropSearchOptions.map((cropName) => (
@@ -1869,7 +2152,7 @@ out center tags;
             ))}
           </datalist>
 
-          <div className="flex gap-2 overflow-x-auto mt-4 pb-1">
+          <div className="market-prices-categories mt-4 flex gap-2 overflow-x-auto pb-1">
             {categories.map((category) => (
               <button
                 type="button"
@@ -2029,7 +2312,7 @@ out center tags;
 
         {(priceError || priceMeta) && (
           <section
-            className={`mt-4 rounded-xl border p-4 ${
+            className={`market-prices-notice mt-4 rounded-xl border p-4 ${
               priceError
                 ? "border-amber-300 bg-amber-50 text-amber-950"
                 : priceMeta.source === "cache"
@@ -2083,7 +2366,7 @@ out center tags;
           </section>
         )}
 
-        <section className="mt-5">
+        <section className="market-prices-section market-prices-summary mt-5">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
               {t("cropPriceSummary", {}, language)}
@@ -2097,7 +2380,7 @@ out center tags;
           </div>
 
           {groupedCropSummary.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+            <div className="market-prices-empty rounded-2xl border p-6 text-center">
               <p className="text-gray-600">
                 {t("noCropPricesForFilters", {}, language)}
               </p>
@@ -2111,41 +2394,41 @@ out center tags;
                 return (
                   <article
                     key={summary.commodity}
-                    className="bg-white rounded-xl border border-green-100 shadow-sm p-3"
+                    className="market-prices-card market-price-summary-card rounded-xl border p-3"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="market-price-card-header market-price-summary-header flex items-start gap-3">
                       <img
                         src={summary.image}
                         alt={summary.commodity}
-                        className="w-16 h-16 rounded-xl object-cover border border-green-100 bg-green-50"
+                        loading="lazy"
+                        decoding="async"
+                        className="market-prices-crop-image h-16 w-16 rounded-xl border object-cover"
                       />
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-bold text-green-900">
+                      <div className="market-price-summary-copy min-w-0 flex-1">
+                        <div className="market-price-summary-title-row flex items-start gap-2">
+                          <h3 title={summary.commodity} className="market-price-summary-title min-w-0 text-lg font-bold text-green-900">
                             {summary.commodity}
                           </h3>
 
-                          <span className="text-sm">
+                          <span className="shrink-0 text-sm">
                             {summary.icon}
-                          </span>
-
-                          <span
-                            className={`${advice.className} px-2.5 py-1 rounded-full text-xs font-semibold`}
-                          >
-                            {advice.label}
                           </span>
                         </div>
 
-                        <p className="text-sm text-gray-500 mt-1">
+                        <span className={`market-price-summary-advice inline-flex ${advice.className} rounded-full px-2.5 py-1 text-xs font-semibold`}>
+                          {advice.label}
+                        </span>
+
+                        <p className="market-price-summary-count mt-1 text-sm text-gray-500">
                           {summary.records.length} {t("recordCount", {}, language)} •{" "}
                           {summary.marketsCount} {t("marketCountLower", {}, language)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 mt-3">
-                      <div className="bg-green-50 rounded-xl p-3">
+                    <div className="market-prices-summary-values mt-3 grid grid-cols-2 gap-2">
+                      <div className="market-prices-value-tile market-prices-value-tile--high rounded-xl p-3">
                         <p className="text-xs text-gray-500">
                           {t("highest", {}, language)}
                         </p>
@@ -2154,12 +2437,12 @@ out center tags;
                             summary.highest.modalPrice
                           )}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p title={summary.highest.market} className="market-price-summary-market mt-1 text-xs text-gray-600">
                           {summary.highest.market}
                         </p>
                       </div>
 
-                      <div className="bg-red-50 rounded-xl p-3">
+                      <div className="market-prices-value-tile market-prices-value-tile--low rounded-xl p-3">
                         <p className="text-xs text-gray-500">
                           {t("lowest", {}, language)}
                         </p>
@@ -2168,12 +2451,12 @@ out center tags;
                             summary.lowest.modalPrice
                           )}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p title={summary.lowest.market} className="market-price-summary-market mt-1 text-xs text-gray-600">
                           {summary.lowest.market}
                         </p>
                       </div>
 
-                      <div className="bg-blue-50 rounded-xl p-3">
+                      <div className="market-prices-value-tile market-prices-value-tile--average rounded-xl p-3">
                         <p className="text-xs text-gray-500">
                           {t("averageLabel", {}, language)}
                         </p>
@@ -2184,11 +2467,11 @@ out center tags;
                         </p>
                       </div>
 
-                      <div className="bg-yellow-50 rounded-xl p-3">
+                      <div className="market-prices-value-tile market-prices-value-tile--best rounded-xl p-3">
                         <p className="text-xs text-gray-500">
                           {t("bestPlace", {}, language)}
                         </p>
-                        <p className="font-bold text-yellow-700 mt-1 text-sm">
+                        <p title={summary.highest.market} className="market-price-summary-best mt-1 text-sm font-bold text-yellow-700">
                           {summary.highest.market}
                         </p>
                       </div>
@@ -2200,7 +2483,7 @@ out center tags;
                         setSearchText(summary.commodity);
                         setSelectedCategory("all");
                       }}
-                      className="w-full mt-3 bg-green-700 hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800 text-white py-2 rounded-lg font-semibold"
+                      className="market-prices-primary-action mt-3 w-full rounded-lg py-2 font-semibold"
                     >
                       {t("viewCommodityDetails", { crop: summary.commodity }, language)}
                     </button>
@@ -2211,7 +2494,7 @@ out center tags;
           )}
         </section>
 
-        <section className="mt-6">
+        <section className="market-prices-section market-prices-records mt-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
               {t("mandiPriceDetails", {}, language)}
@@ -2225,7 +2508,7 @@ out center tags;
           </div>
 
           {filteredPrices.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+            <div className="market-prices-empty rounded-2xl border p-6 text-center">
               <p className="text-gray-600">
                 {t("noMarketRecords", {}, language)}
               </p>
@@ -2235,18 +2518,20 @@ out center tags;
               {filteredPrices.slice(0, visibleRecordLimit).map((item) => (
                 <article
                   key={item.id}
-                  className="bg-white rounded-xl border border-green-100 shadow-sm p-3"
+                  className="market-prices-card market-price-record-card rounded-xl border p-3"
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="market-price-card-header market-price-record-header flex items-start gap-3">
                     <img
                       src={item.image}
                       alt={item.commodity}
-                      className="w-14 h-14 rounded-xl object-cover border border-green-100 bg-green-50"
+                      loading="lazy"
+                      decoding="async"
+                      className="market-prices-crop-image h-14 w-14 rounded-xl border object-cover"
                     />
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-green-900">
+                    <div className="market-price-record-copy min-w-0 flex-1">
+                      <div className="market-price-record-title-row flex items-start gap-2">
+                        <h3 title={item.commodity} className="market-price-record-title min-w-0 text-lg font-bold text-green-900">
                           {item.commodity}
                         </h3>
 
@@ -2256,11 +2541,11 @@ out center tags;
 
                       </div>
 
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p title={`${item.variety} • ${item.market}`} className="market-price-record-market mt-1 text-sm text-gray-500">
                         {item.variety} • {item.market}
                       </p>
 
-                      <p className="text-sm text-gray-500">
+                      <p title={[item.mandal, item.district, item.state].filter(Boolean).join(", ")} className="market-price-record-location text-sm text-gray-500">
                         {[item.mandal, item.district, item.state]
                           .filter(Boolean)
                           .join(", ")}
@@ -2268,8 +2553,8 @@ out center tags;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <div className="market-prices-record-values mt-3 grid grid-cols-3 gap-2">
+                    <div className="market-prices-price-tile market-prices-price-tile--low rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
                         {t("minPrice", {}, language)}
                       </p>
@@ -2280,7 +2565,7 @@ out center tags;
                       </p>
                     </div>
 
-                    <div className="bg-green-50 rounded-xl p-3 text-center">
+                    <div className="market-prices-price-tile market-prices-price-tile--modal rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
                         {t("modalPrice", {}, language)}
                       </p>
@@ -2291,7 +2576,7 @@ out center tags;
                       </p>
                     </div>
 
-                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <div className="market-prices-price-tile market-prices-price-tile--high rounded-xl p-3 text-center">
                       <p className="text-xs text-gray-500">
                         {t("maxPrice", {}, language)}
                       </p>
@@ -2303,7 +2588,7 @@ out center tags;
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="market-price-card-footer mt-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">
                       {!item.arrivalTimestamp
                         ? t("marketPriceDateUnavailable", {}, language)
@@ -2325,7 +2610,7 @@ out center tags;
                           "noopener,noreferrer"
                         );
                       }}
-                      className="text-sm bg-blue-600 text-white px-3 py-2 rounded-xl font-semibold"
+                      className="market-prices-map-action rounded-xl px-3 py-2 text-sm font-semibold"
                     >
                       {t("openMarket", {}, language)}
                     </button>
@@ -2345,7 +2630,7 @@ out center tags;
           )}
         </section>
 
-        <section className="mt-6 mb-6">
+        <section className="market-prices-section market-prices-nearby mt-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-xl font-bold text-green-900">
               {t("nearbySellingPlaces", {}, language)}
@@ -2354,7 +2639,7 @@ out center tags;
             <button
               type="button"
               onClick={openGeneralMapSearch}
-              className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
+              className="market-prices-primary-action rounded-xl px-4 py-2 font-semibold"
             >
               {t("searchInMaps", {}, language)}
             </button>
@@ -2365,13 +2650,13 @@ out center tags;
           </p>
 
           {loadingSellingPoints ? (
-            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+            <div className="market-prices-empty rounded-2xl border p-6 text-center">
               <p className="text-gray-600">
                 {t("searchingNearbyPlaces", {}, language)}
               </p>
             </div>
           ) : sellingPoints.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6 text-center">
+            <div className="market-prices-empty rounded-2xl border p-6 text-center">
               <p className="text-gray-600">
                 {t("noMappedPlaces", {}, language)}
               </p>
@@ -2381,7 +2666,7 @@ out center tags;
               {sellingPoints.map((point) => (
                 <article
                   key={point.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-4"
+                  className="market-prices-card market-prices-place-card rounded-2xl border p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -2409,7 +2694,7 @@ out center tags;
                       onClick={() =>
                         openDirections(point)
                       }
-                      className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold"
+                      className="market-prices-map-action rounded-xl px-4 py-2 font-semibold"
                     >
                       {t("directions", {}, language)}
                     </button>
@@ -2417,7 +2702,7 @@ out center tags;
                     {point.phone && (
                       <a
                         href={`tel:${point.phone}`}
-                        className="bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
+                        className="market-prices-primary-action rounded-xl px-4 py-2 font-semibold"
                       >
                         {t("call", {}, language)}
                       </a>

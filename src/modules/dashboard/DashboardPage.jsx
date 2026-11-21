@@ -18,7 +18,9 @@ import {
 import LanguageSelector from "../../components/LanguageSelector";
 import VoiceAssistantCard from "../../components/VoiceAssistantCard";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
-import { getCurrentLocation } from "../../services/currentLocationService";
+import { clearFarmerVoiceConversation } from "../../utils/voiceConversationStore";
+import { clearVoiceMemory } from "../../utils/voiceMemory";
+import { getCurrentLocation, reverseGeocodeCoordinates } from "../../services/currentLocationService";
 import { fetchWeatherForecast, selectNextTwelveHours } from "../../services/weatherService";
 import "./dashboard.css";
 
@@ -63,6 +65,23 @@ function currentWeatherDetails(code, isDay, language) {
   const [label, icon] = WEATHER_CONDITIONS[Number(code)] || ["conditionWeather", "🌤️"];
   const nightIcons = { 0: "🌙", 1: "🌙", 2: "☁️🌙" };
   return { label: t(label, {}, language), icon: Number(isDay) === 0 ? nightIcons[Number(code)] || icon : icon };
+}
+
+function weatherLocationLabel(place) {
+  const administrative = place?.localityInfo?.administrative || [];
+  const findArea = (words) => administrative.find((area) => {
+    const name = `${area.name || ""} ${area.description || ""}`.toLowerCase();
+    return words.some((word) => name.includes(word));
+  })?.name || "";
+  const informativeLocality = (place?.localityInfo?.informative || []).find((area) =>
+    /village|town|city|suburb|locality|settlement/i.test(`${area.name || ""} ${area.description || ""}`)
+  )?.name || "";
+  const locality = place?.locality || place?.city || place?.town || place?.village || informativeLocality;
+  const mandal = findArea(["mandal", "taluk", "tehsil", "subdistrict", "sub-district"]);
+  const district = findArea(["district"]);
+  const state = place?.principalSubdivision || findArea(["state"]);
+
+  return [...new Set([locality, mandal, district, state].filter(Boolean))].join(", ");
 }
 
 // Order statuses that trigger notifications
@@ -221,12 +240,19 @@ export default function DashboardPage() {
         const location = await getCurrentLocation();
         const weather = await fetchWeatherForecast({ ...location, signal: controller.signal });
         if (!weather?.current) throw new Error("Weather provider returned no current conditions.");
+        let resolvedLocation = "";
+        try {
+          const place = await reverseGeocodeCoordinates(location);
+          resolvedLocation = weatherLocationLabel(place);
+        } catch (geocodeError) {
+          console.warn("Dashboard weather location name unavailable:", geocodeError);
+        }
         if (active) {
           setDashboardWeather({
             hours: selectNextTwelveHours(weather).slice(0, 5),
             current: weather.current,
             location,
-            village: [farmer.village, farmer.district].filter(Boolean).join(", "),
+            locationLabel: resolvedLocation,
           });
         }
       } catch (weatherError) {
@@ -300,7 +326,10 @@ export default function DashboardPage() {
 
   async function handleLogout() {
     try {
+      const farmerUid = auth.currentUser?.uid;
       await signOut(auth);
+      clearFarmerVoiceConversation(farmerUid);
+      clearVoiceMemory();
       sessionStorage.removeItem("role");
       navigate("/role-selection", { replace: true });
     } catch (logoutError) {
@@ -414,24 +443,24 @@ export default function DashboardPage() {
         </header>
 
         <section className="dashboard-feature-grid grid min-w-0 items-stretch gap-4 lg:gap-5">
-          <article className="flex min-w-0 flex-col rounded-2xl border border-[var(--agri-border)] bg-white/95 p-4 shadow-sm sm:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <article className="dashboard-weather-card relative isolate flex min-h-[270px] min-w-0 flex-col overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:p-5">
+            <div className="relative z-10 mb-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-[var(--agri-text)]">⛅ {t("weather", {}, language)}</h2>
-                <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-[var(--agri-muted)]"><MapPin size={13} className="shrink-0" aria-hidden="true" /><span className="truncate">{dashboardWeather?.village || [farmer?.village, farmer?.district].filter(Boolean).join(", ") || (dashboardWeather?.location ? `${dashboardWeather.location.latitude.toFixed(3)}, ${dashboardWeather.location.longitude.toFixed(3)}` : t("detectingLocation", {}, language))}</span></p>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--agri-text)]"><span className="dashboard-weather-heading-icon" aria-hidden="true">⛅</span>{t("weather", {}, language)}</h2>
+                <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-[var(--agri-muted)]"><MapPin size={13} className="shrink-0" aria-hidden="true" /><span className="truncate">{dashboardWeather?.locationLabel || (dashboardWeather?.location ? `${dashboardWeather.location.latitude.toFixed(3)}, ${dashboardWeather.location.longitude.toFixed(3)}` : t("locationNotDetected", {}, language))}</span></p>
               </div>
-              <button type="button" onClick={() => navigate("/weather")} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-[var(--agri-green)] hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700">
+              <button type="button" onClick={() => navigate("/weather")} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl border border-green-700/15 bg-white/70 px-3 text-sm font-semibold text-[var(--agri-green)] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700">
                 {t("weather", {}, language)} <ArrowRight size={15} aria-hidden="true" />
               </button>
             </div>
             {weatherLoading ? (
-              <div className="grid flex-1 content-start gap-3">
-                <div className="h-24 animate-pulse rounded-xl bg-green-50" />
-                <div className="h-20 animate-pulse rounded-xl bg-green-50" />
-                <div className="h-16 animate-pulse rounded-xl bg-green-50" />
+              <div className="relative z-10 grid flex-1 content-start gap-3">
+                <div className="h-24 animate-pulse rounded-2xl bg-white/65" />
+                <div className="h-20 animate-pulse rounded-2xl bg-white/55" />
+                <div className="h-16 animate-pulse rounded-2xl bg-white/45" />
               </div>
             ) : dashboardWeather?.current ? (
-              <>
+              <div className="relative z-10 flex min-w-0 flex-1 flex-col">
                 {(() => {
                   const current = dashboardWeather.current;
                   const details = currentWeatherDetails(current.weather_code, current.is_day, language);
@@ -442,29 +471,29 @@ export default function DashboardPage() {
                     { label: t("rainLabel", {}, language).replace(/^[^\p{L}\p{N}]+/u, ""), value: formatMetric(current.rain ?? current.precipitation, " mm"), Icon: CloudRain },
                   ];
                   return <>
-                    <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] xl:items-center">
-                      <div className="flex min-w-0 items-center gap-3 rounded-xl bg-green-50/80 px-3 py-2.5">
-                        <span className="text-4xl" aria-hidden="true">{details.icon}</span>
-                        <div className="min-w-0"><p className="text-3xl font-bold leading-tight text-[var(--agri-text)]">{formatMetric(current.temperature_2m, "°C")}</p><p className="truncate text-sm text-[var(--agri-muted)]">{details.label}</p></div>
+                    <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] xl:items-stretch">
+                      <div className="dashboard-weather-current flex min-w-0 items-center gap-3 rounded-2xl border border-white/70 px-3 py-2.5">
+                        <span className="dashboard-weather-condition-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl" aria-hidden="true">{details.icon}</span>
+                        <div className="min-w-0"><p className="text-3xl font-extrabold leading-tight tracking-tight text-[var(--agri-text)]">{formatMetric(current.temperature_2m, "°C")}</p><p className="truncate text-sm font-medium text-[var(--agri-muted)]">{details.label}</p></div>
                       </div>
-                      <dl className="grid grid-cols-2 gap-2 2xl:grid-cols-4">
-                        {metrics.map(({ label, value, Icon }) => <div key={label} className="min-w-0 rounded-xl bg-green-50/80 px-2.5 py-2"><dt className="flex items-center gap-1 truncate text-[11px] text-[var(--agri-muted)]"><Icon size={14} className="shrink-0 text-[var(--agri-green)]" aria-hidden="true" />{label}</dt><dd className="mt-1 truncate pl-5 text-sm font-bold text-[var(--agri-text)]">{value}</dd></div>)}
+                      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {metrics.map(({ label, value, Icon }) => <div key={label} className="dashboard-weather-metric min-w-0 rounded-2xl border border-white/75 px-2.5 py-2"><dt className="flex items-center gap-1 truncate text-[11px] font-medium text-[var(--agri-muted)]"><Icon size={14} className="shrink-0 text-[var(--agri-green)]" aria-hidden="true" />{label}</dt><dd className="mt-1 truncate pl-5 text-sm font-bold text-[var(--agri-text)]">{value}</dd></div>)}
                       </dl>
                     </div>
-                    <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto border-t border-green-100 pt-3 pb-1">
+                    <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto border-t border-green-800/10 pt-3 pb-1">
                       {dashboardWeather.hours.map((hour) => (
-                        <article key={hour.time} className="flex min-w-[68px] flex-1 flex-col items-center rounded-lg px-2 py-1.5 text-center even:bg-green-50/70">
+                        <article key={hour.time} className="dashboard-weather-hour flex min-w-[68px] flex-1 flex-col items-center rounded-xl px-2 py-1.5 text-center transition-transform duration-200 hover:-translate-y-0.5">
                           <p className="whitespace-nowrap text-xs font-medium text-[var(--agri-muted)]">{formatForecastTime(hour.time, language)}</p>
-                          <span className="my-1 text-lg" aria-hidden="true">{forecastIcon(hour.weatherCode, hour.isDay)}</span>
+                          <span className="my-1 text-xl" aria-hidden="true">{forecastIcon(hour.weatherCode, hour.isDay)}</span>
                           <p className="text-sm font-bold text-[var(--agri-text)]">{formatMetric(hour.temperature, "°")}</p>
                         </article>
                       ))}
                     </div>
                   </>;
                 })()}
-              </>
+              </div>
             ) : weatherError ? (
-              <div className="flex min-h-40 flex-1 flex-col items-center justify-center rounded-xl bg-amber-50/70 px-4 py-5 text-center">
+              <div className="relative z-10 flex min-h-40 flex-1 flex-col items-center justify-center rounded-2xl border border-white/70 bg-white/65 px-4 py-5 text-center">
                 <p className="text-sm text-[var(--agri-muted)]">{t("weatherUnavailable", {}, language)}</p>
                 <button type="button" onClick={handleWeatherRetry} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--agri-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--agri-forest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2">
                   <RefreshCw size={15} aria-hidden="true" /> {t("retry", {}, language)}
@@ -476,7 +505,7 @@ export default function DashboardPage() {
           <VoiceAssistantCard onOpen={() => navigate("/farmer/voice")} />
         </section>
 
-        <section className="rounded-2xl border border-[var(--agri-border)] bg-white/80 p-4 shadow-sm sm:p-5" aria-labelledby="farmer-features-heading">
+        <section className="dashboard-services-panel relative isolate overflow-hidden rounded-2xl border border-[var(--agri-border)] p-4 shadow-sm sm:p-5" aria-labelledby="farmer-features-heading">
           <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
             <div>
               <h2
@@ -505,9 +534,9 @@ export default function DashboardPage() {
                   type="button"
                   key={feature.key}
                   onClick={() => navigate(feature.path)}
-                  className="group flex min-h-[92px] min-w-0 items-center gap-3 rounded-xl border border-[var(--agri-border)] bg-[var(--agri-card)] p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 sm:p-3.5"
+                  className="dashboard-service-card group flex min-h-[92px] min-w-0 items-center gap-3 rounded-xl border border-[var(--agri-border)] bg-[var(--agri-card)] p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 sm:p-3.5"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100/70 text-2xl">
+                  <span className="dashboard-service-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100/70 text-2xl">
                     {feature.icon}
                   </span>
                   <span className="min-w-0 flex-1">

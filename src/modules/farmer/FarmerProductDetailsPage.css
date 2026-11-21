@@ -1,0 +1,183 @@
+.farmer-product-details-page {
+  min-height: 100vh;
+  background-color: #f1f7f1;
+  background-image:
+    radial-gradient(ellipse at 5% 0%, rgb(220 242 223 / 70%), transparent 32rem),
+    radial-gradient(ellipse at 96% 34%, rgb(228 243 233 / 54%), transparent 30rem);
+  color: #173b2d;
+}
+
+.farmer-product-details-content {
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
+.farmer-product-details-nav {
+  border: 1px solid #dcebe0;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 6px 18px rgb(27 72 45 / 5%);
+}
+
+.farmer-product-details-back {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  color: #087143;
+}
+
+.farmer-product-details-back:hover {
+  color: #064d32;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.farmer-product-details-back:focus-visible,
+.farmer-product-call-dealer:focus-visible,
+.farmer-product-request-order:focus-visible {
+  outline: 3px solid #75bd6c;
+  outline-offset: 3px;
+}
+
+.farmer-product-details-card {
+  border: 1px solid #d8e9dd;
+  background: white;
+  box-shadow: 0 14px 38px rgb(24 75 45 / 9%);
+}
+
+.farmer-product-unavailable-card {
+  border: 1px solid #d8e9dd;
+  background: white;
+  box-shadow: 0 12px 32px rgb(28 71 45 / 8%);
+}
+
+.farmer-product-details-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(112deg, #064d32 0%, #087246 56%, #128451 100%);
+}
+
+.farmer-product-details-hero::after {
+  position: absolute;
+  z-index: -1;
+  top: -145px;
+  right: -90px;
+  width: 410px;
+  height: 360px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgb(204 240 151 / 18%), rgb(255 255 255 / 3%) 56%, transparent 70%);
+  content: "";
+  animation: farmer-product-details-glow 12s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.farmer-product-image {
+  border: 1px solid rgb(255 255 255 / 70%);
+  background: linear-gradient(145deg, #fff, #f1f8f1);
+  box-shadow: 0 10px 25px rgb(0 0 0 / 16%), inset 0 1px 0 white;
+}
+
+.farmer-product-image__media {
+  padding: 0.5rem;
+  background: white;
+}
+
+.farmer-product-image__fallback {
+  background: linear-gradient(145deg, #e9f6e9, #dff0e4);
+  color: #18593a;
+  font-size: 4rem;
+}
+
+.farmer-product-details-subtitle {
+  color: #d9f0e1;
+}
+
+.farmer-product-details-body {
+  background: linear-gradient(145deg, #fff 0%, #fff 66%, #fbfefb 100%);
+}
+
+.farmer-product-stat {
+  min-height: 112px;
+  border: 1px solid #e0ece3;
+}
+
+.farmer-product-stat--price {
+  background: linear-gradient(130deg, #f0faf2, #f7fcf7);
+}
+
+.farmer-product-stat--stock {
+  background: linear-gradient(130deg, #f0f7f7, #f7fbfa);
+}
+
+.farmer-product-description {
+  border: 1px solid #dcebe0;
+  background: linear-gradient(130deg, #f8fcf8, #f3f9f4);
+}
+
+.farmer-product-dealer,
+.farmer-product-order-panel {
+  border-color: #e2ece5;
+}
+
+.farmer-product-call-dealer {
+  min-height: 34px;
+  border: 1px solid #cddfe9;
+  background: #f2f8fb;
+  color: #285d7a;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.farmer-product-call-dealer:hover {
+  background: #e7f2f7;
+  box-shadow: 0 3px 10px rgb(40 93 122 / 10%);
+}
+
+.farmer-product-total {
+  font-size: 1.05rem;
+}
+
+.farmer-product-request-order {
+  min-height: 50px;
+  background: linear-gradient(135deg, #087b43, #056139);
+  box-shadow: 0 6px 16px rgb(6 95 53 / 16%);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.farmer-product-request-order:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #07904c, #076b3d);
+  box-shadow: 0 9px 20px rgb(6 95 53 / 21%);
+}
+
+.farmer-product-request-order:disabled {
+  box-shadow: none;
+}
+
+@keyframes farmer-product-details-glow {
+  from { transform: translate3d(0, 0, 0) scale(0.96); opacity: 0.72; }
+  to { transform: translate3d(-12px, 9px, 0) scale(1.04); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .farmer-product-details-page {
+    padding-inline: 0.85rem;
+  }
+
+  .farmer-product-image {
+    width: min(100%, 11rem);
+    height: 11rem;
+    align-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farmer-product-details-page *,
+  .farmer-product-details-page *::before,
+  .farmer-product-details-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

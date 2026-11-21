@@ -1,0 +1,329 @@
+.farmer-market-page {
+  min-height: 100vh;
+  background-color: #f1f7f1;
+  background-image:
+    radial-gradient(ellipse at 7% 0%, rgb(219 241 222 / 72%), transparent 32rem),
+    radial-gradient(ellipse at 96% 28%, rgb(229 242 232 / 54%), transparent 29rem);
+  color: #153c2d;
+}
+
+.farmer-market-page__content {
+  max-width: 1240px;
+  margin-inline: auto;
+}
+
+.farmer-market-hero {
+  border: 1px solid rgb(194 227 204 / 34%);
+  background: linear-gradient(112deg, #064d32 0%, #087246 58%, #188451 100%);
+  box-shadow: 0 16px 36px rgb(13 78 48 / 17%);
+}
+
+.farmer-market-hero::before,
+.farmer-market-hero::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.farmer-market-hero::before {
+  inset: -35% -8% -45% 38%;
+  background:
+    radial-gradient(ellipse at 60% 34%, rgb(210 242 157 / 20%), transparent 23%),
+    radial-gradient(ellipse at 88% 70%, rgb(126 211 136 / 17%), transparent 37%);
+  animation: farmer-market-atmosphere 13s ease-in-out infinite alternate;
+}
+
+.farmer-market-hero::after {
+  inset: -28% auto -28% -34%;
+  width: 23%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 10%), transparent);
+  transform: skewX(-18deg);
+  animation: farmer-market-sunlight 18s ease-in-out infinite;
+}
+
+.farmer-market-dashboard-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 10%);
+  padding: 0.45rem 0.9rem;
+  color: #e8f5ec;
+}
+
+.farmer-market-dashboard-link:hover {
+  background: rgb(255 255 255 / 18%);
+  color: white;
+}
+
+.farmer-market-orders-link {
+  min-height: 46px;
+  border: 1px solid rgb(255 255 255 / 70%);
+  background: #f8fff8;
+  color: #075b37;
+  box-shadow: 0 5px 16px rgb(0 0 0 / 10%);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.farmer-market-orders-link:hover {
+  transform: translateY(-1px);
+  background: white;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
+}
+
+.farmer-market-dashboard-link:focus-visible,
+.farmer-market-orders-link:focus-visible,
+.farmer-market-tools button:focus-visible,
+.farmer-market-category-panel button:focus-visible,
+.farmer-market-results button:focus-visible,
+.farmer-market-results a:focus-visible {
+  outline: 3px solid #b7e76d;
+  outline-offset: 3px;
+}
+
+.farmer-market-location {
+  border: 1px solid rgb(255 255 255 / 18%);
+  background: linear-gradient(100deg, rgb(255 255 255 / 14%), rgb(255 255 255 / 8%));
+  color: #e2f3e8;
+}
+
+.farmer-market-tools,
+.farmer-market-category-panel {
+  border-color: #d6e8db;
+  background: rgb(255 255 255 / 91%);
+  box-shadow: 0 8px 24px rgb(28 71 45 / 6%);
+}
+
+.farmer-market-search-label {
+  display: block;
+  color: #244b38;
+}
+
+.farmer-market-search-field {
+  min-height: 48px;
+  border-color: #d2e1d6;
+  background: #fbfefb;
+  color: #173c2d;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.farmer-market-search-field::placeholder {
+  color: #718279;
+}
+
+.farmer-market-search-field:focus {
+  border-color: #16804b;
+  background: white;
+  box-shadow: 0 0 0 3px rgb(22 128 75 / 13%);
+}
+
+.farmer-market-voice-button,
+.farmer-market-refresh-button {
+  min-height: 48px;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.farmer-market-voice-button {
+  border-color: #16804b;
+  background: #f7fcf8;
+  color: #087143;
+}
+
+.farmer-market-voice-button:hover {
+  background: #eaf6ed;
+}
+
+.farmer-market-refresh-button {
+  background: linear-gradient(135deg, #087b43, #056139);
+  color: white;
+  box-shadow: 0 5px 14px rgb(6 95 53 / 14%);
+}
+
+.farmer-market-refresh-button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #07904c, #076b3d);
+  box-shadow: 0 8px 18px rgb(6 95 53 / 20%);
+}
+
+.farmer-market-query-note {
+  border-left: 3px solid #66b875;
+  border-radius: 0 0.7rem 0.7rem 0;
+  background: #f1f9f2;
+  padding: 0.55rem 0.8rem;
+  color: #276442;
+}
+
+.farmer-market-category-panel > div {
+  scrollbar-width: thin;
+  scrollbar-color: #a9cfb2 transparent;
+}
+
+.farmer-market-category-panel button {
+  min-height: 42px;
+  border: 1px solid #d7e8dc;
+  background: #f8fcf8;
+  color: #315b43;
+}
+
+.farmer-market-category-panel button:hover {
+  border-color: #afd5b9;
+  background: #eef8f0;
+}
+
+.farmer-market-category-panel button.bg-green-700 {
+  border-color: #087143;
+  background: linear-gradient(135deg, #087b43, #056139);
+  color: white;
+  box-shadow: 0 5px 14px rgb(6 95 53 / 16%);
+}
+
+.farmer-market-results-heading {
+  min-height: 42px;
+}
+
+.farmer-market-results-count {
+  flex: 0 0 auto;
+  border: 1px solid #d9eade;
+  background: #f7fbf7;
+  color: #536b5c;
+}
+
+.farmer-market-product-list > article {
+  overflow: hidden;
+  border-color: #d9e9dd;
+  border-radius: 1.25rem;
+  background: linear-gradient(125deg, #fff 0%, #fff 68%, #f8fcf8 100%);
+  box-shadow: 0 5px 18px rgb(26 73 44 / 5%);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.farmer-market-product-list > article:hover {
+  transform: translateY(-2px);
+  border-color: #badcc4;
+  box-shadow: 0 11px 26px rgb(26 73 44 / 10%);
+}
+
+.farmer-market-product-list > article > div:first-child {
+  align-self: start;
+  border-color: #dcebe0;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #eef8ef, #f7fbf6);
+}
+
+.farmer-market-product-list > article > div:nth-child(2) h2 {
+  color: #123c2d;
+  letter-spacing: -0.015em;
+}
+
+.farmer-market-product-list > article > div:nth-child(2) > div.mt-3.grid > div {
+  min-width: 0;
+  border: 1px solid #e6efe8;
+  border-radius: 0.9rem;
+  background: #f6faf6;
+  padding: 0.7rem;
+}
+
+.farmer-market-product-list > article > div:nth-child(2) > div.mt-3.grid > div:nth-child(2) {
+  background: #f3f8f8;
+}
+
+.farmer-market-product-list > article > div:last-child {
+  border-color: #e4eee6;
+}
+
+.farmer-market-product-list > article > div:last-child > button,
+.farmer-market-product-list > article > div:last-child a {
+  min-height: 42px;
+  border-radius: 0.8rem;
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.farmer-market-product-list > article > div:last-child > button:last-child {
+  background: linear-gradient(135deg, #087b43, #056139);
+  box-shadow: 0 4px 12px rgb(6 95 53 / 15%);
+}
+
+.farmer-market-product-list > article > div:last-child > button:last-child:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #07904c, #076b3d);
+  box-shadow: 0 7px 16px rgb(6 95 53 / 20%);
+}
+
+.farmer-market-product-list > article > div:last-child > button:disabled {
+  box-shadow: none;
+}
+
+.farmer-market-product-list > article > div:last-child > div > div:first-child {
+  border-color: #d6e4da;
+  border-radius: 0.85rem;
+}
+
+.farmer-market-product-list > article > div:last-child > div > div:first-child button {
+  min-width: 42px;
+  min-height: 42px;
+  color: #087143;
+}
+
+.farmer-market-results > section {
+  border-color: #d8e9dd;
+  border-radius: 1.5rem;
+  background: linear-gradient(145deg, #fff, #f8fcf8);
+  box-shadow: 0 9px 26px rgb(28 71 45 / 7%);
+}
+
+.farmer-market-results > section button {
+  min-height: 44px;
+  border-radius: 0.8rem;
+}
+
+.farmer-market-loading-card {
+  border-color: #d8e9dd;
+  background: white;
+  box-shadow: 0 12px 32px rgb(28 71 45 / 8%);
+}
+
+.farmer-market-page--loading > div > div > div:first-child {
+  animation: farmer-market-seed-pulse 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes farmer-market-atmosphere {
+  from { transform: translate3d(0, 0, 0) scale(0.96); opacity: 0.68; }
+  to { transform: translate3d(-13px, 9px, 0) scale(1.04); opacity: 1; }
+}
+
+@keyframes farmer-market-sunlight {
+  0%, 28% { left: -34%; opacity: 0; }
+  40% { opacity: 0.6; }
+  70%, 100% { left: 112%; opacity: 0; }
+}
+
+@keyframes farmer-market-seed-pulse {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-3px) scale(1.04); }
+}
+
+@media (max-width: 640px) {
+  .farmer-market-page {
+    padding-inline: 0.85rem;
+  }
+
+  .farmer-market-results-heading {
+    align-items: flex-start;
+  }
+
+  .farmer-market-product-list > article:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farmer-market-page *,
+  .farmer-market-page *::before,
+  .farmer-market-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

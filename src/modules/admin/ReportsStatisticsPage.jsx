@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./AdminPageEffects.css";
 import { get, ref } from "firebase/database";
 import {
   ArrowLeft,
@@ -1345,7 +1346,7 @@ export default function ReportsStatisticsPage() {
   */
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="admin-page-effects admin-page-effects--reports min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         <StatusMessage

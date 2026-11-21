@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { onValue, ref, remove, update } from "firebase/database";
 import { database } from "../../firebase";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
+import "./AdminPageEffects.css";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -328,7 +329,7 @@ export default function AdminOrderManagementPage() {
   };
 
   return (
-    <div className="admin-orders-page">
+    <div className="admin-orders-page admin-page-effects admin-page-effects--orders">
       <style>{`
         * {
           box-sizing: border-box;

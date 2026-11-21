@@ -1,0 +1,166 @@
+.role-selection-page {
+  isolation: isolate;
+  --pointer-x: 0;
+  --pointer-y: 0;
+}
+
+.role-landscape,
+.role-landscape > * {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.role-landscape {
+  z-index: 0;
+  overflow: hidden;
+  animation: landscape-appear 1.2s ease-out both;
+  background:
+    radial-gradient(ellipse at 50% 4%, rgb(255 244 200 / 72%), transparent 36%),
+    linear-gradient(180deg, #dff5ee 0%, #e9f7ec 46%, #d6edce 100%);
+}
+
+.landscape-sun {
+  inset: 8% auto auto 50% !important;
+  width: clamp(130px, 24vw, 310px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgb(255 238 175 / 42%), rgb(255 232 162 / 17%) 43%, transparent 72%);
+  animation: sunlight-breathe 9s ease-in-out infinite alternate;
+}
+
+.landscape-sun::before {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgb(255 241 190 / 0%) 0deg 13deg, rgb(255 241 190 / 12%) 14deg 16deg, rgb(255 241 190 / 0%) 17deg 30deg);
+  mask-image: radial-gradient(circle, transparent 0 35%, #000 68%, transparent 100%);
+  animation: rays-turn 90s linear infinite;
+}
+
+.landscape-cloud {
+  inset: auto !important;
+  width: 150px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 36%);
+  filter: blur(1px);
+  box-shadow: 28px -10px 0 -5px rgb(255 255 255 / 32%), 56px 0 0 -8px rgb(255 255 255 / 26%);
+  animation: cloud-drift 48s linear infinite;
+  transition: margin 220ms ease-out;
+}
+
+.cloud-one { top: 18%; left: -190px; margin-left: calc(var(--pointer-x) * -3px); margin-top: calc(var(--pointer-y) * -2px); }
+.cloud-two { top: 31%; left: 58%; opacity: .6; transform: scale(.72); animation-duration: 65s; animation-delay: -24s; margin-left: calc(var(--pointer-x) * -2px); margin-top: calc(var(--pointer-y) * -1px); }
+
+.landscape-field {
+  inset: auto -8% 0 !important;
+  height: 34%;
+  transform: translateX(calc(var(--pointer-x) * -3px));
+  transition: transform 180ms ease-out;
+}
+
+.field-far {
+  bottom: 16% !important;
+  height: 24%;
+  opacity: .42;
+  transform: translate(calc(var(--pointer-x) * -2px), calc(var(--pointer-y) * -1px));
+  transition: transform 220ms ease-out;
+  background: linear-gradient(170deg, transparent 30%, #b8dcae 31% 45%, transparent 46%), linear-gradient(190deg, transparent 41%, #c4e2b4 42% 59%, transparent 60%);
+}
+
+.field-mid {
+  bottom: 4% !important;
+  height: 29%;
+  opacity: .55;
+  transform: translate(calc(var(--pointer-x) * -5px), calc(var(--pointer-y) * -2px));
+  background: linear-gradient(167deg, transparent 34%, #91c78d 35% 54%, transparent 55%), linear-gradient(194deg, transparent 40%, #a4d09a 41% 62%, transparent 63%);
+}
+
+.field-near {
+  height: 20%;
+  opacity: .52;
+  transform: translate(calc(var(--pointer-x) * -7px), calc(var(--pointer-y) * -3px));
+  background: linear-gradient(180deg, transparent 0%, #7fba78 56%, #72ae70 100%);
+  clip-path: polygon(0 38%, 14% 28%, 32% 43%, 47% 20%, 66% 37%, 82% 24%, 100% 39%, 100% 100%, 0 100%);
+}
+
+.landscape-crops {
+  inset: auto 0 0 !important;
+  height: 17%;
+  transform: translateX(calc(var(--pointer-x) * -9px));
+  transform-origin: bottom;
+  background: repeating-linear-gradient(78deg, transparent 0 22px, rgb(57 125 73 / 48%) 23px 25px, transparent 26px 41px);
+  mask-image: linear-gradient(0deg, #000 0%, transparent 96%);
+  animation: crop-sway 5s ease-in-out infinite alternate;
+}
+
+.nature-speck,
+.nature-leaf {
+  position: absolute;
+  inset: auto;
+  pointer-events: none;
+}
+
+.nature-speck {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 255 224 / 88%);
+  box-shadow: 0 0 12px 3px rgb(255 245 175 / 40%);
+  animation: pollen-drift 11s ease-in-out infinite;
+}
+
+.speck-one { top: 36%; left: 18%; }
+.speck-two { top: 51%; left: 78%; animation-delay: -4s; animation-duration: 14s; }
+.speck-three { top: 29%; left: 67%; animation-delay: -8s; animation-duration: 12s; }
+
+.nature-leaf {
+  width: 12px;
+  height: 22px;
+  border-radius: 100% 0 100% 0;
+  background: linear-gradient(135deg, rgb(98 160 92 / 24%), rgb(56 125 75 / 44%));
+  animation: leaf-float 17s ease-in-out infinite;
+}
+.leaf-one { top: 55%; left: 12%; }
+.leaf-two { top: 42%; right: 13%; animation-delay: -9s; font-size: 16px; }
+
+.role-content { animation: content-rise .75s .12s ease-out both; }
+.role-logo { animation: content-rise .8s .18s ease-out both; }
+.role-language { animation: content-rise .7s .28s ease-out both; }
+.role-card { animation: card-arrive .65s calc(.24s + var(--card-index) * 120ms) cubic-bezier(.2,.7,.2,1) both; }
+.role-card:nth-child(1):hover { box-shadow: 0 18px 42px rgb(34 197 94 / 20%); }
+.role-card:nth-child(2):hover { box-shadow: 0 18px 42px rgb(59 130 246 / 20%); }
+.role-card:nth-child(3):hover { box-shadow: 0 18px 42px rgb(139 92 246 / 20%); }
+.role-card:active { scale: .985; }
+.role-card > div:nth-child(2) > div:first-child > div:last-child { transition: translate 220ms ease-out, color 220ms ease-out; }
+.role-card:hover > div:nth-child(2) > div:first-child > div:last-child { translate: 3px 0; }
+
+@keyframes landscape-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sunlight-breathe { from { opacity: .58; scale: .96; } to { opacity: .92; scale: 1.06; } }
+@keyframes rays-turn { to { rotate: 360deg; } }
+@keyframes cloud-drift { from { translate: 0 0; } to { translate: calc(100vw + 360px) 12px; } }
+@keyframes crop-sway { from { rotate: -.4deg; } to { rotate: .4deg; } }
+@keyframes pollen-drift { 0%, 100% { translate: 0 0; opacity: .3; } 50% { translate: 12px -18px; opacity: .9; } }
+@keyframes leaf-float { 0%, 100% { translate: 0 0; rotate: -15deg; } 50% { translate: 8px -18px; rotate: 20deg; } }
+@keyframes content-rise { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+@keyframes card-arrive { from { opacity: 0; translate: 0 16px; } to { opacity: 1; translate: 0 0; } }
+
+@media (max-width: 640px) {
+  .cloud-two, .nature-leaf, .speck-three { display: none; }
+  .landscape-field, .landscape-crops, .landscape-cloud { transition: none; }
+  .landscape-crops { opacity: .55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .role-landscape, .role-landscape *, .role-content, .role-logo,
+  .role-language, .role-card {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+  .landscape-cloud { margin: 0; }
+}

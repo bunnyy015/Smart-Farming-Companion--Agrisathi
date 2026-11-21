@@ -1,0 +1,158 @@
+/* Shared motion accents for dealer screens; all colors remain page-owned. */
+.dealer-page-effects > div > header {
+  animation: dealer-screen-enter .48s cubic-bezier(.2, .7, .25, 1) both;
+}
+
+.dealer-page-effects > div > section {
+  animation: dealer-screen-enter .42s ease-out both;
+}
+
+.dealer-page-effects > div > section:nth-of-type(2) { animation-delay: 55ms; }
+.dealer-page-effects > div > section:nth-of-type(3) { animation-delay: 100ms; }
+.dealer-page-effects > div > section:nth-of-type(4) { animation-delay: 145ms; }
+
+.dealer-page-effects article,
+.dealer-page-effects__account-card {
+  animation: dealer-screen-enter .42s cubic-bezier(.2, .7, .25, 1) both;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.dealer-page-effects article:hover,
+.dealer-page-effects__account-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 13px 26px rgba(18, 65, 91, .12);
+}
+
+.dealer-page-effects--orders article:nth-of-type(2),
+.dealer-page-effects--stock article:nth-of-type(2),
+.dealer-page-effects--sales article:nth-of-type(2),
+.dealer-page-effects--notifications article:nth-of-type(2) { animation-delay: 55ms; }
+
+.dealer-page-effects--orders article:nth-of-type(3),
+.dealer-page-effects--stock article:nth-of-type(3),
+.dealer-page-effects--sales article:nth-of-type(3),
+.dealer-page-effects--notifications article:nth-of-type(3) { animation-delay: 100ms; }
+
+.dealer-page-effects--orders article:nth-of-type(4),
+.dealer-page-effects--stock article:nth-of-type(4),
+.dealer-page-effects--sales article:nth-of-type(4),
+.dealer-page-effects--notifications article:nth-of-type(4) { animation-delay: 145ms; }
+
+.dealer-page-effects--sales .divide-y > button {
+  animation: dealer-screen-enter .38s ease-out both;
+  transition: transform .18s ease, background-color .18s ease;
+}
+
+.dealer-page-effects--sales .divide-y > button:hover {
+  transform: translateX(3px);
+}
+
+.dealer-page-effects--orders section[aria-label="Order sections"] > *,
+.dealer-page-effects--stock section.grid > *,
+.dealer-page-effects--sales section.grid > * {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.dealer-page-effects--orders section[aria-label="Order sections"] > *:hover,
+.dealer-page-effects--stock section.grid > *:hover,
+.dealer-page-effects--sales section.grid > *:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 18px rgba(18, 65, 91, .1);
+}
+
+.dealer-page-effects button {
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.dealer-page-effects button:hover:not(:disabled) {
+  filter: brightness(1.035);
+}
+
+.dealer-page-effects input,
+.dealer-page-effects select,
+.dealer-page-effects textarea {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.dealer-page-effects input:focus,
+.dealer-page-effects select:focus,
+.dealer-page-effects textarea:focus {
+  box-shadow: 0 0 0 3px rgba(41, 133, 190, .15);
+}
+
+.dealer-page-effects [role="alert"] {
+  animation: dealer-screen-pop .3s cubic-bezier(.18, .75, .3, 1.15) both;
+}
+
+.dealer-page-effects [role="dialog"] {
+  transform-origin: center;
+  animation: dealer-screen-pop .3s cubic-bezier(.18, .75, .3, 1.15) both;
+}
+
+.dealer-page-effects .fixed.inset-0:has([role="dialog"]) {
+  animation: dealer-screen-backdrop .2s ease-out both;
+  backdrop-filter: blur(3px);
+}
+
+.dealer-page-effects--notifications article .bg-green-600.rounded-full {
+  animation: dealer-notification-pulse 2.1s ease-in-out infinite;
+}
+
+.dealer-page-effects__registration-card {
+  animation: dealer-screen-pop .42s cubic-bezier(.18, .75, .3, 1.15) both;
+  transition: box-shadow .22s ease;
+}
+
+.dealer-page-effects__registration-card:hover {
+  box-shadow: 0 18px 38px rgba(18, 65, 91, .14);
+}
+
+.dealer-page-effects--registration input:focus {
+  transform: translateY(-1px);
+}
+
+@keyframes dealer-screen-enter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dealer-screen-pop {
+  from { opacity: 0; transform: scale(.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes dealer-screen-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dealer-notification-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, .2); }
+  50% { box-shadow: 0 0 0 5px rgba(22, 163, 74, .08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealer-page-effects > div > header,
+  .dealer-page-effects > div > section,
+  .dealer-page-effects article,
+  .dealer-page-effects__account-card,
+  .dealer-page-effects--sales .divide-y > button,
+  .dealer-page-effects [role="alert"],
+  .dealer-page-effects [role="dialog"],
+  .dealer-page-effects .fixed.inset-0:has([role="dialog"]),
+  .dealer-page-effects__registration-card,
+  .dealer-page-effects--notifications article .bg-green-600.rounded-full {
+    animation: none;
+  }
+
+  .dealer-page-effects button,
+  .dealer-page-effects input,
+  .dealer-page-effects select,
+  .dealer-page-effects textarea,
+  .dealer-page-effects article,
+  .dealer-page-effects__account-card,
+  .dealer-page-effects--sales .divide-y > button,
+  .dealer-page-effects__registration-card {
+    transition: none;
+  }
+}

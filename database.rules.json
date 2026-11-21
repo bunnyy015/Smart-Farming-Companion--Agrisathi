@@ -45,6 +45,10 @@
         "farmerReceived": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.val() === true"
         },
+        "farmerArchived": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.val() !== true && newData.val() === true && (data.parent().child('farmerReceived').val() === true || data.parent().child('completedBy').val() === 'farmer' || data.parent().child('dealerPaymentReceived').val() === true || data.parent().child('paymentStatus').val() === 'paid' || data.parent().child('paymentStatus').val() === 'completed' || data.parent().child('status').val() === 'completed' || data.parent().child('status').val() === 'complete' || data.parent().child('status').val() === 'paid' || data.parent().child('status').val() === 'payment_completed' || data.parent().child('status').val() === 'rejected' || data.parent().child('status').val() === 'reject' || data.parent().child('status').val() === 'cancelled' || data.parent().child('status').val() === 'canceled' || data.parent().child('status').val() === 'expired' || data.parent().child('orderStatus').val() === 'completed' || data.parent().child('orderStatus').val() === 'complete' || data.parent().child('orderStatus').val() === 'paid' || data.parent().child('orderStatus').val() === 'payment_completed' || data.parent().child('orderStatus').val() === 'rejected' || data.parent().child('orderStatus').val() === 'reject' || data.parent().child('orderStatus').val() === 'cancelled' || data.parent().child('orderStatus').val() === 'canceled' || data.parent().child('orderStatus').val() === 'expired')",
+          ".validate": "newData.isBoolean()"
+        },
         "farmerReceivedAt": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
         },
@@ -66,6 +70,33 @@
         },
         "completedAt": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && data.parent().child('farmerUid').val() === auth.uid && data.parent().child('farmerReceived').val() !== true && (data.parent().child('status').val() === 'accepted' || data.parent().child('status').val() === 'delivered_by_dealer') && newData.isString()"
+        }
+      }
+    },
+    "diseaseReports": {
+      "$reportId": {
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'farmer' && !data.exists() && newData.child('farmerId').val() === auth.uid",
+        ".validate": "newData.hasChildren(['farmerId', 'crop', 'disease', 'confidence', 'imageEnhanced', 'createdAt']) && newData.child('farmerId').isString() && newData.child('crop').isString() && newData.child('disease').isString() && newData.child('confidence').isString() && newData.child('imageEnhanced').isBoolean() && newData.child('createdAt').isNumber()",
+        "farmerId": {
+          ".validate": "newData.isString()"
+        },
+        "crop": {
+          ".validate": "newData.isString()"
+        },
+        "disease": {
+          ".validate": "newData.isString()"
+        },
+        "confidence": {
+          ".validate": "newData.isString()"
+        },
+        "imageEnhanced": {
+          ".validate": "newData.isBoolean()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
         }
       }
     },
