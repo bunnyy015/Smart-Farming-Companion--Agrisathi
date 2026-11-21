@@ -1,0 +1,320 @@
+.farmer-profile-page {
+  min-height: 100vh;
+  background-color: #f1f7f1;
+  background-image:
+    radial-gradient(ellipse at 8% 0%, rgb(219 241 222 / 74%), transparent 32rem),
+    radial-gradient(ellipse at 94% 30%, rgb(227 242 233 / 56%), transparent 28rem);
+  color: #163b2e;
+}
+
+.farmer-profile-page__content {
+  max-width: 1160px;
+  margin-inline: auto;
+}
+
+.farmer-profile-hero {
+  border: 1px solid rgb(191 226 204 / 36%);
+  background: linear-gradient(112deg, #064d32 0%, #087246 58%, #188451 100%);
+  box-shadow: 0 16px 36px rgb(13 78 48 / 17%);
+}
+
+.farmer-profile-hero::before,
+.farmer-profile-hero::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.farmer-profile-hero::before {
+  inset: -30% -8% -50% 38%;
+  background:
+    radial-gradient(ellipse at 56% 36%, rgb(207 241 151 / 23%), transparent 24%),
+    radial-gradient(ellipse at 82% 70%, rgb(134 211 132 / 18%), transparent 36%);
+  animation: farmer-profile-hero-glow 12s ease-in-out infinite alternate;
+}
+
+.farmer-profile-hero::after {
+  inset: -30% auto -30% -32%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 10%), transparent);
+  transform: skewX(-18deg);
+  animation: farmer-profile-hero-sweep 17s ease-in-out infinite;
+}
+
+.farmer-profile-back {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 10%);
+  padding: 0.45rem 0.9rem;
+  color: #e6f5eb;
+}
+
+.farmer-profile-back:hover {
+  background: rgb(255 255 255 / 18%);
+  color: white;
+}
+
+.farmer-profile-back:focus-visible,
+.farmer-profile-edit-button:focus-visible,
+.farmer-profile-quick-action:focus-visible {
+  outline: 3px solid #b7e76d;
+  outline-offset: 3px;
+}
+
+.farmer-profile-edit-button {
+  min-height: 46px;
+  border: 1px solid rgb(255 255 255 / 68%);
+  background: #f8fff8;
+  color: #075b37;
+  box-shadow: 0 5px 16px rgb(0 0 0 / 10%);
+}
+
+.farmer-profile-edit-button:hover {
+  background: white;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
+  transform: translateY(-1px);
+}
+
+.farmer-profile-summary,
+.farmer-profile-whatsapp,
+.farmer-profile-detail-card,
+.farmer-profile-farm-panel,
+.farmer-profile-edit-panel {
+  border-color: #d6e8db;
+  background: rgb(255 255 255 / 91%);
+  box-shadow: 0 8px 24px rgb(28 71 45 / 6%);
+}
+
+.farmer-profile-summary {
+  overflow: hidden;
+}
+
+.farmer-profile-avatar {
+  flex: 0 0 auto;
+  border: 1px solid #cce6d2;
+  background: linear-gradient(145deg, #e6f6e9, #d8efe1);
+  box-shadow: inset 0 1px 0 white, 0 8px 22px rgb(15 94 55 / 10%);
+}
+
+.farmer-profile-completion {
+  border: 1px solid #e0eee4;
+  background: linear-gradient(110deg, #f3faf4, #f7fbf8);
+}
+
+.farmer-profile-progress {
+  background: #deebe1;
+}
+
+.farmer-profile-progress__fill {
+  background: linear-gradient(90deg, #078542, #62b943);
+  box-shadow: 0 0 12px rgb(7 133 66 / 24%);
+}
+
+.farmer-profile-whatsapp {
+  background: linear-gradient(115deg, #fff 0%, #fbfefb 67%, #f1faf3 100%);
+}
+
+.farmer-profile-whatsapp-switch {
+  min-width: 82px;
+  min-height: 42px;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.farmer-profile-whatsapp-switch:hover:not(:disabled) {
+  box-shadow: 0 5px 14px rgb(16 89 52 / 16%);
+  transform: translateY(-1px);
+}
+
+.farmer-profile-detail-card {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.farmer-profile-detail-card:hover {
+  border-color: #c5e0cd;
+  box-shadow: 0 12px 26px rgb(28 71 45 / 9%);
+  transform: translateY(-2px);
+}
+
+.farmer-profile-detail-title {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #e6f0e8;
+}
+
+.farmer-profile-detail-card .space-y-4 > div {
+  border-left: 2px solid #d8ebdd;
+  padding-left: 0.8rem;
+}
+
+.farmer-profile-detail-card .space-y-4 > div > p:first-child,
+.farmer-profile-farm-panel .farmer-profile-farm-item > p:first-child {
+  color: #60756a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.farmer-profile-detail-card .space-y-4 > div > p:last-child {
+  margin-top: 0.2rem;
+  color: #173c2e;
+  line-height: 1.5;
+}
+
+.farmer-profile-farm-panel {
+  background: linear-gradient(130deg, #fff 0%, #fbfefb 72%, #f5faf6 100%);
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item {
+  min-height: 104px;
+  border: 1px solid #e2eee5;
+  background: linear-gradient(145deg, #f7fbf7, #f1f8f2);
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item:hover {
+  border-color: #c7e3cf;
+  box-shadow: 0 6px 16px rgb(28 71 45 / 7%);
+  transform: translateY(-2px);
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item--land {
+  background: linear-gradient(145deg, #f1f8f9, #f3f9f8);
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item--water {
+  background: linear-gradient(145deg, #f1f8f9, #f5faf9);
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item--soil {
+  background: linear-gradient(145deg, #fbf8ee, #faf9f2);
+}
+
+.farmer-profile-farm-panel .farmer-profile-farm-item--language {
+  background: linear-gradient(145deg, #f7f4fb, #faf8fc);
+}
+
+.farmer-profile-quick-action {
+  min-height: 112px;
+  border-color: #d8e9dc;
+  background: rgb(255 255 255 / 92%);
+  color: #173c2e;
+  box-shadow: 0 5px 16px rgb(28 71 45 / 5%);
+}
+
+.farmer-profile-quick-action:hover {
+  border-color: #b9dbc3;
+  box-shadow: 0 10px 22px rgb(28 71 45 / 10%);
+  transform: translateY(-2px);
+}
+
+.farmer-profile-quick-action > div {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  border-radius: 14px;
+  background: #e8f6eb;
+  font-size: 1.45rem;
+}
+
+.farmer-profile-edit-panel {
+  background: linear-gradient(145deg, #fff 0%, #fbfefb 100%);
+}
+
+.farmer-profile-form {
+  color: #244536;
+}
+
+.farmer-profile-form > div:not(.farmer-profile-crop-areas) > div > label,
+.farmer-profile-form > div > label {
+  color: #355748;
+  font-weight: 650;
+}
+
+.farmer-profile-form input:not([type="checkbox"]),
+.farmer-profile-form textarea,
+.farmer-profile-form select {
+  min-height: 46px;
+  border-color: #d4e2d8;
+  border-radius: 0.8rem;
+  background-color: #fff;
+  color: #183b2e;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.farmer-profile-form input:not([type="checkbox"]):focus,
+.farmer-profile-form textarea:focus,
+.farmer-profile-form select:focus {
+  border-color: #16804b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(22 128 75 / 14%);
+}
+
+.farmer-profile-form input:disabled {
+  background: #f1f5f2;
+  color: #65766d;
+}
+
+.farmer-profile-form [type="submit"] {
+  min-height: 46px;
+  background: linear-gradient(135deg, #087b43, #056139);
+  box-shadow: 0 5px 14px rgb(6 95 53 / 16%);
+}
+
+.farmer-profile-form [type="submit"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #07904c, #076b3d);
+  transform: translateY(-1px);
+}
+
+.farmer-profile-form button:focus-visible {
+  outline: 3px solid #6ebd63;
+  outline-offset: 2px;
+}
+
+.farmer-profile-crop-areas {
+  border-color: #d9eade;
+  background: #f8fcf8;
+}
+
+.farmer-profile-page--loading > div {
+  border: 1px solid #d8e9dc;
+  box-shadow: 0 12px 32px rgb(28 71 45 / 8%);
+}
+
+@keyframes farmer-profile-hero-glow {
+  from { transform: translate3d(0, 0, 0) scale(0.96); opacity: 0.7; }
+  to { transform: translate3d(-12px, 8px, 0) scale(1.04); opacity: 1; }
+}
+
+@keyframes farmer-profile-hero-sweep {
+  0%, 28% { left: -32%; opacity: 0; }
+  40% { opacity: 0.62; }
+  70%, 100% { left: 112%; opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .farmer-profile-page {
+    padding-inline: 0.85rem;
+  }
+
+  .farmer-profile-detail-card:hover,
+  .farmer-profile-farm-panel .farmer-profile-farm-item:hover,
+  .farmer-profile-quick-action:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farmer-profile-page *,
+  .farmer-profile-page *::before,
+  .farmer-profile-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

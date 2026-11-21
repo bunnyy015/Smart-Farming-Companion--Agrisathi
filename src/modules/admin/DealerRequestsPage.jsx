@@ -14,6 +14,7 @@ import {
 
 import StatusMessage from "../../components/StatusMessage";
 import { database } from "../../firebase";
+import "./AdminPageEffects.css";
 
 function cleanValue(value) {
   if (value === null || value === undefined) {
@@ -279,7 +280,7 @@ export default function DealerRequestsPage() {
   }, [requests, search]);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <main className="admin-page-effects admin-page-effects--dealer-requests min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
         <StatusMessage
           message={message}

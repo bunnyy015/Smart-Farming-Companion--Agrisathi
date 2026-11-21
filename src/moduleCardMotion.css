@@ -1,0 +1,48 @@
+/* Small per-card feedback shared across farmer, dealer, admin, and other modules.
+   Page sections and layout containers are intentionally left still. */
+:where(
+  main article:not([class*="hover:-translate"]),
+  main button.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main a.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main [role="button"][class*="rounded"]:not([class*="hover:-translate"])
+) {
+  transition: translate 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+:where(
+  main article:not([class*="hover:-translate"]),
+  main button.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main a.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main [role="button"][class*="rounded"]:not([class*="hover:-translate"])
+):hover {
+  translate: 0 -2px;
+  box-shadow: 0 8px 20px rgb(20 83 45 / 10%);
+}
+
+:where(
+  main button.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main a.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main [role="button"][class*="rounded"]:not([class*="hover:-translate"])
+):focus-visible {
+  translate: 0 -2px;
+}
+
+:where(
+  main article:not([class*="hover:-translate"]),
+  main button.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main a.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+  main [role="button"][class*="rounded"]:not([class*="hover:-translate"])
+):active {
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    main article:not([class*="hover:-translate"]),
+    main button.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+    main a.text-left[class*="rounded"]:not([class*="hover:-translate"]),
+    main [role="button"][class*="rounded"]:not([class*="hover:-translate"])
+  ) {
+    transition: none;
+  }
+}

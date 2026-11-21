@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref, remove } from "firebase/database";
 import { database } from "../../firebase";
+import "./AdminPageEffects.css";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -162,7 +163,7 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <main className="admin-page-effects admin-page-effects--products min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-800 p-6 text-white shadow-xl md:p-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">

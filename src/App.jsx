@@ -32,6 +32,7 @@ const FarmerOrdersPage = lazy(() => import("./modules/farmer/FarmerOrdersPage"))
 const FarmerNotificationsPage = lazy(() => import("./modules/farmer/FarmerNotificationsPage"));
 const CommunityPage = lazy(() => import("./modules/community/CommunityPage"));
 const NearbyServicesPage = lazy(() => import("./modules/farmer/NearbyServicesPage"));
+const FarmerModuleLayout = lazy(() => import("./components/FarmerModuleLayout"));
 
 // ==============================
 // Admin
@@ -109,6 +110,8 @@ function App() {
             FARMER ROUTES
         ===================================================== */}
 
+        <Route element={<FarmerModuleLayout />}>
+
         <Route
           path="/dashboard"
           element={<DashboardPage />}
@@ -175,6 +178,8 @@ function App() {
           path="/community"
           element={<CommunityPage />}
         />
+
+        </Route>
 
 
         {/* =====================================================

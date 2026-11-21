@@ -7,6 +7,19 @@ import QuantitySelector from "../../components/marketplace/QuantitySelector";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
 import { createOrderAcceptanceFields } from "../../utils/orderAcceptanceTimer";
+import "./FarmerProductDetailsPage.css";
+
+function getProductImage(product) {
+  return [
+    product?.imageUrl,
+    product?.imageURL,
+    product?.image,
+    product?.productImage,
+    product?.productImageUrl,
+    product?.photoURL,
+    product?.photoUrl,
+  ].find((value) => typeof value === "string" && value.trim()) || "";
+}
 
 function getCategoryIcon(category) {
   const icons = {
@@ -250,6 +263,8 @@ export default function FarmerProductDetailsPage() {
 
         paymentMode: "Cash on Delivery",
         status: "pending",
+        reservationType: "shop_collection",
+        dealerResponseDeadline: acceptanceFields.acceptanceDeadlineAt,
 
         stockReserved: false,
         farmerReceived: false,
@@ -285,8 +300,8 @@ export default function FarmerProductDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
+      <div className="farmer-product-details-page farmer-product-details-page--loading min-h-screen flex items-center justify-center p-4">
+        <div className="farmer-product-unavailable-card rounded-2xl p-7 text-center">
           <div className="text-5xl">🌱</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
@@ -299,14 +314,14 @@ export default function FarmerProductDetailsPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-green-50 p-4 md:p-6">
+      <div className="farmer-product-details-page min-h-screen p-4 md:p-6">
         <div className="w-full">
           <StatusMessage
             message={message}
             onClose={() => setMessage(null)}
           />
 
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+          <div className="farmer-product-unavailable-card rounded-2xl p-8 text-center">
             <div className="text-5xl">📦</div>
 
             <h1 className="text-xl font-bold text-green-900 mt-4">
@@ -349,40 +364,56 @@ export default function FarmerProductDetailsPage() {
     dealer?.district ||
     dealer?.state ||
     "Location not available";
+  const productImage = getProductImage(product);
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="w-full">
+    <div className="farmer-product-details-page min-h-screen p-4 md:p-6">
+      <div className="farmer-product-details-content w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
-        <header className="bg-white rounded-2xl shadow-sm p-5 mb-5">
+        <header className="farmer-product-details-nav mb-5 rounded-2xl p-4 sm:p-5">
           <button
             type="button"
             onClick={() =>
               navigate("/farmer/dealer-products")
             }
-            className="text-green-700 font-semibold"
+            className="farmer-product-details-back font-semibold"
           >
             {t("localMarketplace", {}, language)}
           </button>
         </header>
 
-        <main className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <section className="bg-gradient-to-r from-green-800 to-green-600 text-white p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-4xl">
-                {getCategoryIcon(product.category)}
+        <main className="farmer-product-details-card overflow-hidden rounded-3xl">
+          <section className="farmer-product-details-hero p-5 text-white sm:p-7">
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+              <div className="farmer-product-image relative flex h-36 w-36 shrink-0 items-center justify-center overflow-hidden rounded-2xl sm:h-40 sm:w-40">
+                {productImage ? (
+                  <img
+                    src={productImage}
+                    alt={product.productName || t("farmProduct", {}, language)}
+                    className="farmer-product-image__media absolute inset-0 h-full w-full object-contain"
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                      const fallback = event.currentTarget.nextElementSibling;
+                      if (fallback) fallback.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <div className={`${productImage ? "hidden" : "flex"} farmer-product-image__fallback absolute inset-0 items-center justify-center`}>
+                  <span aria-hidden="true">{getCategoryIcon(product.category)}</span>
+                </div>
               </div>
 
-              <div>
-                <h1 className="text-3xl font-bold">
+              <div className="min-w-0">
+                <h1 className="break-words text-3xl font-extrabold tracking-tight sm:text-4xl">
                   {product.productName}
                 </h1>
 
-                <p className="text-green-100 mt-1">
+                <p className="farmer-product-details-subtitle mt-2">
                   {product.category || t("farmProduct", {}, language)}
                   {product.brand
                     ? ` • ${product.brand}`
@@ -392,9 +423,9 @@ export default function FarmerProductDetailsPage() {
             </div>
           </section>
 
-          <section className="p-5">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-green-50 rounded-xl p-4">
+          <section className="farmer-product-details-body p-4 sm:p-7">
+            <div className="farmer-product-stats grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="farmer-product-stat farmer-product-stat--price rounded-2xl p-4 sm:p-5">
                 <p className="text-sm text-gray-500">
                   {t("priceLabel", {}, language)}
                 </p>
@@ -408,7 +439,7 @@ export default function FarmerProductDetailsPage() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 rounded-xl p-4">
+              <div className="farmer-product-stat farmer-product-stat--stock rounded-2xl p-4 sm:p-5">
                 <p className="text-sm text-gray-500">
                   {t("availableLabel", {}, language)}
                 </p>
@@ -424,19 +455,19 @@ export default function FarmerProductDetailsPage() {
             </div>
 
             {product.description && (
-              <div className="mt-5">
-                <h2 className="font-bold text-green-900">
+              <div className="farmer-product-description mt-5 rounded-2xl p-4 sm:p-5">
+                <h2 className="font-bold text-green-950">
                   {t("productInformation", {}, language)}
                 </h2>
 
-                <p className="text-gray-600 mt-2">
+                <p className="mt-2 leading-7 text-gray-700">
                   {product.description}
                 </p>
               </div>
             )}
 
-            <div className="border-t border-gray-100 mt-5 pt-5">
-              <h2 className="font-bold text-green-900">
+            <div className="farmer-product-dealer mt-5 border-t pt-5">
+              <h2 className="font-bold text-green-950">
                 {t("dealerLabel", {}, language)}
               </h2>
 
@@ -455,15 +486,15 @@ export default function FarmerProductDetailsPage() {
               {dealerPhone && (
                 <a
                   href={`tel:${dealerPhone}`}
-                  className="inline-block ml-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold"
+                  className="farmer-product-call-dealer ml-2 inline-block rounded-full px-3 py-1 text-xs font-semibold"
                 >
                   {t("callDealer", {}, language)}
                 </a>
               )}
             </div>
 
-            <div className="border-t border-gray-100 mt-5 pt-5">
-              <h2 className="font-bold text-green-900">
+            <div className="farmer-product-order-panel mt-5 border-t pt-5">
+              <h2 className="font-bold text-green-950">
                 {t("selectQuantity", {}, language)}
               </h2>
 
@@ -476,7 +507,7 @@ export default function FarmerProductDetailsPage() {
                   onChange={setQuantity}
                 />
 
-                <p className="font-bold text-green-900">
+                <p className="farmer-product-total font-bold text-green-950">
                   {t("totalLabel", {}, language)} ₹
                   {(
                     Number(product.price || 0) *
@@ -489,7 +520,7 @@ export default function FarmerProductDetailsPage() {
                 type="button"
                 disabled={sending}
                 onClick={requestOrder}
-                className="w-full bg-green-700 text-white py-3 rounded-xl font-semibold mt-5 disabled:bg-gray-400"
+                className="farmer-product-request-order mt-5 w-full rounded-xl py-3 font-semibold text-white disabled:bg-gray-400"
               >
                 {sending
                   ? t("sendingOrderRequest", {}, language)
@@ -497,7 +528,7 @@ export default function FarmerProductDetailsPage() {
               </button>
 
               <p className="text-center text-sm text-gray-500 mt-3">
-                {t("paymentCashOnDelivery", {}, language)}
+                Reserve now and collect from the dealer’s shop after confirmation. Payment is made directly at the shop.
               </p>
             </div>
           </section>

@@ -1,0 +1,273 @@
+.community-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #123c2b;
+  background:
+    radial-gradient(ellipse at 8% 12%, rgb(183 243 210 / 48%), transparent 34rem),
+    radial-gradient(ellipse at 94% 72%, rgb(208 240 222 / 58%), transparent 32rem),
+    #f3faf5;
+}
+
+.community-page::before,
+.community-page::after {
+  position: absolute;
+  z-index: -1;
+  width: 22rem;
+  height: 22rem;
+  border: 1px solid rgb(22 163 74 / 10%);
+  border-radius: 44% 56% 63% 37% / 43% 42% 58% 57%;
+  background: linear-gradient(145deg, rgb(134 239 172 / 9%), rgb(16 185 129 / 3%));
+  content: "";
+  pointer-events: none;
+  animation: community-drift 22s ease-in-out infinite alternate;
+}
+
+.community-page::before {
+  top: 16rem;
+  left: -13rem;
+}
+
+.community-page::after {
+  right: -14rem;
+  bottom: 5rem;
+  animation-delay: -8s;
+}
+
+.community-page__content {
+  position: relative;
+  max-width: 76rem;
+}
+
+.community-hero {
+  position: relative;
+  overflow: hidden;
+  color: white;
+  background:
+    radial-gradient(circle at 86% 8%, rgb(190 242 100 / 25%) 0 3rem, transparent 3.1rem),
+    radial-gradient(ellipse at 92% 110%, rgb(74 222 128 / 32%), transparent 42%),
+    linear-gradient(118deg, #064e37 0%, #087447 58%, #159658 100%);
+  box-shadow: 0 18px 42px rgb(6 78 55 / 18%);
+  animation: community-arrive 650ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.community-hero::after {
+  position: absolute;
+  right: 4%;
+  bottom: -3.5rem;
+  width: 21rem;
+  height: 9rem;
+  border: 1px solid rgb(220 252 231 / 14%);
+  border-radius: 50%;
+  box-shadow: 0 -1.5rem 0 -1.45rem rgb(220 252 231 / 14%), 0 -3rem 0 -2.95rem rgb(220 252 231 / 12%);
+  content: "";
+  pointer-events: none;
+}
+
+.community-back-link {
+  position: relative;
+  z-index: 1;
+  min-height: 2.75rem;
+  padding: .65rem .9rem;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: .85rem;
+  background: rgb(255 255 255 / 10%);
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.community-back-link:hover {
+  transform: translateX(-2px);
+  background: rgb(255 255 255 / 18%);
+}
+
+.community-hero h1,
+.community-hero p,
+.community-hero-note {
+  position: relative;
+  z-index: 1;
+}
+
+.community-hero-note {
+  max-width: 42rem;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 10%);
+  backdrop-filter: blur(8px);
+}
+
+.community-composer,
+.community-search,
+.community-empty,
+.community-post,
+.community-delete-panel,
+.community-loading-card {
+  border: 1px solid #d5eadc;
+  background: rgb(255 255 255 / 91%);
+  box-shadow: 0 10px 28px rgb(20 83 45 / 7%);
+  backdrop-filter: blur(10px);
+}
+
+.community-composer,
+.community-search,
+.community-empty,
+.community-post,
+.community-delete-panel {
+  animation: community-arrive 500ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.community-composer h2,
+.community-empty h2 {
+  color: #075b37;
+}
+
+.community-field {
+  border: 1px solid #c9ded1;
+  background: #fbfefc;
+  color: #123c2b;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.community-field:focus {
+  border-color: #0b8a4b;
+  background: white;
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 13%);
+}
+
+.community-textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.community-button {
+  min-height: 2.75rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.community-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgb(20 83 45 / 14%);
+}
+
+.community-button:active:not(:disabled) {
+  transform: translateY(0) scale(.98);
+}
+
+.community-button:focus-visible,
+.community-filters button:focus-visible {
+  outline: 3px solid #a3e635;
+  outline-offset: 3px;
+}
+
+.community-button--primary,
+.community-button--liked {
+  border: 1px solid #087447;
+  background: linear-gradient(125deg, #078348, #05613a);
+  color: white;
+  box-shadow: 0 7px 16px rgb(5 91 55 / 17%);
+}
+
+.community-button--danger {
+  border: 1px solid #b91c1c;
+  background: #b91c1c;
+  color: white;
+}
+
+.community-button--danger-quiet {
+  border: 1px solid #fecaca;
+  background: #fff8f7;
+  color: #b91c1c;
+}
+
+.community-button--danger-quiet:hover:not(:disabled) {
+  border-color: #f87171;
+  background: #fff0ee;
+}
+
+.community-button--quiet {
+  border: 1px solid #d1ded5;
+  background: white;
+  color: #28513b;
+}
+
+.community-button--like {
+  border: 1px solid #cce8d5;
+  background: #effaf2;
+}
+
+.community-button--like:hover:not(:disabled) {
+  background: #dff5e5;
+}
+
+.community-filters {
+  scrollbar-width: thin;
+  scrollbar-color: #93c5a4 transparent;
+}
+
+.community-filters button {
+  min-height: 2.75rem;
+  border: 1px solid #cce4d3;
+  background: rgb(255 255 255 / 88%);
+  color: #17613d;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.community-filters button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgb(20 83 45 / 10%);
+}
+
+.community-filters button[aria-pressed="true"] {
+  border-color: #087447;
+  background: linear-gradient(125deg, #078348, #05613a);
+  color: white;
+  box-shadow: 0 6px 16px rgb(5 91 55 / 18%);
+}
+
+.community-post {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.community-post:hover {
+  transform: translateY(-3px);
+  border-color: #b8ddc4;
+  box-shadow: 0 16px 34px rgb(20 83 45 / 11%);
+}
+
+.community-delete-panel {
+  border-color: #fecaca;
+  background: rgb(255 250 249 / 96%);
+}
+
+.community-delete-preview {
+  background: #fff0ee;
+}
+
+@keyframes community-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes community-drift {
+  from { transform: rotate(-12deg) translate3d(0, 0, 0); }
+  to { transform: rotate(12deg) translate3d(2rem, -1rem, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .community-page::before,
+  .community-page::after,
+  .community-hero,
+  .community-composer,
+  .community-search,
+  .community-empty,
+  .community-post,
+  .community-delete-panel {
+    animation: none;
+  }
+
+  .community-back-link,
+  .community-button,
+  .community-filters button,
+  .community-post {
+    transition: none;
+  }
+}

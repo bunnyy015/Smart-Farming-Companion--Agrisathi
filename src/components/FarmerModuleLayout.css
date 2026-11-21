@@ -1,0 +1,88 @@
+.farmer-voice-fab {
+  position: fixed;
+  z-index: 40;
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 9999px;
+  background: linear-gradient(145deg, #078542, #075b37);
+  color: white;
+  box-shadow: 0 9px 25px rgb(5 91 55 / 28%), 0 0 0 6px rgb(16 185 129 / 10%);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.farmer-voice-fab:hover {
+  transform: translateY(-3px) scale(1.035);
+  box-shadow: 0 13px 30px rgb(5 91 55 / 35%), 0 0 0 8px rgb(16 185 129 / 13%);
+  filter: brightness(1.06);
+}
+
+.farmer-voice-fab:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.farmer-voice-fab:focus-visible {
+  outline: 3px solid #bef264;
+  outline-offset: 4px;
+}
+
+.farmer-voice-fab__pulse {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid rgb(16 185 129 / 35%);
+  border-radius: inherit;
+  animation: farmer-voice-fab-pulse 2.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.farmer-voice-fab__tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 12px;
+  background: #123c2d;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(5px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  pointer-events: none;
+}
+
+.farmer-voice-fab:hover .farmer-voice-fab__tooltip,
+.farmer-voice-fab:focus-visible .farmer-voice-fab__tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@keyframes farmer-voice-fab-pulse {
+  0% { opacity: 0.65; transform: scale(0.92); }
+  75%, 100% { opacity: 0; transform: scale(1.32); }
+}
+
+@media (max-width: 640px) {
+  .farmer-voice-fab {
+    width: 58px;
+    height: 58px;
+  }
+
+  .farmer-voice-fab__tooltip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farmer-voice-fab,
+  .farmer-voice-fab__pulse,
+  .farmer-voice-fab__tooltip {
+    animation: none;
+    transition: none;
+  }
+}

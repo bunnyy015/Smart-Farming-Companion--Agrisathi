@@ -16,6 +16,7 @@ import {
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
+import "./DealerProductsPage.css";
 
 const emptyForm = {
   productName: "",
@@ -687,7 +688,7 @@ export default function DealerProductsPage() {
 
   if (loading) {
     return (
-      <div className="dealer-theme min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="dealer-theme dealer-products-page dealer-products-page__loading min-h-screen bg-green-50 flex items-center justify-center">
         <p className="text-xl font-bold text-green-700">
           Loading products...
         </p>
@@ -717,18 +718,20 @@ export default function DealerProductsPage() {
   );
 
   return (
-    <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="dealer-theme dealer-products-page min-h-screen bg-green-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <StatusMessage
-          message={message}
-          onClose={() =>
-            setMessage(null)
-          }
-        />
+        <div className="dealer-products-page__status">
+          <StatusMessage
+            message={message}
+            onClose={() =>
+              setMessage(null)
+            }
+          />
+        </div>
 
         {deleteTarget && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5">
+          <div className="dealer-products-page__modal-backdrop fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="dealer-products-page__modal w-full max-w-sm bg-white rounded-2xl shadow-xl p-5">
               <h2 className="text-xl font-bold text-gray-900">
                 Delete product?
               </h2>
@@ -768,7 +771,7 @@ export default function DealerProductsPage() {
           </div>
         )}
 
-        <header className="bg-white rounded-2xl shadow p-5 mb-5">
+        <header className="dealer-products-page__header bg-white rounded-2xl shadow p-5 mb-5">
           <button
             type="button"
             onClick={() =>
@@ -796,7 +799,7 @@ export default function DealerProductsPage() {
           </div>
         </header>
 
-        <section className="bg-white rounded-2xl shadow p-4 mb-5">
+        <section className="dealer-products-page__filter bg-white rounded-2xl shadow p-4 mb-5">
           <label htmlFor="product-category-filter" className="block text-sm font-semibold text-gray-700 mb-2">Filter by agricultural category</label>
           <select id="product-category-filter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="w-full sm:max-w-sm border rounded-xl px-4 py-3 bg-white">
             <option value="all">All categories</option>
@@ -806,7 +809,7 @@ export default function DealerProductsPage() {
 
         <div className={formOpen && !showLowStockOnly ? "grid lg:grid-cols-3 gap-5" : "block"}>
           <section
-            className={`bg-white rounded-2xl shadow p-5 ${!formOpen || showLowStockOnly ? "hidden" : ""}`}
+            className={`dealer-products-page__form bg-white rounded-2xl shadow p-5 ${!formOpen || showLowStockOnly ? "hidden" : ""}`}
           >
             <h2 className="text-xl font-bold text-green-800">
               {editingId
@@ -951,10 +954,10 @@ export default function DealerProductsPage() {
           </section>
 
           <section
-            className={`space-y-4 ${formOpen && !showLowStockOnly ? "lg:col-span-2" : ""}`}
+            className={`dealer-products-page__list space-y-4 ${formOpen && !showLowStockOnly ? "lg:col-span-2" : ""}`}
           >
             {visibleProducts.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow p-8 text-center">
+              <div className="dealer-products-page__empty bg-white rounded-2xl shadow p-8 text-center">
                 <div className="text-4xl">
                   📦
                 </div>
@@ -990,7 +993,7 @@ export default function DealerProductsPage() {
                 return (
                   <article
                     key={product.id}
-                    className="bg-white rounded-2xl shadow p-5"
+                    className="dealer-products-page__product-card bg-white rounded-2xl shadow p-5"
                   >
                     <div className="flex flex-col md:flex-row gap-4">
                       <div className="w-full md:w-36">

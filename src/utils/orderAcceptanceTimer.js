@@ -57,9 +57,9 @@ export async function expirePendingOrders(database, orders) {
 
           return {
             ...current,
-            status: "cancelled",
-            cancellationReason: "dealer_acceptance_timeout",
-            cancelledAt: serverTimestamp(),
+            status: "expired",
+            expiryReason: "dealer_response_timeout",
+            expiredAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           };
         },

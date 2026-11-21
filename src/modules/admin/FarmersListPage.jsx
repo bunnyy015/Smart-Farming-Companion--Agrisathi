@@ -4,6 +4,7 @@ import { get, ref, update } from "firebase/database";
 
 import { database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import "./AdminPageEffects.css";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -311,7 +312,7 @@ export default function FarmersListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-4 md:p-6">
+    <div className="admin-page-effects admin-page-effects--farmers min-h-screen bg-gradient-to-b from-green-50 to-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         <StatusMessage

@@ -48,6 +48,7 @@ function formatNumber(value) {
 
 export default function DealerDashboard() {
   const navigate = useNavigate();
+  const [dealerName, setDealerName] = useState("");
 
   const [stats, setStats] = useState({
     products: 0,
@@ -217,15 +218,35 @@ export default function DealerDashboard() {
         `sales/${currentUser.uid}`
       );
 
+      const dealerProfileReference = ref(
+        database,
+        `users/${currentUser.uid}`
+      );
+
       const [
         productsSnapshot,
         ordersSnapshot,
         salesSnapshot,
+        dealerProfileSnapshot,
       ] = await Promise.all([
         get(productsReference),
         get(ordersQuery),
         get(salesReference),
+        get(dealerProfileReference),
       ]);
+
+      const dealerProfile = dealerProfileSnapshot.exists()
+        ? dealerProfileSnapshot.val()
+        : {};
+      setDealerName(
+        dealerProfile.name ||
+        dealerProfile.fullName ||
+        dealerProfile.dealerName ||
+        dealerProfile.shopName ||
+        dealerProfile.businessName ||
+        currentUser.displayName ||
+        "Dealer"
+      );
 
       /* ===================================================
          PRODUCTS DATA
@@ -484,7 +505,7 @@ export default function DealerDashboard() {
   ======================================================= */
 
   return (
-    <div className="dealer-theme min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 p-4 md:p-6">
+    <div className="dealer-theme dealer-dashboard min-h-screen bg-gradient-to-br from-green-50 via-white to-cyan-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         {/* =================================================
@@ -526,7 +547,11 @@ export default function DealerDashboard() {
                   </p>
 
                   <h1 className="text-3xl md:text-4xl font-bold mt-1">
-                    Dealer Dashboard
+                    {(() => {
+                      const hour = new Date().getHours();
+                      const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+                      return `${greeting}, ${dealerName || "Dealer"}`;
+                    })()}
                   </h1>
 
                   <p className="text-blue-100 mt-1">

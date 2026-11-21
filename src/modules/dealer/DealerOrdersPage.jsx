@@ -16,6 +16,7 @@ import StatusMessage from "../../components/StatusMessage";
 import OrderAcceptanceTimer from "../../components/OrderAcceptanceTimer";
 import { expirePendingOrders, getOrderAcceptanceDeadline } from "../../utils/orderAcceptanceTimer";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
+import "./DealerPageEffects.css";
 
 /* =========================================================
    HELPERS
@@ -100,15 +101,8 @@ function getOrderSection(order) {
   if (["cancelled", "canceled", "rejected", "reject"].includes(status)) return "cancelled";
   if (status === "expired") return "cancelled";
   if (status === "completed") return "completed";
-  if ([
-    "accepted",
-    "delivered_by_dealer",
-    "received_by_farmer",
-    "payment_pending",
-    "payment_received",
-  ].includes(status)) {
-    return "farmer_received";
-  }
+  if (["accepted", "delivered_by_dealer"].includes(status)) return "awaiting_farmer";
+  if (["received_by_farmer", "payment_pending", "payment_received"].includes(status) && (order.farmerReceived || status !== "received_by_farmer")) return "completed";
 
   // Rejected and unknown statuses are intentionally hidden
   // from the three primary order sections.
@@ -119,6 +113,7 @@ function isEligibleHistoryOrder(order) {
   return [
     "completed",
     "complete",
+    "received_by_farmer",
     "rejected",
     "reject",
     "cancelled",
@@ -1517,142 +1512,6 @@ export default function DealerOrdersPage() {
   }
 
   /* =======================================================
-     MARK PAYMENT RECEIVED
-  ======================================================= */
-
-  async function markPaymentReceived(order) {
-    if (!order?.id || processingOrderId) return;
-    const status = getOrderStatus(order);
-    const farmerConfirmedReceipt =
-      status === "received_by_farmer" && order.farmerReceived;
-    if (
-      !farmerConfirmedReceipt &&
-      !["delivered_by_dealer", "payment_pending", "payment_received"].includes(status)
-    ) {
-      return;
-    }
-
-    setProcessingOrderId(order.id);
-    setMessage(null);
-    try {
-      const dealerUid = getOrderDealerUid(order) || currentUser?.uid;
-      let productId = getOrderProductId(order);
-      const quantity = getOrderQuantity(order);
-      const now = new Date().toISOString();
-      const updates = {
-        [`dealerOrders/${order.id}/status`]: "completed",
-        [`dealerOrders/${order.id}/dealerPaymentReceived`]: true,
-        [`dealerOrders/${order.id}/dealerPaymentReceivedAt`]:
-          order.dealerPaymentReceivedAt || now,
-        [`dealerOrders/${order.id}/paymentReceivedAt`]:
-          order.paymentReceivedAt || now,
-        [`dealerOrders/${order.id}/completedAt`]: now,
-        [`dealerOrders/${order.id}/updatedAt`]: now,
-      };
-
-      if (
-        dealerUid &&
-        !productId
-      ) {
-        const resolvedProduct =
-          await findOrderProduct(
-            order
-          );
-
-        if (
-          resolvedProduct
-        ) {
-          productId =
-            resolvedProduct.id;
-        }
-      }
-
-      if (
-        dealerUid &&
-        productId
-      ) {
-        let product =
-          products[
-            `${dealerUid}/${productId}`
-          ];
-
-        if (!product) {
-          const snapshot =
-            await get(
-              ref(
-                database,
-                `dealerProducts/${dealerUid}/${productId}`
-              )
-            );
-
-          if (
-            snapshot.exists()
-          ) {
-            product = {
-              id: productId,
-              dealerUid,
-              ...snapshot.val(),
-            };
-          }
-        }
-
-        if (product) {
-          const reserved =
-            getReservedQuantity(
-              product
-            );
-
-          const sold =
-            getSoldQuantity(
-              product
-            );
-
-          const newReserved =
-            Math.max(
-              0,
-              reserved -
-                quantity
-            );
-
-          const newSold =
-            sold + quantity;
-
-          updates[
-            `dealerProducts/${dealerUid}/${productId}/reservedQuantity`
-          ] = newReserved;
-
-          updates[
-            `dealerProducts/${dealerUid}/${productId}/soldQuantity`
-          ] = newSold;
-
-          updates[
-            `dealerProducts/${dealerUid}/${productId}/dealerUid`
-          ] = dealerUid;
-        }
-      }
-
-      await update(ref(database), updates);
-      setOrders((currentOrders) => currentOrders.map((item) => item.id === order.id
-        ? {
-            ...item,
-            status: "completed",
-            dealerPaymentReceived: true,
-            dealerPaymentReceivedAt: item.dealerPaymentReceivedAt || now,
-            paymentReceivedAt: item.paymentReceivedAt || now,
-            completedAt: now,
-            updatedAt: now,
-          }
-        : item));
-      setMessage({ type: "success", text: "Payment received. The order is now in completed history." });
-    } catch (error) {
-      console.error("Payment and order completion error:", error);
-      setMessage({ type: "error", text: "Payment could not be recorded and the order could not be completed." });
-    } finally {
-      setProcessingOrderId(null);
-    }
-  }
-
-  /* =======================================================
      FILTERED ORDERS
   ======================================================= */
 
@@ -1686,7 +1545,7 @@ export default function DealerOrdersPage() {
 
           if (statusFilter === "completed") {
             const statusMatches = historyStatusFilter === "all" ||
-              (historyStatusFilter === "completed" && status === "completed");
+              (historyStatusFilter === "completed" && ["completed", "received_by_farmer"].includes(status));
             if (!statusMatches) return false;
 
             const dateValue = order.completedAt || order.updatedAt || order.createdAt;
@@ -1883,7 +1742,7 @@ export default function DealerOrdersPage() {
     useMemo(() => {
       const result = {
         pending: 0,
-        farmer_received: 0,
+        awaiting_farmer: 0,
         completed: 0,
         cancelled: 0,
       };
@@ -1892,7 +1751,7 @@ export default function DealerOrdersPage() {
         (order) => {
           if (role === "dealer" && deletedHistoryOrderIds.includes(order.id)) return;
           const section = getOrderSection(order);
-          if (section === "completed" && getOrderStatus(order) !== "completed") return;
+          if (section === "completed" && !["completed", "received_by_farmer"].includes(getOrderStatus(order))) return;
           if (section && Object.prototype.hasOwnProperty.call(result, section)) {
             result[section]++;
           }
@@ -2032,20 +1891,8 @@ export default function DealerOrdersPage() {
       return <span className="text-sm font-semibold text-amber-700">Waiting for farmer to confirm order received</span>;
     }
 
-    if (
-      (status === "received_by_farmer" && order.farmerReceived) ||
-      ["delivered_by_dealer", "payment_pending", "payment_received"].includes(status)
-    ) {
-      return (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => markPaymentReceived(order)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-semibold disabled:opacity-50 transition"
-        >
-          {busy ? "Processing..." : "Payment Received"}
-        </button>
-      );
+    if (status === "received_by_farmer" && order.farmerReceived) {
+      return <span className="text-sm font-semibold text-green-700">Farmer confirmed pickup · Completed</span>;
     }
 
     return (
@@ -2063,7 +1910,8 @@ export default function DealerOrdersPage() {
     status,
     order
   ) {
-    const normalizedStatus = status === "canceled" ? "cancelled" : status;
+    const normalizedStatus = status === "canceled" ? "cancelled" :
+      status === "received_by_farmer" && order?.farmerReceived ? "completed" : status;
     const styles = {
       pending:
         "bg-amber-50 text-amber-700 border-amber-200",
@@ -2107,7 +1955,7 @@ export default function DealerOrdersPage() {
             ? "Expired · Dealer timeout"
             : normalizedStatus === "cancelled" && order?.cancelledBy === "dealer"
               ? "Cancelled by Dealer"
-              : normalizedStatus
+            : normalizedStatus
                 .replaceAll("_", " ")
                 .replace(/^\w/, (character) => character.toUpperCase())}
       </span>
@@ -2126,7 +1974,7 @@ export default function DealerOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-6">
+      <div className="dealer-page-effects dealer-page-effects--orders min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl border border-blue-100 p-8 text-center max-w-md w-full">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-3xl">
             🛒
@@ -2150,7 +1998,7 @@ export default function DealerOrdersPage() {
   ======================================================= */
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-cyan-50 p-4 md:p-6">
+    <div className="dealer-page-effects dealer-page-effects--orders min-h-screen bg-gradient-to-b from-blue-50 via-white to-cyan-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         <StatusMessage
@@ -2236,7 +2084,7 @@ export default function DealerOrdersPage() {
 
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6" aria-label="Order sections">
           <SummaryCard label="Pending Orders" value={counts.pending} active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
-          <SummaryCard label="Farmer Received" value={counts.farmer_received} active={statusFilter === "farmer_received"} onClick={() => setStatusFilter("farmer_received")} />
+          <SummaryCard label="Awaiting Farmer Confirmation" value={counts.awaiting_farmer} active={statusFilter === "awaiting_farmer"} onClick={() => setStatusFilter("awaiting_farmer")} />
           <SummaryCard label="Completed" value={counts.completed} active={statusFilter === "completed"} onClick={() => setStatusFilter("completed")} />
           <SummaryCard label="Cancelled Orders" value={counts.cancelled} active={statusFilter === "cancelled"} onClick={() => setStatusFilter("cancelled")} />
         </section>
@@ -2479,7 +2327,7 @@ export default function DealerOrdersPage() {
                   <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Order and farmer</h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <InfoCard label="Order ID" value={selectedCompletedOrder.orderId || selectedCompletedOrder.id || "Not available"} />
-                    <InfoCard label="Current status" value={getOrderStatus(selectedCompletedOrder)} />
+                    <InfoCard label="Reservation status" value={getOrderStatus(selectedCompletedOrder) === "received_by_farmer" ? "Completed · Farmer confirmed pickup" : getOrderStatus(selectedCompletedOrder)} />
                     {isCancelledStatus(selectedCompletedOrder) && (
                       <InfoCard
                         label="Cancellation source"
@@ -2509,7 +2357,7 @@ export default function DealerOrdersPage() {
                 </div>
 
                 <div>
-                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Product and payment</h3>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Reserved product and amount</h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <InfoCard label="Product name" value={getOrderProductName(selectedCompletedOrder) || completedOrderProduct?.productName || completedOrderProduct?.name || "Unknown Product"} />
                     <InfoCard label="Product ID" value={getOrderProductId(selectedCompletedOrder) || completedOrderProduct?.id || "Not stored"} />
@@ -2522,7 +2370,7 @@ export default function DealerOrdersPage() {
                 </div>
 
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">Delivery address</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">Farmer pickup details</h3>
                   <div className="mt-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
                     <p><span className="font-semibold">Name:</span> {completedOrderAddress.name || selectedCompletedOrder.farmerName || selectedCompletedOrder.customerName || "Not provided"}</p>
                     <p><span className="font-semibold">Address:</span> {completedOrderAddress.address || selectedCompletedOrder.deliveryAddress || "Not provided"}</p>
@@ -2546,10 +2394,8 @@ export default function DealerOrdersPage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <InfoCard label="Order date" value={formatDate(selectedCompletedOrder.createdAt)} />
                     <InfoCard label="Accepted date" value={formatDate(selectedCompletedOrder.acceptedAt)} />
-                    <InfoCard label="Delivered date" value={formatDate(selectedCompletedOrder.deliveredAt || selectedCompletedOrder.deliveryAt)} />
-                    <InfoCard label="Farmer received date" value={formatDate(selectedCompletedOrder.farmerReceivedAt || selectedCompletedOrder.receivedAt)} />
-                    <InfoCard label="Payment received date" value={formatDate(selectedCompletedOrder.paymentReceivedAt || selectedCompletedOrder.dealerPaymentReceivedAt)} />
-                    <InfoCard label="Completed date" value={formatDate(selectedCompletedOrder.completedAt)} />
+                    <InfoCard label="Farmer pickup confirmed" value={formatDate(selectedCompletedOrder.farmerReceivedAt || selectedCompletedOrder.receivedAt)} />
+                    <InfoCard label="Completed date" value={formatDate(selectedCompletedOrder.completedAt || selectedCompletedOrder.farmerReceivedAt || selectedCompletedOrder.receivedAt)} />
                     <InfoCard label="Cancellation date" value={formatDate(selectedCompletedOrder.cancelledAt)} />
                   </div>
                 </div>

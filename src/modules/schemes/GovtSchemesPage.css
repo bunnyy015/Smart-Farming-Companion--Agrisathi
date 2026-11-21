@@ -1,0 +1,392 @@
+.govt-schemes-page {
+  --scheme-forest: #07563f;
+  --scheme-leaf: #087d53;
+  --scheme-mint: #e8f8ee;
+  --scheme-ink: #123c2e;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(114, 211, 146, .2), transparent 24rem),
+    radial-gradient(circle at 92% 35%, rgba(74, 190, 128, .15), transparent 28rem),
+    linear-gradient(145deg, #f5fbf5 0%, #eef9f0 48%, #eaf5eb 100%);
+}
+
+.govt-schemes-page::before,
+.govt-schemes-page::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.govt-schemes-page::before {
+  top: 13rem;
+  left: -8rem;
+  width: 25rem;
+  height: 25rem;
+  border: 1px solid rgba(15, 125, 78, .09);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.5rem rgba(15, 125, 78, .025), 0 0 0 5rem rgba(15, 125, 78, .02);
+  animation: schemes-orbit 24s linear infinite;
+}
+
+.govt-schemes-page::after {
+  right: 3%;
+  bottom: 12%;
+  width: 15rem;
+  height: 15rem;
+  border-radius: 60% 0 60% 0;
+  background: linear-gradient(145deg, rgba(50, 160, 92, .07), rgba(198, 238, 191, .13));
+  filter: blur(2px);
+  transform: rotate(-30deg);
+  animation: schemes-leaf-drift 9s ease-in-out infinite alternate;
+}
+
+.govt-schemes-shell {
+  position: relative;
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+.govt-schemes-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(206, 255, 224, .18);
+  background:
+    radial-gradient(circle at 82% 15%, rgba(157, 233, 130, .3), transparent 10rem),
+    linear-gradient(115deg, #064b36 0%, #08734c 56%, #159052 100%);
+  box-shadow: 0 18px 48px rgba(4, 81, 53, .2);
+}
+
+.govt-schemes-hero::after {
+  position: absolute;
+  right: -1rem;
+  bottom: -8rem;
+  width: 28rem;
+  height: 15rem;
+  border-radius: 50%;
+  background: rgba(174, 231, 136, .12);
+  content: "";
+  filter: blur(2px);
+  animation: schemes-sunrise 7s ease-in-out infinite alternate;
+}
+
+.govt-schemes-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.govt-schemes-back {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(233, 255, 241, .34);
+  border-radius: 999px;
+  padding: .55rem .9rem;
+  background: rgba(255, 255, 255, .1);
+  transition: background .2s ease, transform .2s ease;
+}
+
+.govt-schemes-back:hover {
+  background: rgba(255, 255, 255, .2);
+  transform: translateX(-2px);
+}
+
+.govt-schemes-title {
+  max-width: 54rem;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+
+.govt-schemes-intro {
+  max-width: 48rem;
+  line-height: 1.65;
+}
+
+.schemes-farm-profile,
+.schemes-filter-panel,
+.scheme-detail-panel {
+  border: 1px solid rgba(36, 131, 82, .15);
+  background: rgba(255, 255, 255, .86);
+  box-shadow: 0 12px 34px rgba(14, 79, 51, .08);
+  backdrop-filter: blur(14px);
+}
+
+.schemes-farm-profile {
+  animation: schemes-rise-in .55s ease both;
+}
+
+.schemes-farm-profile-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.schemes-farm-profile-heading h2 {
+  margin-top: .18rem;
+  color: var(--scheme-ink);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+
+.schemes-farm-profile-heading p:last-child {
+  margin-top: .25rem;
+  color: #60776b;
+  font-size: .9rem;
+}
+
+.schemes-eyebrow {
+  color: #0c8955;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.schemes-match-count {
+  flex: 0 0 auto;
+  border: 1px solid #b8ebce;
+  border-radius: 999px;
+  padding: .55rem .85rem;
+  background: #e5faed;
+  color: #075d3c;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.schemes-profile-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  margin-top: 1rem;
+}
+
+.schemes-profile-fact,
+.schemes-profile-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  border: 1px solid #d9eee0;
+  border-radius: 999px;
+  padding: .4rem .75rem;
+  background: linear-gradient(135deg, #f8fff9, #eef9f1);
+  color: #315d48;
+  font-size: .8rem;
+  font-weight: 650;
+}
+
+.schemes-profile-empty {
+  border-radius: .8rem;
+}
+
+.schemes-profile-note,
+.schemes-updated-note {
+  margin-top: .75rem;
+  color: #708176;
+  font-size: .75rem;
+}
+
+.schemes-filter-panel {
+  border-radius: 1.25rem;
+}
+
+.schemes-filter-intro {
+  color: #52685b;
+  line-height: 1.6;
+}
+
+.schemes-tab,
+.schemes-status-filter {
+  border: 1px solid #d8e9dc;
+  background: #f8fcf8;
+  color: #345846;
+  transition: color .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.schemes-tab:hover,
+.schemes-status-filter:hover {
+  border-color: #75c89a;
+  background: #effaf2;
+  transform: translateY(-1px);
+}
+
+.schemes-tab.is-active,
+.schemes-status-filter[aria-pressed="true"] {
+  border-color: transparent;
+  background: linear-gradient(120deg, #08794e, #0ba465);
+  color: white;
+  box-shadow: 0 7px 18px rgba(8, 121, 78, .2);
+}
+
+.schemes-search-input {
+  border-color: #d5e4d9;
+  background: rgba(255, 255, 255, .9);
+  color: var(--scheme-ink);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.schemes-search-input:focus {
+  border-color: #16a268;
+  box-shadow: 0 0 0 4px rgba(22, 162, 104, .12);
+}
+
+.schemes-card-grid {
+  align-items: stretch;
+}
+
+.schemes-card {
+  position: relative;
+  min-height: 11.5rem;
+  overflow: hidden;
+  border-color: rgba(48, 139, 88, .17);
+  background: linear-gradient(145deg, rgba(255,255,255,.97), rgba(248,255,249,.94));
+  box-shadow: 0 7px 22px rgba(13, 77, 50, .07);
+  animation: schemes-rise-in .55s ease both;
+  transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease;
+}
+
+.schemes-card::after {
+  position: absolute;
+  right: -2rem;
+  top: -3rem;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: rgba(124, 218, 148, .1);
+  content: "";
+  transition: transform .3s ease, background .3s ease;
+}
+
+.schemes-card:hover {
+  z-index: 1;
+  border-color: rgba(12, 143, 82, .48);
+  box-shadow: 0 18px 34px rgba(13, 77, 50, .14);
+  transform: translateY(-4px);
+}
+
+.schemes-card:hover::after {
+  background: rgba(124, 218, 148, .2);
+  transform: scale(1.3);
+}
+
+.schemes-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.schemes-card h2 {
+  line-height: 1.35;
+}
+
+.schemes-match-badge {
+  border: 1px solid transparent;
+}
+
+.schemes-match-badge.is-likely {
+  border-color: #a7e8bf;
+  background: #dcfae7;
+  color: #075e3b;
+}
+
+.schemes-match-badge.is-potential {
+  border-color: #f5df98;
+  background: #fff4c9;
+  color: #795410;
+}
+
+.schemes-match-badge.is-ineligible {
+  border-color: #f4b9b9;
+  background: #ffe3e3;
+  color: #8e2e2e;
+}
+
+.scheme-assessment-panel {
+  border-width: 1px;
+}
+
+.scheme-assessment-panel.is-likely {
+  border-color: #a5e8bd;
+  background: linear-gradient(135deg, #e6fbec, #f6fff7);
+}
+
+.scheme-assessment-panel.is-potential {
+  border-color: #f2d995;
+  background: linear-gradient(135deg, #fff8de, #fffdf4);
+}
+
+.scheme-assessment-panel.is-ineligible {
+  border-color: #f0b3b3;
+  background: linear-gradient(135deg, #ffeded, #fff8f8);
+}
+
+.scheme-detail-panel {
+  animation: schemes-rise-in .45s ease both;
+}
+
+.schemes-action-button {
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.schemes-action-button:hover {
+  box-shadow: 0 8px 20px rgba(12, 92, 58, .15);
+  transform: translateY(-2px);
+}
+
+.schemes-primary-action {
+  background: linear-gradient(120deg, #08794e, #0ba465);
+}
+
+.schemes-primary-action:hover {
+  background: linear-gradient(120deg, #05633f, #088d57);
+}
+
+.schemes-secondary-action {
+  background: linear-gradient(120deg, #276b8e, #3184a7);
+}
+
+.schemes-secondary-action:hover {
+  background: linear-gradient(120deg, #1e5877, #286f91);
+}
+
+@keyframes schemes-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes schemes-leaf-drift {
+  to { transform: translateY(-1rem) rotate(-20deg); }
+}
+
+@keyframes schemes-sunrise {
+  to { transform: translate(-1rem, -1rem) scale(1.08); }
+}
+
+@keyframes schemes-rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .govt-schemes-page { padding: .85rem; }
+  .govt-schemes-hero { padding: 1.25rem; }
+  .govt-schemes-title { font-size: 2rem; line-height: 1.1; }
+  .schemes-farm-profile-heading { flex-direction: column; }
+  .schemes-match-count { align-self: flex-start; }
+  .schemes-card { min-height: 10rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .govt-schemes-page::before,
+  .govt-schemes-page::after,
+  .govt-schemes-hero::after,
+  .schemes-farm-profile,
+  .schemes-card,
+  .scheme-detail-panel {
+    animation: none !important;
+  }
+
+  .schemes-card,
+  .schemes-tab,
+  .schemes-status-filter,
+  .schemes-action-button { transition: none !important; }
+}

@@ -10,6 +10,7 @@ import {
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
+import "./DealerPageEffects.css";
 
 /* =========================================================
    HELPERS
@@ -859,7 +860,7 @@ export default function DealerProfilePage() {
 
   if (loading) {
     return (
-      <div className="dealer-theme min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-6">
+      <div className="dealer-theme dealer-page-effects dealer-page-effects--profile min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl border border-blue-100 p-8 text-center max-w-md w-full">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center text-3xl shadow-lg">
             👤
@@ -882,7 +883,7 @@ export default function DealerProfilePage() {
   ======================================================= */
 
   return (
-    <div className="dealer-theme min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-4 md:p-6">
+    <div className="dealer-theme dealer-page-effects dealer-page-effects--profile min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
 
         {/* =================================================
@@ -1356,7 +1357,7 @@ function AccountInfoCard({
   value,
 }) {
   return (
-    <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-5">
+    <div className="dealer-page-effects__account-card bg-white border border-blue-100 rounded-2xl shadow-sm p-5">
 
       <div className="flex items-center gap-3">
 

@@ -1,0 +1,447 @@
+.crop-disease-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(145deg, #f0f8f1 0%, #f7fbf7 48%, #edf7ef 100%);
+  color: #173c2d;
+}
+
+.crop-disease-page::before,
+.crop-disease-page::after {
+  position: fixed;
+  z-index: -1;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 9999px;
+  content: "";
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.crop-disease-page::before {
+  top: 9%;
+  left: -13rem;
+  background: radial-gradient(circle, rgb(132 204 151 / 18%), transparent 68%);
+  animation: crop-disease-orbit 19s ease-in-out infinite alternate;
+}
+
+.crop-disease-page::after {
+  right: -13rem;
+  bottom: 2%;
+  background: radial-gradient(circle, rgb(93 181 125 / 14%), transparent 70%);
+  animation: crop-disease-orbit 23s ease-in-out infinite alternate-reverse;
+}
+
+.crop-disease-content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1440px);
+}
+
+.crop-disease-hero {
+  background: linear-gradient(112deg, #064d32 0%, #087246 58%, #16824f 100%);
+  box-shadow: 0 14px 34px rgb(9 75 46 / 17%);
+}
+
+.crop-disease-hero::before,
+.crop-disease-hero::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.crop-disease-hero::before {
+  inset: -40% -8% -42% 38%;
+  background:
+    radial-gradient(ellipse at 66% 38%, rgb(211 242 157 / 22%), transparent 26%),
+    radial-gradient(ellipse at 94% 78%, rgb(129 211 137 / 17%), transparent 38%);
+  animation: crop-disease-glow 12s ease-in-out infinite alternate;
+}
+
+.crop-disease-hero::after {
+  top: -35%;
+  bottom: -35%;
+  left: -35%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 10%), transparent);
+  transform: skewX(-18deg);
+  animation: crop-disease-sweep 17s ease-in-out infinite;
+}
+
+.crop-disease-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.crop-disease-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 1.25rem;
+}
+
+.crop-disease-card {
+  min-width: 0;
+  border: 1px solid rgb(207 229 213 / 92%);
+  background: rgb(255 255 255 / 91%);
+  box-shadow: 0 8px 24px rgb(25 74 45 / 7%);
+  backdrop-filter: blur(10px);
+  animation: crop-disease-card-enter 560ms cubic-bezier(.2,.7,.2,1) both;
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.crop-disease-upload {
+  animation-delay: 50ms;
+}
+
+.crop-disease-recommendation {
+  animation-delay: 130ms;
+}
+
+.crop-disease-card:hover {
+  transform: translateY(-3px);
+  border-color: #a9d2b4;
+  box-shadow: 0 15px 32px rgb(25 74 45 / 11%);
+}
+
+.crop-disease-upload,
+.crop-disease-recommendation {
+  display: flex;
+  flex-direction: column;
+}
+
+.crop-disease-page label {
+  color: #365746;
+}
+
+.crop-disease-page input[type="text"],
+.crop-disease-page select {
+  min-height: 46px;
+  border-color: #d0e0d5;
+  background-color: #fbfefb;
+  color: #173c2d;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.crop-disease-page input[type="text"]:focus,
+.crop-disease-page select:focus {
+  border-color: #16804b;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgb(22 128 75 / 12%);
+}
+
+.crop-disease-page button {
+  transition: transform 160ms ease, box-shadow 180ms ease, filter 160ms ease, background-color 160ms ease;
+}
+
+.crop-disease-page button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.crop-disease-page button:active:not(:disabled) {
+  transform: translateY(0) scale(.985);
+}
+
+.crop-disease-page button:focus-visible,
+.crop-disease-page input:focus-visible,
+.crop-disease-page select:focus-visible {
+  outline: 3px solid #7bc77f;
+  outline-offset: 3px;
+}
+
+.crop-disease-page .crop-disease-action-button {
+  border: 1px solid rgb(255 255 255 / 25%);
+  background: linear-gradient(120deg, #087b43, #056139 55%, #064f35);
+  background-size: 150% 150%;
+  color: white;
+  box-shadow: 0 6px 14px rgb(6 95 53 / 17%), inset 0 1px 0 rgb(255 255 255 / 13%);
+}
+
+.crop-disease-page .crop-disease-action-button:hover:not(:disabled) {
+  background-position: 100% 50%;
+  box-shadow: 0 9px 20px rgb(6 95 53 / 23%), inset 0 1px 0 rgb(255 255 255 / 17%);
+}
+
+.crop-disease-page .crop-disease-action-button:disabled {
+  border-color: #cbd5d0;
+  background: #9aa8a0;
+  color: #fff;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.crop-disease-page .crop-disease-secondary-button {
+  border: 1px solid #15804a;
+  background: linear-gradient(135deg, #fff, #f0faf2);
+  color: #08623c;
+  box-shadow: 0 3px 9px rgb(25 74 45 / 5%);
+}
+
+.crop-disease-page .crop-disease-secondary-button:hover:not(:disabled) {
+  background: #e9f7ed;
+  box-shadow: 0 6px 14px rgb(25 74 45 / 10%);
+}
+
+.crop-disease-page .crop-disease-secondary-button:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+
+.crop-disease-visual-stage {
+  position: relative;
+  display: grid;
+  flex: 1;
+  min-height: 220px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .95fr);
+  align-items: center;
+  overflow: hidden;
+  gap: .75rem;
+  padding: 1.25rem 1rem 1rem 1.35rem;
+  border: 1px solid #d4ebd9;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(ellipse at 88% 14%, rgb(188 229 166 / 48%), transparent 36%),
+    linear-gradient(125deg, #f4fbf3 0%, #fafff9 53%, #e8f6e8 100%);
+}
+
+.crop-disease-visual-stage::after {
+  position: absolute;
+  top: -42%;
+  right: 12%;
+  width: 18rem;
+  height: 18rem;
+  border: 1px solid rgb(60 146 86 / 9%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 20px rgb(60 146 86 / 4%), 0 0 0 42px rgb(60 146 86 / 3%);
+  animation: crop-disease-orbit 16s ease-in-out infinite alternate;
+  content: "";
+  pointer-events: none;
+}
+
+.crop-disease-visual-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 21rem;
+}
+
+.crop-disease-visual-kicker {
+  color: #16804b;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.crop-disease-visual-copy h2 {
+  margin-top: .65rem;
+  color: #145638;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.crop-disease-visual-copy p {
+  margin-top: .55rem;
+  color: #5b7466;
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+.crop-disease-visual-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: 1rem;
+  color: #287047;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.crop-disease-visual-hint span {
+  color: #69ae49;
+  animation: crop-disease-sparkle 2.4s ease-in-out infinite;
+}
+
+.crop-disease-plant-art {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.crop-disease-sun {
+  fill: #f6ca5b;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 13px rgb(246 202 91 / 47%));
+  animation: crop-disease-sun-glow 4.2s ease-in-out infinite;
+}
+
+.crop-disease-field {
+  fill: url(#crop-field-gradient);
+}
+
+.crop-disease-field-line {
+  fill: none;
+  stroke: #83bf70;
+  stroke-linecap: round;
+  stroke-width: 2;
+  opacity: .56;
+}
+
+.crop-disease-field-line--one {
+  animation: crop-disease-field-wave 5.5s ease-in-out infinite alternate;
+}
+
+.crop-disease-field-line--two {
+  stroke: #acd58b;
+  animation: crop-disease-field-wave 6.5s ease-in-out infinite alternate-reverse;
+}
+
+.crop-disease-stem,
+.crop-disease-leaf-vein {
+  fill: none;
+  stroke: #287c49;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+
+.crop-disease-leaf {
+  fill: url(#crop-leaf-gradient);
+  transform-box: fill-box;
+  transform-origin: 8% 92%;
+  filter: drop-shadow(0 5px 5px rgb(26 103 57 / 12%));
+}
+
+.crop-disease-leaf--left {
+  animation: crop-disease-leaf-sway 4.8s ease-in-out infinite alternate;
+}
+
+.crop-disease-leaf--right {
+  transform-origin: 8% 86%;
+  animation: crop-disease-leaf-sway 4.2s ease-in-out infinite alternate-reverse;
+}
+
+.crop-disease-leaf--top {
+  transform-origin: 48% 92%;
+  animation: crop-disease-leaf-sway 5.6s ease-in-out infinite alternate;
+}
+
+.crop-disease-leaf-vein {
+  stroke: rgb(232 255 215 / 76%);
+  stroke-width: 1.6;
+  opacity: .78;
+}
+
+.crop-disease-sparkle {
+  fill: #8dc96a;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: crop-disease-sparkle 2.8s ease-in-out infinite;
+}
+
+.crop-disease-sparkle--two { animation-delay: .7s; }
+.crop-disease-sparkle--three { animation-delay: 1.2s; }
+
+.crop-disease-detect-button {
+  min-height: 3.25rem;
+  margin-top: auto;
+}
+
+.crop-disease-recommendation > div:first-child {
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f0fbf3, #f8fdf9);
+  padding: 1rem;
+}
+
+.crop-disease-recommendation article {
+  border-color: #d0e8d6;
+  background: linear-gradient(145deg, #f3fbf4, #fff);
+  box-shadow: 0 4px 14px rgb(25 74 45 / 5%);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.crop-disease-recommendation article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px rgb(25 74 45 / 9%);
+}
+
+.crop-disease-results {
+  animation-delay: 100ms;
+}
+
+@keyframes crop-disease-orbit {
+  from { transform: translate3d(0, 0, 0) scale(.95); opacity: .72; }
+  to { transform: translate3d(18px, -12px, 0) scale(1.08); opacity: 1; }
+}
+
+@keyframes crop-disease-glow {
+  from { transform: translate3d(0, 0, 0) scale(.95); opacity: .65; }
+  to { transform: translate3d(-12px, 8px, 0) scale(1.05); opacity: 1; }
+}
+
+@keyframes crop-disease-sweep {
+  0%, 30% { left: -35%; opacity: 0; }
+  42% { opacity: .58; }
+  72%, 100% { left: 115%; opacity: 0; }
+}
+
+@keyframes crop-disease-card-enter {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes crop-disease-leaf-sway {
+  from { rotate: -2deg; }
+  to { rotate: 3deg; }
+}
+
+@keyframes crop-disease-sun-glow {
+  0%, 100% { scale: 1; opacity: .92; }
+  50% { scale: 1.12; opacity: 1; }
+}
+
+@keyframes crop-disease-sparkle {
+  0%, 100% { scale: .72; opacity: .45; }
+  50% { scale: 1.25; opacity: 1; }
+}
+
+@keyframes crop-disease-field-wave {
+  from { translate: -5px 0; }
+  to { translate: 5px -2px; }
+}
+
+@media (min-width: 900px) {
+  .crop-disease-workspace {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .crop-disease-visual-stage {
+    min-height: 185px;
+    grid-template-columns: minmax(0, 1fr) minmax(128px, .8fr);
+    gap: .25rem;
+    padding: 1rem .7rem 1rem 1rem;
+  }
+
+  .crop-disease-visual-copy p {
+    font-size: .78rem;
+  }
+
+  .crop-disease-visual-hint {
+    font-size: .64rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crop-disease-page *,
+  .crop-disease-page *::before,
+  .crop-disease-page *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}

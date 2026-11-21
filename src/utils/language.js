@@ -280,6 +280,7 @@ export const translations = {
     schemeFieldDepartment: "Department",
     schemeFieldState: "State",
     schemeFieldLink: "Application Link",
+    schemeFieldSource: "Official Source URL",
     schemeFieldLinkLabel: "Application Link Label",
     schemeFieldNote: "Application Note",
     schemeFieldIcon: "Icon",
@@ -862,6 +863,7 @@ export const translations = {
     schemeFieldDepartment: "శాఖ",
     schemeFieldState: "రాష్ట్రం",
     schemeFieldLink: "దరఖాస్తు లింక్",
+    schemeFieldSource: "అధికారిక మూలం URL",
     schemeFieldLinkLabel: "లింక్ పేరు",
     schemeFieldNote: "దరఖాస్తు గమనిక",
     schemeFieldIcon: "చిహ్నం",
@@ -1384,6 +1386,7 @@ export const translations = {
     schemeFieldDepartment: "विभाग",
     schemeFieldState: "राज्य",
     schemeFieldLink: "आवेदन लिंक",
+    schemeFieldSource: "आधिकारिक स्रोत URL",
     schemeFieldLinkLabel: "लिंक का नाम",
     schemeFieldNote: "आवेदन संबंधी टिप्पणी",
     schemeFieldIcon: "चिह्न",
@@ -2726,9 +2729,10 @@ Object.assign(translations.kn, {
 });
 
 const knownSchemeNameTranslations = {
-  te: { schemeTitleAif: "వ్యవసాయ మౌలిక సదుపాయాల నిధి (AIF)", schemeTitleNmnf: "సహజ వ్యవసాయంపై జాతీయ మిషన్ (NMNF)", schemeTitlePmkmy: "ప్రధాన మంత్రి కిసాన్ మాన్‌ధన్ యోజన (PM-KMY)", schemeTitleKusum: "ప్రధాన మంత్రి కుసుమ్ పథకం (PM-KUSUM)", schemeTitleSmam: "వ్యవసాయ యాంత్రీకరణ ఉప మిషన్ (SMAM)", schemeTitleRythuBharosa: "తెలంగాణ రైతు భరోసా", centralGovernment: "కేంద్ర ప్రభుత్వం" },
-  hi: { schemeTitleAif: "कृषि अवसंरचना निधि (AIF)", schemeTitleNmnf: "प्राकृतिक खेती पर राष्ट्रीय मिशन (NMNF)", schemeTitlePmkmy: "प्रधानमंत्री किसान मानधन योजना (PM-KMY)", schemeTitleKusum: "प्रधानमंत्री कुसुम योजना (PM-KUSUM)", schemeTitleSmam: "कृषि यंत्रीकरण उप-मिशन (SMAM)", schemeTitleRythuBharosa: "तेलंगाना रायथु भरोसा", centralGovernment: "केंद्र सरकार" },
-  kn: { schemeTitleAif: "ಕೃಷಿ ಮೂಲಸೌಕರ್ಯ ನಿಧಿ (AIF)", schemeTitleNmnf: "ನೈಸರ್ಗಿಕ ಕೃಷಿ ರಾಷ್ಟ್ರೀಯ ಮಿಷನ್ (NMNF)", schemeTitlePmkmy: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಮಾನ್‌ಧನ್ ಯೋಜನೆ (PM-KMY)", schemeTitleKusum: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕುಸುಮ್ ಯೋಜನೆ (PM-KUSUM)", schemeTitleSmam: "ಕೃಷಿ ಯಾಂತ್ರೀಕರಣ ಉಪ-ಮಿಷನ್ (SMAM)", schemeTitlePmkisan: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ", schemeTitleInsurance: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಫಸಲ್ ಬಿಮಾ ಯೋಜನೆ", schemeTitleCredit: "ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್", schemeTitleSoil: "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಯೋಜನೆ", schemeTitleIrrigation: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕೃಷಿ ಸಿಂಚಾಯಿ ಯೋಜನೆ", schemeTitleEnam: "ಇ-ನಾಮ್", schemeTitleRythuBharosa: "ತೆಲಂಗಾಣ ರೈತು ಭರೋಸಾ", centralGovernment: "ಕೇಂದ್ರ ಸರ್ಕಾರ" },
+  en: { schemeTitleAif: "Agriculture Infrastructure Fund (AIF)", schemeTitleNmnf: "National Mission on Natural Farming (NMNF)", schemeTitlePmkmy: "Pradhan Mantri Kisan Maandhan Yojana (PM-KMY)", schemeTitleKusum: "PM-KUSUM", schemeTitleSmam: "Sub-Mission on Agricultural Mechanization (SMAM)", schemeTitleRythuBharosa: "Telangana Rythu Bharosa", schemeTitleRythuBima: "Telangana Rythu Bima" },
+  te: { schemeTitleAif: "వ్యవసాయ మౌలిక సదుపాయాల నిధి (AIF)", schemeTitleNmnf: "సహజ వ్యవసాయంపై జాతీయ మిషన్ (NMNF)", schemeTitlePmkmy: "ప్రధాన మంత్రి కిసాన్ మాన్‌ధన్ యోజన (PM-KMY)", schemeTitleKusum: "ప్రధాన మంత్రి కుసుమ్ పథకం (PM-KUSUM)", schemeTitleSmam: "వ్యవసాయ యాంత్రీకరణ ఉప మిషన్ (SMAM)", schemeTitleRythuBharosa: "తెలంగాణ రైతు భరోసా", schemeTitleRythuBima: "తెలంగాణ రైతు బీమా", centralGovernment: "కేంద్ర ప్రభుత్వం" },
+  hi: { schemeTitleAif: "कृषि अवसंरचना निधि (AIF)", schemeTitleNmnf: "प्राकृतिक खेती पर राष्ट्रीय मिशन (NMNF)", schemeTitlePmkmy: "प्रधानमंत्री किसान मानधन योजना (PM-KMY)", schemeTitleKusum: "प्रधानमंत्री कुसुम योजना (PM-KUSUM)", schemeTitleSmam: "कृषि यंत्रीकरण उप-मिशन (SMAM)", schemeTitleRythuBharosa: "तेलंगाना रायथु भरोसा", schemeTitleRythuBima: "तेलंगाना रायथु बीमा", centralGovernment: "केंद्र सरकार" },
+  kn: { schemeTitleAif: "ಕೃಷಿ ಮೂಲಸೌಕರ್ಯ ನಿಧಿ (AIF)", schemeTitleNmnf: "ನೈಸರ್ಗಿಕ ಕೃಷಿ ರಾಷ್ಟ್ರೀಯ ಮಿಷನ್ (NMNF)", schemeTitlePmkmy: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಮಾನ್‌ಧನ್ ಯೋಜನೆ (PM-KMY)", schemeTitleKusum: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕುಸುಮ್ ಯೋಜನೆ (PM-KUSUM)", schemeTitleSmam: "ಕೃಷಿ ಯಾಂತ್ರೀಕರಣ ಉಪ-ಮಿಷನ್ (SMAM)", schemeTitlePmkisan: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ", schemeTitleInsurance: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಫಸಲ್ ಬಿಮಾ ಯೋಜನೆ", schemeTitleCredit: "ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್", schemeTitleSoil: "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಯೋಜನೆ", schemeTitleIrrigation: "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕೃಷಿ ಸಿಂಚಾಯಿ ಯೋಜನೆ", schemeTitleEnam: "ಇ-ನಾಮ್", schemeTitleRythuBharosa: "ತೆಲಂಗಾಣ ರೈತು ಭರೋಸಾ", schemeTitleRythuBima: "ತೆಲಂಗಾಣ ರೈತು ಬೀಮಾ", centralGovernment: "ಕೇಂದ್ರ ಸರ್ಕಾರ" },
 };
 for (const [languageCode, copy] of Object.entries(knownSchemeNameTranslations)) {
   Object.assign(translations[languageCode], copy);

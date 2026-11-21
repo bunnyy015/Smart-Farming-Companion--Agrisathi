@@ -18,6 +18,7 @@ import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
 import { createOrderAcceptanceFields } from "../../utils/orderAcceptanceTimer";
 import { getMarketplaceCategory } from "../../utils/marketplaceCategories";
+import "./FarmerDealerProductsPage.css";
 
 export default function FarmerDealerProductsPage() {
   const navigate = useNavigate();
@@ -523,6 +524,8 @@ export default function FarmerDealerProductsPage() {
 
         paymentMode: "Cash on Delivery",
         status: "pending",
+        reservationType: "shop_collection",
+        dealerResponseDeadline: acceptanceFields.acceptanceDeadlineAt,
 
         stockReserved: false,
         farmerReceived: false,
@@ -563,8 +566,8 @@ export default function FarmerDealerProductsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-7 text-center">
+      <div className="farmer-market-page farmer-market-page--loading min-h-screen flex items-center justify-center p-4">
+        <div className="farmer-market-loading-card rounded-2xl border p-7 text-center">
           <div className="text-5xl">
             🌾
           </div>
@@ -582,14 +585,14 @@ export default function FarmerDealerProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="w-full">
+    <div className="farmer-market-page min-h-screen p-4 md:p-6">
+      <div className="farmer-market-page__content w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
-        <header className="bg-gradient-to-r from-green-800 to-green-600 text-white rounded-2xl shadow p-5">
+        <header className="farmer-market-hero relative isolate overflow-hidden rounded-3xl p-5 text-white sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <button
@@ -597,16 +600,16 @@ export default function FarmerDealerProductsPage() {
                 onClick={() =>
                   navigate("/dashboard")
                 }
-                className="text-green-100 font-semibold"
+                className="farmer-market-dashboard-link relative z-10 font-semibold"
               >
                 {t("dashboardLink", {}, language)}
               </button>
 
-              <h1 className="text-3xl font-bold mt-3">
+              <h1 className="relative z-10 mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
                 {t("localMarketplace", {}, language)}
               </h1>
 
-              <p className="text-green-100 mt-1">
+              <p className="relative z-10 mt-2 text-green-100">
                 {t("marketplaceIntro", {}, language)}
               </p>
             </div>
@@ -616,13 +619,13 @@ export default function FarmerDealerProductsPage() {
               onClick={() =>
                 navigate("/farmer/orders")
               }
-              className="bg-white text-green-800 px-4 py-2.5 rounded-xl font-semibold shadow-sm"
+              className="farmer-market-orders-link relative z-10 rounded-xl px-4 py-2.5 font-semibold shadow-sm"
             >
               {t("myOrdersButton", {}, language)}
             </button>
           </div>
 
-          <div className="bg-white/15 rounded-xl px-4 py-3 mt-4 text-sm">
+          <div className="farmer-market-location relative z-10 mt-5 rounded-2xl px-4 py-3 text-sm">
             {t("nearLabel", {}, language)}{" "}
             <strong>
               {farmer?.district ||
@@ -632,10 +635,10 @@ export default function FarmerDealerProductsPage() {
           </div>
         </header>
 
-        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
+        <section className="farmer-market-tools mt-5 rounded-3xl border p-4 sm:p-5">
           <label
             htmlFor="marketplace-search"
-            className="font-semibold text-gray-800"
+            className="farmer-market-search-label font-semibold text-gray-800"
           >
             {t("searchProduct", {}, language)}
           </label>
@@ -651,7 +654,7 @@ export default function FarmerDealerProductsPage() {
                 )
               }
               placeholder={t("marketplaceSearchPlaceholder", {}, language)}
-              className="flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-600"
+              className="farmer-market-search-field min-w-0 flex-1 rounded-xl border px-4 py-3 outline-none"
             />
 
             <button
@@ -659,7 +662,7 @@ export default function FarmerDealerProductsPage() {
               onClick={() =>
                 navigate("/farmer/voice")
               }
-              className="border border-green-700 text-green-700 px-4 py-3 rounded-xl font-semibold"
+              className="farmer-market-voice-button rounded-xl border px-4 py-3 font-semibold"
             >
               {t("speak", {}, language)}
             </button>
@@ -667,21 +670,21 @@ export default function FarmerDealerProductsPage() {
             <button
               type="button"
               onClick={loadMarketplace}
-              className="bg-green-700 text-white px-4 py-3 rounded-xl font-semibold"
+              className="farmer-market-refresh-button rounded-xl px-4 py-3 font-semibold"
             >
               {t("refresh", {}, language)}
             </button>
           </div>
 
           {voiceSearch && (
-            <p className="text-sm text-green-700 mt-3">
+            <p className="farmer-market-query-note mt-3 text-sm">
               {t("voiceSearchLabel", {}, language)}{" "}
               <strong>{voiceSearch}</strong>
             </p>
           )}
         </section>
 
-        <section className="mt-5">
+        <section className="farmer-market-category-panel mt-5 rounded-3xl border p-3 sm:p-4">
           <CategoryFilter
             selectedCategory={
               selectedCategory
@@ -690,13 +693,13 @@ export default function FarmerDealerProductsPage() {
           />
         </section>
 
-        <section className="mt-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-green-900">
+        <section className="farmer-market-results mt-6">
+          <div className="farmer-market-results-heading mb-4 flex items-end justify-between gap-3">
+            <h2 className="text-xl font-extrabold text-green-950 sm:text-2xl">
               {t("nearbyProducts", {}, language)}
             </h2>
 
-            <span className="text-sm text-gray-500">
+            <span className="farmer-market-results-count rounded-full px-3 py-1.5 text-sm font-semibold">
               {products.length} {t("productsFound", {}, language)}
             </span>
           </div>
@@ -711,7 +714,7 @@ export default function FarmerDealerProductsPage() {
               onRefresh={loadMarketplace}
             />
           ) : (
-            <div className="space-y-3">
+            <div className="farmer-market-product-list space-y-3">
               {products.map((product) => {
                 const key =
                   getProductKey(product);
@@ -722,6 +725,7 @@ export default function FarmerDealerProductsPage() {
   product={product}
   quantity={getQuantity(product)}
   sending={submittingKey === key}
+                  showDescription={false}
   onQuantityChange={(quantity) =>
     updateQuantity(product, quantity)
   }

@@ -20,11 +20,12 @@ import { expirePendingOrders, getOrderAcceptanceDeadline } from "../../utils/ord
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
 import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
+import "./FarmerOrdersPage.css";
 
 const FILTERS = [
-  { value: "active", key: "activeOrders", fallback: "Active Orders" },
-  { value: "accepted", key: "acceptedOrders", fallback: "Accepted Orders" },
-  { value: "history", key: "orderHistory", fallback: "Order History" },
+  { value: "active", key: "activeOrdersLabel", fallback: "Active Orders" },
+  { value: "accepted", key: "acceptedOrdersLabel", fallback: "Accepted Orders" },
+  { value: "history", key: "orderHistoryLabel", fallback: "Order History" },
 ];
 
 const ACCEPTED_STATUSES = [
@@ -165,7 +166,7 @@ function matchesHistoryDateRange(order, startDate, endDate) {
 
 function InfoCard({ label, value }) {
   return (
-    <div className="rounded-xl border border-green-100 bg-green-50/60 p-3">
+    <div className="farmer-order-info-card rounded-xl border p-3">
       <p className="text-xs text-gray-500">{label}</p>
       <p className="mt-1 break-words font-semibold text-green-950">{value || "Not available"}</p>
     </div>
@@ -199,11 +200,11 @@ function getStatusDetails(status) {
     },
 
     received_by_farmer: {
-      icon: "📦",
-      label: "Order Received",
-      className: "bg-indigo-100 text-indigo-800",
-      progress: 85,
-      message: "You confirmed collection. Waiting for the dealer to complete the order.",
+      icon: "🎉",
+      label: "Completed",
+      className: "bg-green-100 text-green-800",
+      progress: 100,
+      message: "You confirmed collection. This reservation is complete.",
     },
 
     payment_pending: {
@@ -826,9 +827,16 @@ export default function FarmerOrdersPage() {
           result.status === "fulfilled" ? [selectedOrders[index].id] : []
         )
       );
-      const failedIds = selectedOrders
-        .filter((order) => !archivedIds.has(order.id))
-        .map((order) => order.id);
+      const failedOrders = results.flatMap((result, index) =>
+        result.status === "rejected"
+          ? [{
+              id: selectedOrders[index].id,
+              code: result.reason?.code || "unknown",
+              message: result.reason?.message || "Unknown database error",
+            }]
+          : []
+      );
+      const failedIds = failedOrders.map((order) => order.id);
 
       if (archivedIds.size > 0) {
         setOrders((currentOrders) => currentOrders.map((order) =>
@@ -845,27 +853,24 @@ export default function FarmerOrdersPage() {
       setSelectionMode(failedIds.length > 0);
       setDeleteConfirmation(false);
       if (failedIds.length > 0) {
-        console.error(
-          "Farmer order hiding failed for selected order IDs:",
-          failedIds
-        );
+        console.error("Farmer order archiving failed:", failedOrders);
         showMessage(
           "error",
           archivedIds.size > 0
-          ? `${archivedIds.size} order${archivedIds.size === 1 ? "" : "s"} deleted. ${failedIds.length} could not be deleted.`
-            : "The selected orders could not be deleted. Check database permissions and try again."
+            ? `${archivedIds.size} order${archivedIds.size === 1 ? "" : "s"} hidden. ${failedIds.length} could not be hidden.`
+            : "The selected orders could not be hidden from your history. Check your connection and confirm the latest Firebase rules are published."
         );
       } else {
         showMessage(
           "success",
           selectedOrders.length === 1
-            ? "Order deleted from your history."
-            : "Orders deleted from your history."
+            ? "Order hidden from your history."
+            : "Orders hidden from your history."
         );
       }
     } catch (error) {
       console.error("Delete history orders error:", error);
-      showMessage("error", "The selected orders could not be deleted from your history.");
+      showMessage("error", "The selected orders could not be hidden from your history. Check your connection and try again.");
     } finally {
       setUpdatingId("");
     }
@@ -920,22 +925,21 @@ export default function FarmerOrdersPage() {
 
       const now = new Date().toISOString();
 
-      await update(ref(database, `dealerOrders/${order.id}`), {
-        farmerReceived: true,
-        orderReceivedAt: now,
-        farmerReceivedAt: now,
-        completedBy: "farmer",
-        completedByUid: user.uid,
-        completedAt: now,
-        status: "completed",
-        updatedAt: now,
+      await update(ref(database), {
+        [`dealerOrders/${order.id}/farmerReceived`]: true,
+        [`dealerOrders/${order.id}/farmerReceivedAt`]: now,
+        [`dealerOrders/${order.id}/status`]: "completed",
+        [`dealerOrders/${order.id}/completedAt`]: now,
+        [`dealerOrders/${order.id}/completedBy`]: "farmer",
+        [`dealerOrders/${order.id}/completedByUid`]: user.uid,
+        [`dealerOrders/${order.id}/updatedAt`]: now,
       });
 
       setReceiptConfirmation(null);
 
       showMessage(
         "success",
-        "Order marked as completed successfully."
+        "Receipt confirmed. The order is now in your completed history."
       );
 
       await refreshOrders();
@@ -957,9 +961,9 @@ export default function FarmerOrdersPage() {
       showMessage(
         "error",
         permissionDenied
-          ? "Firebase blocked this update. Its rules must allow the order owner to confirm receipt and move their accepted or delivered order to completed."
+          ? "Firebase rules denied receipt confirmation. Check that this is your order and its status is accepted or delivered."
           : validationFailed
-            ? "Firebase rejected the completion fields. Check the dealerOrders rules for farmerReceived, orderReceivedAt, farmerReceivedAt, completedBy, completedByUid, completedAt, status, and updatedAt."
+            ? "Firebase rejected the receipt fields. Check the dealerOrders rules for farmerReceived, farmerReceivedAt, status, and updatedAt."
             : "The order update failed. Check your connection and try again."
       );
     } finally {
@@ -969,7 +973,7 @@ export default function FarmerOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+      <div className="farmer-orders-page farmer-orders-page--loading min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-12 h-12 mx-auto rounded-full border-4 border-green-200 border-t-green-700 animate-spin" />
 
@@ -982,19 +986,19 @@ export default function FarmerOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50">
-      <main className="w-full px-4 sm:px-6 lg:px-10">
+    <div className="farmer-orders-page min-h-screen">
+      <main className="farmer-orders-content relative z-10 w-full px-4 sm:px-6 lg:px-10">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
-        <header className="bg-gradient-to-br from-green-800 to-green-600 text-white rounded-b-3xl px-4 pt-5 pb-6 shadow-lg">
+        <header className="farmer-orders-hero relative isolate overflow-hidden rounded-b-3xl px-4 pb-6 pt-5 text-white shadow-lg sm:rounded-3xl sm:mt-4 sm:px-6 sm:pt-6">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => navigate("/dashboard")}
-              className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center"
+              className="farmer-orders-back flex h-11 w-11 items-center justify-center rounded-full"
               aria-label={t("dashboardLink", {}, language)}
             >
               ←
@@ -1004,7 +1008,7 @@ export default function FarmerOrdersPage() {
               type="button"
               disabled={refreshing}
               onClick={refreshOrders}
-              className="bg-white/15 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+              className="farmer-orders-refresh rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {refreshing ? t("refreshing", {}, language) : t("refresh", {}, language)}
             </button>
@@ -1012,36 +1016,36 @@ export default function FarmerOrdersPage() {
 
           <div className="mt-5">
             <p className="text-green-100 text-sm">
-              {t("farmerPurchases", {}, language)}
+              {t("farmerPurchasesLabel", {}, language)}
             </p>
 
-            <h1 className="text-3xl font-bold mt-1">
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
               🛒 {t("myOrders", {}, language)}
             </h1>
 
             <p className="text-green-100 text-sm mt-2">
-              {t("trackOrdersIntro", {}, language)}
+              {t("trackOrdersDescription", {}, language)}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-5">
-            <div className="bg-white/15 rounded-xl p-3 text-center">
+          <div className="farmer-orders-stats mt-5 grid grid-cols-2 gap-3">
+            <div className="farmer-orders-stat rounded-2xl p-3 text-center">
               <p className="text-xl font-bold">
                 {counts.active}
               </p>
               <p className="text-xs text-green-100 mt-1">
-                {t("active", {}, language)}
+                {t("activeLabel", {}, language)}
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/farmer/orders?filter=history")}
-              className="bg-white/20 rounded-xl p-3 text-center hover:bg-white/30"
+              className="farmer-orders-stat farmer-orders-history-stat rounded-2xl p-3 text-center"
             >
               <p className="text-xl font-bold">{historyOrders.length}</p>
               <p className="text-xs text-green-100 mt-1">
-                {t("history", {}, language)}
+                {t("historyLabel", {}, language)}
               </p>
             </button>
           </div>
@@ -1049,7 +1053,7 @@ export default function FarmerOrdersPage() {
 
         <div className="px-4">
           {paidOrders.length > 0 && (
-            <section className="bg-green-50 border border-green-200 rounded-2xl p-4 mt-5">
+            <section className="farmer-orders-paid-note mt-5 rounded-2xl border p-4">
               <p className="font-bold text-green-900">
                 ✅ Payment completed
               </p>
@@ -1059,21 +1063,21 @@ export default function FarmerOrdersPage() {
               <button
                 type="button"
                 onClick={() => navigate("/farmer/orders?filter=history")}
-                className="mt-3 bg-green-700 text-white px-4 py-2 rounded-xl font-semibold"
+                className="farmer-orders-action-button mt-3 rounded-xl px-4 py-2 font-semibold"
               >
                 View Order History
               </button>
             </section>
           )}
 
-          <section className="flex gap-2 overflow-x-auto py-5">
+          <section className="farmer-orders-filters flex gap-2 overflow-x-auto py-5">
             {FILTERS.map((filter) => (
               <button
                 type="button"
                 key={filter.value}
                 onClick={() => changeFilter(filter.value)}
                 aria-pressed={selectedFilter === filter.value}
-                className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
+                className={`farmer-orders-filter shrink-0 min-h-11 px-4 rounded-full text-sm font-semibold ${
                   selectedFilter === filter.value
                     ? "bg-green-700 text-white"
                     : "bg-white border border-green-200 text-green-800"
@@ -1086,21 +1090,21 @@ export default function FarmerOrdersPage() {
 
           {selectedFilter === "history" && (
             <>
-              <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Order history status filters">
+              <section className="farmer-orders-history-filters mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Order history status filters">
                 {HISTORY_STATUS_FILTERS.map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
                     aria-pressed={historyStatusFilter === value}
                     onClick={() => { cancelSelection(); setHistoryStatusFilter(value); }}
-                    className={`rounded-2xl border p-4 text-left transition ${historyStatusFilter === value ? "border-green-700 bg-green-700 text-white shadow-md" : "border-green-100 bg-white text-gray-800 hover:border-green-300 hover:shadow-sm"}`}
+                    className={`farmer-orders-history-filter rounded-2xl border p-4 text-left transition ${historyStatusFilter === value ? "border-green-700 bg-green-700 text-white shadow-md" : "border-green-100 bg-white text-gray-800 hover:border-green-300 hover:shadow-sm"}`}
                   >
                     <span className={`block text-xs font-semibold ${historyStatusFilter === value ? "text-green-50" : "text-gray-500"}`}>{t(HISTORY_STATUS_FILTERS.find((item) => item.value === value)?.key || "", {}, language) || label}</span>
                     <span className="mt-1 block text-2xl font-bold">{counts.historyStatuses[value]}</span>
                   </button>
                 ))}
               </section>
-              <section className="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:grid-cols-2">
+              <section className="farmer-orders-date-filter mb-5 grid grid-cols-1 gap-3 rounded-2xl border p-4 shadow-sm sm:grid-cols-2">
               <label className="text-sm font-semibold text-gray-700">
                 From date
                 <input type="date" value={historyStartDate} max={historyEndDate || undefined} onChange={(event) => { cancelSelection(); setHistoryStartDate(event.target.value); }} className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 font-normal" />
@@ -1114,7 +1118,7 @@ export default function FarmerOrdersPage() {
           )}
 
           {selectedFilter === "history" && selectionMode && (
-            <section className="sticky top-2 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-green-200 bg-white p-3 shadow-lg">
+            <section className="farmer-orders-selection-toolbar sticky top-2 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 shadow-lg">
               <button
                 type="button"
                 onClick={cancelSelection}
@@ -1154,7 +1158,7 @@ export default function FarmerOrdersPage() {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="farmer-delete-history-title"
-                className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+                className="farmer-orders-dialog w-full max-w-md rounded-2xl p-6 shadow-2xl"
               >
                 <h2 id="farmer-delete-history-title" className="text-xl font-bold text-gray-900">
                   {selectedOrderIds.length === 1
@@ -1184,7 +1188,7 @@ export default function FarmerOrdersPage() {
           )}
 
           {filteredOrders.length === 0 ? (
-            <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <section className="farmer-orders-empty rounded-3xl p-8 text-center">
               <div className="text-6xl">📦</div>
 
               <h2 className="text-xl font-bold text-green-900 mt-4">
@@ -1199,13 +1203,13 @@ export default function FarmerOrdersPage() {
               {selectedFilter === "active" && <button
                 type="button"
                 onClick={() => navigate("/farmer/dealer-products")}
-                className="w-full bg-green-700 text-white min-h-12 rounded-xl font-semibold mt-5"
+                className="farmer-orders-action-button mt-5 min-h-12 w-full rounded-xl font-semibold"
               >
-                {t("browseProducts", {}, language)}
+                {t("browseProductsLabel", {}, language)}
               </button>}
             </section>
           ) : (
-            <section className="space-y-3">
+            <section className="farmer-orders-list space-y-3">
               {filteredOrders.map((order) => {
                 const orderStatus = getNormalizedOrderStatus(order);
                 const status = order.cancellationReason === "dealer_acceptance_timeout" || orderStatus === "expired"
@@ -1252,7 +1256,7 @@ export default function FarmerOrdersPage() {
                         setSelectedOrderIds((currentIds) => currentIds.includes(order.id) ? currentIds : [...currentIds, order.id]);
                       }
                     }}
-                    className={`cursor-pointer rounded-xl border bg-white px-3 py-3 shadow-sm transition hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-400 ${selected ? "border-green-600 bg-green-50 ring-2 ring-green-300" : "border-green-100"}`}
+                    className={`farmer-order-card cursor-pointer rounded-2xl border bg-white px-3 py-3 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-green-400 ${selected ? "farmer-order-card--selected border-green-600 bg-green-50 ring-2 ring-green-300" : "border-green-100"}`}
                   >
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       {selected && <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-700 text-sm text-white">✓</span>}
@@ -1285,8 +1289,8 @@ export default function FarmerOrdersPage() {
               })}
               {selectedOrder && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedOrder(null); }}>
-                  <section role="dialog" aria-modal="true" aria-labelledby="farmer-order-details-title" className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
-                    <header className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-3xl bg-green-800 p-5 text-white">
+                  <section role="dialog" aria-modal="true" aria-labelledby="farmer-order-details-title" className="farmer-orders-dialog farmer-orders-details-dialog max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl shadow-2xl sm:rounded-3xl">
+                    <header className="farmer-orders-dialog-header sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-3xl p-5 text-white">
                       <div><p className="text-xs font-semibold uppercase tracking-wider text-green-100">Order details</p><h2 id="farmer-order-details-title" className="mt-1 break-all text-xl font-bold">{selectedOrder.orderId || selectedOrder.id}</h2></div>
                       <button type="button" autoFocus onClick={() => setSelectedOrder(null)} aria-label="Close order details" className="rounded-xl bg-white/15 px-3 py-2 font-semibold">Close ✕</button>
                     </header>
@@ -1320,7 +1324,7 @@ export default function FarmerOrdersPage() {
               )}
               {receiptConfirmation && (
                 <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !updatingId) setReceiptConfirmation(null); }}>
-                  <section role="dialog" aria-modal="true" aria-labelledby="confirm-order-received-title" className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
+                  <section role="dialog" aria-modal="true" aria-labelledby="confirm-order-received-title" className="farmer-orders-dialog w-full max-w-lg rounded-t-3xl p-5 shadow-2xl sm:rounded-3xl">
                     <h2 id="confirm-order-received-title" className="text-xl font-bold text-gray-900">Confirm order received?</h2>
                     <p className="mt-2 text-sm text-gray-600">Have you received this product successfully? Confirming will mark this order as completed.</p>
                     <div className="mt-5 flex justify-end gap-3">
@@ -1332,7 +1336,7 @@ export default function FarmerOrdersPage() {
               )}
               {cancellationOrder && (
                 <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !updatingId) setCancellationOrder(null); }}>
-                  <section role="dialog" aria-modal="true" aria-labelledby="cancel-farmer-order-title" className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl">
+                  <section role="dialog" aria-modal="true" aria-labelledby="cancel-farmer-order-title" className="farmer-orders-dialog w-full max-w-lg rounded-t-3xl p-5 shadow-2xl sm:rounded-3xl">
                     <h2 id="cancel-farmer-order-title" className="text-xl font-bold text-gray-900">Cancel this order?</h2>
                     <p className="mt-2 text-sm text-gray-600">The 24-hour acceptance timer will stop, and the order will move to Cancelled orders.</p>
                     <label className="mt-4 block text-sm font-semibold text-gray-700">

@@ -10,6 +10,7 @@ import {
 import { auth, database } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
 import "./DealerTheme.css";
+import "./DealerPageEffects.css";
 
 export default function DealerSalesPage() {
   const navigate = useNavigate();
@@ -388,7 +389,7 @@ export default function DealerSalesPage() {
 
   if (loading) {
     return (
-      <div className="dealer-theme min-h-screen bg-green-50 flex items-center justify-center p-4">
+      <div className="dealer-theme dealer-page-effects dealer-page-effects--sales min-h-screen bg-green-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
           <div className="text-5xl">
             📈
@@ -403,7 +404,7 @@ export default function DealerSalesPage() {
   }
 
   return (
-    <div className="dealer-theme min-h-screen bg-green-50 p-4 md:p-6">
+    <div className="dealer-theme dealer-page-effects dealer-page-effects--sales min-h-screen bg-green-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <StatusMessage
           message={message}

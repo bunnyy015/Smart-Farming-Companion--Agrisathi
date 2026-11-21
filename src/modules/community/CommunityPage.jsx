@@ -11,6 +11,7 @@ import {
 } from "firebase/database";
 import { auth, database, getAuthUser } from "../../firebase";
 import StatusMessage from "../../components/StatusMessage";
+import "./CommunityPage.css";
 
 const emptyForm = {
   content: "",
@@ -343,8 +344,8 @@ export default function CommunityPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm p-7 text-center">
+      <div className="community-page community-page--loading min-h-screen flex items-center justify-center p-4">
+        <div className="community-loading-card rounded-2xl p-7 text-center">
           <div className="text-5xl">👥</div>
 
           <h1 className="text-xl font-bold text-green-900 mt-4">
@@ -356,15 +357,15 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 p-4 md:p-6">
-      <div className="w-full">
+    <main className="community-page min-h-screen p-4 md:p-6">
+      <div className="community-page__content mx-auto w-full">
         <StatusMessage
           message={message}
           onClose={() => setMessage(null)}
         />
 
         {deleteTarget && (
-          <section className="bg-white border border-red-200 rounded-2xl shadow-lg p-5 mb-5">
+          <section className="community-delete-panel rounded-2xl p-5 mb-5">
             <h2 className="text-lg font-bold text-red-700">
               Delete this post?
             </h2>
@@ -373,7 +374,7 @@ export default function CommunityPage() {
               This action cannot be undone.
             </p>
 
-            <div className="bg-gray-50 rounded-xl p-3 mt-3">
+            <div className="community-delete-preview rounded-xl p-3 mt-3">
               <p className="font-semibold">
                 {deleteTarget.title}
               </p>
@@ -383,7 +384,7 @@ export default function CommunityPage() {
               <button
                 type="button"
                 onClick={deletePost}
-                className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold"
+                className="community-button community-button--danger px-4 py-2.5 rounded-xl font-semibold"
               >
                 Delete Post
               </button>
@@ -391,7 +392,7 @@ export default function CommunityPage() {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="border border-gray-300 px-4 py-2.5 rounded-xl font-semibold"
+                className="community-button community-button--quiet px-4 py-2.5 rounded-xl font-semibold"
               >
                 Go Back
               </button>
@@ -399,11 +400,11 @@ export default function CommunityPage() {
           </section>
         )}
 
-        <header className="bg-gradient-to-r from-green-800 to-green-600 text-white rounded-2xl shadow p-5">
+        <header className="community-hero rounded-3xl p-5 sm:p-7">
           <button
             type="button"
             onClick={() => navigate(getBackPath())}
-            className="text-green-100 font-semibold"
+            className="community-back-link font-semibold"
           >
             ← Dashboard
           </button>
@@ -416,13 +417,13 @@ export default function CommunityPage() {
             Ask questions and share farming knowledge.
           </p>
 
-          <div className="bg-white/15 rounded-xl p-3 mt-4 text-sm">
+          <div className="community-hero-note rounded-xl p-3 mt-4 text-sm">
             📍 Community posts from farmers, dealers and
             agriculture officers.
           </div>
         </header>
 
-        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-5 mt-5">
+        <section className="community-composer rounded-3xl p-5 sm:p-6 mt-5">
           <h2 className="text-xl font-bold text-green-900">
             ✍️ Share with Community
           </h2>
@@ -435,20 +436,20 @@ export default function CommunityPage() {
               placeholder="Write your message..."
               rows="4"
               required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3"
+              className="community-field community-textarea w-full rounded-xl px-4 py-3"
             />
 
             <button
               type="submit"
               disabled={creating}
-              className="bg-green-700 text-white px-5 py-3 rounded-xl font-semibold disabled:bg-gray-400"
+              className="community-button community-button--primary px-5 py-3 rounded-xl font-semibold disabled:bg-gray-400"
             >
               {creating ? "Posting..." : "Post"}
             </button>
           </form>
         </section>
 
-        <section className="bg-white rounded-2xl border border-green-100 shadow-sm p-4 mt-5">
+        <section className="community-search rounded-2xl p-4 sm:p-5 mt-5">
           <label className="font-semibold text-gray-800">
             🔍 Search community
           </label>
@@ -460,11 +461,11 @@ export default function CommunityPage() {
               setSearchText(event.target.value)
             }
             placeholder="Crop, question or district"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 mt-2"
+            className="community-field w-full rounded-xl px-4 py-3 mt-2"
           />
         </section>
 
-        <section className="flex gap-2 overflow-x-auto py-5">
+        <section className="community-filters flex gap-2 overflow-x-auto py-5" aria-label="Filter community posts">
           {categories.map((category) => (
             <button
               type="button"
@@ -472,6 +473,7 @@ export default function CommunityPage() {
               onClick={() =>
                 setSelectedCategory(category)
               }
+              aria-pressed={selectedCategory === category}
               className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${
                 selectedCategory === category
                   ? "bg-green-700 text-white"
@@ -484,7 +486,7 @@ export default function CommunityPage() {
         </section>
 
         {filteredPosts.length === 0 ? (
-          <section className="bg-white rounded-2xl shadow-sm p-8 text-center">
+          <section className="community-empty rounded-3xl p-8 text-center">
             <div className="text-5xl">🌱</div>
 
             <h2 className="text-xl font-bold text-green-900 mt-4">
@@ -496,7 +498,7 @@ export default function CommunityPage() {
             </p>
           </section>
         ) : (
-          <section className="space-y-4">
+          <section className="community-post-list space-y-4">
             {filteredPosts.map((post) => {
               const badge = getRoleBadge(post.authorRole);
 
@@ -511,7 +513,7 @@ export default function CommunityPage() {
               return (
                 <article
                   key={post.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm p-5"
+                  className="community-post rounded-3xl p-5 sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -564,10 +566,11 @@ export default function CommunityPage() {
                     <button
                       type="button"
                       onClick={() => toggleLike(post)}
+                      aria-pressed={currentUserLiked}
                       className={`px-4 py-2 rounded-xl font-semibold ${
                         currentUserLiked
-                          ? "bg-green-700 text-white"
-                          : "bg-green-50 text-green-700"
+                          ? "community-button--liked text-white"
+                          : "community-button--like text-green-700"
                       }`}
                     >
                       👍 {Number(post.likeCount || 0)}
@@ -577,7 +580,7 @@ export default function CommunityPage() {
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(post)}
-                        className="border border-red-200 text-red-700 px-4 py-2 rounded-xl font-semibold"
+                        className="community-button community-button--danger-quiet px-4 py-2 rounded-xl font-semibold"
                       >
                         Delete
                       </button>
@@ -589,6 +592,6 @@ export default function CommunityPage() {
           </section>
         )}
       </div>
-    </div>
+    </main>
   );
 }

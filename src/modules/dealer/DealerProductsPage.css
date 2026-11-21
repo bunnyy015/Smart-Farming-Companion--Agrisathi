@@ -1,0 +1,155 @@
+.dealer-products-page__loading p {
+  animation: dealer-product-loading-pulse 1.4s ease-in-out infinite;
+}
+
+.dealer-products-page__status > [role="alert"] {
+  animation: dealer-product-pop .32s cubic-bezier(.18, .75, .3, 1.2) both;
+}
+
+.dealer-products-page__header,
+.dealer-products-page__filter {
+  animation: dealer-product-rise .45s ease-out both;
+}
+
+.dealer-products-page__filter {
+  animation-delay: 70ms;
+}
+
+.dealer-products-page__header button,
+.dealer-products-page__form button,
+.dealer-products-page__product-card button,
+.dealer-products-page__modal button {
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.dealer-products-page__header button:hover:not(:disabled),
+.dealer-products-page__form button:hover:not(:disabled),
+.dealer-products-page__product-card button:hover:not(:disabled),
+.dealer-products-page__modal button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(18, 65, 91, .16);
+}
+
+.dealer-products-page__filter select,
+.dealer-products-page__form input,
+.dealer-products-page__form select,
+.dealer-products-page__form textarea {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.dealer-products-page__filter select:focus,
+.dealer-products-page__form input:focus,
+.dealer-products-page__form select:focus,
+.dealer-products-page__form textarea:focus {
+  border-color: #2683c5;
+  box-shadow: 0 0 0 3px rgba(38, 131, 197, .16);
+  outline: none;
+}
+
+.dealer-products-page__form:not(.hidden) {
+  transform-origin: top center;
+  animation: dealer-product-pop .38s cubic-bezier(.18, .75, .3, 1.15) both;
+}
+
+.dealer-products-page__form input[type="file"] {
+  transition: background-color .2s ease, border-color .2s ease;
+}
+
+.dealer-products-page__form input[type="file"]:hover {
+  background-color: #eaf5ff;
+  border-color: #3987c2;
+}
+
+.dealer-products-page__list > .dealer-products-page__product-card {
+  position: relative;
+  border: 1px solid rgba(68, 132, 177, .18);
+  transform-origin: center;
+  animation: dealer-product-rise .48s cubic-bezier(.2, .7, .25, 1) both;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.dealer-products-page__product-card:nth-child(2) { animation-delay: 45ms; }
+.dealer-products-page__product-card:nth-child(3) { animation-delay: 90ms; }
+.dealer-products-page__product-card:nth-child(4) { animation-delay: 135ms; }
+.dealer-products-page__product-card:nth-child(5) { animation-delay: 180ms; }
+
+.dealer-products-page__product-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 122, 178, .42);
+  box-shadow: 0 14px 28px rgba(26, 75, 104, .13);
+}
+
+.dealer-products-page__product-card img {
+  transition: transform .28s ease, box-shadow .28s ease;
+}
+
+.dealer-products-page__product-card:hover img {
+  transform: scale(1.035);
+  box-shadow: 0 6px 16px rgba(18, 65, 91, .12);
+}
+
+.dealer-products-page__product-card > div > div > div.grid > div {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.dealer-products-page__product-card > div > div > div.grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 13px rgba(18, 65, 91, .09);
+}
+
+.dealer-products-page__modal-backdrop {
+  animation: dealer-product-backdrop-in .2s ease-out both;
+  backdrop-filter: blur(3px);
+}
+
+.dealer-products-page__modal {
+  transform-origin: center;
+  animation: dealer-product-pop .28s cubic-bezier(.18, .75, .3, 1.2) both;
+}
+
+.dealer-products-page__empty {
+  animation: dealer-product-rise .4s ease-out both;
+}
+
+@keyframes dealer-product-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dealer-product-pop {
+  from { opacity: 0; transform: scale(.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes dealer-product-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dealer-product-loading-pulse {
+  0%, 100% { opacity: .65; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealer-products-page__loading p,
+  .dealer-products-page__status > [role="alert"],
+  .dealer-products-page__header,
+  .dealer-products-page__filter,
+  .dealer-products-page__form:not(.hidden),
+  .dealer-products-page__product-card,
+  .dealer-products-page__modal-backdrop,
+  .dealer-products-page__modal,
+  .dealer-products-page__empty {
+    animation: none;
+  }
+
+  .dealer-products-page button,
+  .dealer-products-page input,
+  .dealer-products-page select,
+  .dealer-products-page textarea,
+  .dealer-products-page img,
+  .dealer-products-page__product-card > div > div > div.grid > div {
+    transition: none;
+  }
+}

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./index.css";
+import "./moduleCardMotion.css";
 import App from "./App.jsx";
 import { initializeLanguage } from "./utils/language";
 

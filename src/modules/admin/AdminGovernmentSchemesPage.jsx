@@ -8,12 +8,14 @@ import useLanguage from "../../utils/useLanguage";
 import { t } from "../../utils/language";
 import { DEFAULT_SCHEMES } from "../schemes/defaultGovernmentSchemes";
 import { resolveGovernmentSchemesPath } from "../../services/governmentSchemesService";
+import "./AdminPageEffects.css";
 
 const EMPTY_FORM = {
   title: "", description: "", eligibility: "", benefits: "",
   requiredDocuments: "", applicationProcess: "", category: "",
   department: "", state: "", applicationLink: "", applyLabel: "",
   applicationNote: "", icon: "🌾",
+  sourceUrl: "",
 };
 
 const FIELD_DEFINITIONS = [
@@ -27,6 +29,7 @@ const FIELD_DEFINITIONS = [
   ["department", "schemeFieldDepartment", false],
   ["state", "schemeFieldState", false],
   ["applicationLink", "schemeFieldLink", false],
+  ["sourceUrl", "schemeFieldSource", false],
   ["applyLabel", "schemeFieldLinkLabel", false],
   ["applicationNote", "schemeFieldNote", false, true],
   ["icon", "schemeFieldIcon", false],
@@ -45,6 +48,7 @@ function schemeValues(scheme, language) {
     department: scheme.department || "",
     state: scheme.state || "",
     applicationLink: scheme.applicationLink || scheme.applyUrl || "",
+    sourceUrl: scheme.sourceUrl || scheme.informationUrl || "",
     applyLabel: scheme.applyLabel || "",
     applicationNote: scheme.applicationNote || "",
     icon: scheme.icon || "🌾",
@@ -55,7 +59,7 @@ function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-const DEFAULT_SCHEMES_VERSION = 2;
+const DEFAULT_SCHEMES_VERSION = 3;
 
 function defaultSchemeTitle(scheme) {
   return scheme.title || scheme.schemeName || t(scheme.titleKey, {}, "en") || "";
@@ -215,6 +219,7 @@ export default function AdminGovernmentSchemesPage() {
       applicationProcess,
       registrationSteps: applicationProcess,
       applyUrl: values.applicationLink.trim(),
+      sourceUrl: values.sourceUrl.trim(),
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -259,11 +264,11 @@ export default function AdminGovernmentSchemesPage() {
   }
 
   if (loading && !authorized) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-indigo-900">{t("loading", {}, language)}</div>;
+    return <div className="admin-page-effects admin-page-effects--schemes flex min-h-screen items-center justify-center bg-slate-50 text-indigo-900">{t("loading", {}, language)}</div>;
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <main className="admin-page-effects admin-page-effects--schemes min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
         <StatusMessage message={message} onClose={() => setMessage(null)} />
         <header className="mb-6 rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-800 p-6 text-white shadow-xl md:p-8">
@@ -298,7 +303,7 @@ export default function AdminGovernmentSchemesPage() {
 
       {viewing && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewing(null)}><section role="dialog" aria-modal="true" aria-labelledby="scheme-view-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><header className="flex items-start justify-between gap-4 rounded-t-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-800 p-5 text-white"><div><h2 id="scheme-view-title" className="text-2xl font-bold">{schemeValues(viewing, language).title}</h2><p className="mt-1 text-indigo-200">{schemeValues(viewing, language).category}</p></div><button type="button" onClick={() => setViewing(null)} aria-label={t("schemeClose", {}, language)} className="rounded-lg bg-white/10 px-3 py-1 text-xl hover:bg-white/20">×</button></header><div className="space-y-4 p-5">{[["schemeFieldDescription", schemeValues(viewing, language).description], ["schemeFieldEligibility", schemeValues(viewing, language).eligibility], ["schemeFieldBenefits", schemeValues(viewing, language).benefits], ["schemeFieldDocuments", schemeValues(viewing, language).requiredDocuments], ["schemeFieldDepartment", schemeValues(viewing, language).department], ["schemeFieldCategory", schemeValues(viewing, language).category], ["schemeFieldState", schemeValues(viewing, language).state], ["schemeFieldNote", schemeValues(viewing, language).applicationNote]].map(([label, value]) => value && <div key={label}><h3 className="text-sm font-semibold text-gray-500">{t(label, {}, language)}</h3><p className="mt-1 whitespace-pre-wrap text-gray-800">{value}</p></div>)}{schemeValues(viewing, language).applicationProcess && <div><h3 className="text-sm font-semibold text-gray-500">{t("schemeFieldProcess", {}, language)}</h3><ol className="mt-1 list-decimal space-y-1 pl-5">{schemeValues(viewing, language).applicationProcess.split(/\r?\n/).filter(Boolean).map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}</ol></div>}{schemeValues(viewing, language).applicationLink && <div><h3 className="text-sm font-semibold text-gray-500">{t("schemeFieldLink", {}, language)}</h3><a className="mt-1 block break-all text-indigo-700 underline" href={schemeValues(viewing, language).applicationLink} target="_blank" rel="noopener noreferrer">{schemeValues(viewing, language).applicationLink}</a></div>}<div className="flex justify-end gap-2 border-t border-gray-100 pt-4"><button type="button" onClick={() => { openEdit(viewing); setViewing(null); }} className="rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white">{t("schemeEditAction", {}, language)}</button><button type="button" onClick={() => setViewing(null)} className="rounded-xl border border-gray-300 px-4 py-2 font-semibold">{t("schemeClose", {}, language)}</button></div></div></section></div>}
 
-      {(editing !== null) && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={resetForm}><section role="dialog" aria-modal="true" aria-labelledby="scheme-form-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><header className="rounded-t-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-800 p-5 text-white"><h2 id="scheme-form-title" className="text-xl font-bold">{t(editing ? "schemeEdit" : "schemeAdd", {}, language)}</h2></header><form onSubmit={saveScheme} className="grid gap-4 p-5 sm:grid-cols-2">{FIELD_DEFINITIONS.map(([name, label, required, multiline]) => <label key={name} className={`text-sm font-semibold text-gray-700 ${multiline ? "sm:col-span-2" : ""}`}>{t(label, {}, language)}{multiline ? <textarea required={required} rows={name === "applicationProcess" ? 4 : 3} value={form[name]} onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 font-normal focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" /> : <input required={required} type={name === "applicationLink" ? "url" : "text"} value={form[name]} onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 font-normal focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" />}</label>)}<div className="flex justify-end gap-3 border-t border-gray-100 pt-4 sm:col-span-2"><button type="button" onClick={resetForm} className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700">{t("cancel", {}, language)}</button><button type="submit" disabled={saving} className="rounded-xl bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? t("schemeSaving", {}, language) : t("save", {}, language)}</button></div></form></section></div>}
+      {(editing !== null) && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={resetForm}><section role="dialog" aria-modal="true" aria-labelledby="scheme-form-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><header className="rounded-t-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-800 p-5 text-white"><h2 id="scheme-form-title" className="text-xl font-bold">{t(editing ? "schemeEdit" : "schemeAdd", {}, language)}</h2></header><form onSubmit={saveScheme} className="grid gap-4 p-5 sm:grid-cols-2">{FIELD_DEFINITIONS.map(([name, label, required, multiline]) => <label key={name} className={`text-sm font-semibold text-gray-700 ${multiline ? "sm:col-span-2" : ""}`}>{t(label, {}, language)}{multiline ? <textarea required={required} rows={name === "applicationProcess" ? 4 : 3} value={form[name]} onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 font-normal focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" /> : <input required={required} type={["applicationLink", "sourceUrl"].includes(name) ? "url" : "text"} value={form[name]} onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))} className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 font-normal focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" />}</label>)}<div className="flex justify-end gap-3 border-t border-gray-100 pt-4 sm:col-span-2"><button type="button" onClick={resetForm} className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700">{t("cancel", {}, language)}</button><button type="submit" disabled={saving} className="rounded-xl bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? t("schemeSaving", {}, language) : t("save", {}, language)}</button></div></form></section></div>}
 
       {deleting && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><section role="alertdialog" aria-modal="true" aria-labelledby="scheme-delete-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><h2 id="scheme-delete-title" className="text-lg font-bold text-gray-900">{t("schemeDeleteConfirm", {}, language)}</h2><p className="mt-2 text-gray-600">{schemeValues(deleting, language).title}</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setDeleting(null)} className="rounded-xl border border-gray-300 px-4 py-2 font-semibold">{t("cancel", {}, language)}</button><button type="button" onClick={deleteScheme} className="rounded-xl bg-red-700 px-4 py-2 font-semibold text-white hover:bg-red-800">{t("schemeDeleteAction", {}, language)}</button></div></section></div>}
     </main>
