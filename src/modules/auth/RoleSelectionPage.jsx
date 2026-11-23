@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Info } from "lucide-react";
 import {
   getLanguage,
   languages,
@@ -342,6 +343,12 @@ export default function RoleSelectionPage() {
           </div>
         </footer>
       </main>
+
+      <nav className="role-info-actions" aria-label="AgriSaathi information">
+        <button type="button" onClick={() => navigate("/about?section=about")}>
+          <Info size={16} aria-hidden="true" /> {language === "te" ? "మా గురించి · సంప్రదింపు" : language === "hi" ? "परिचय · संपर्क" : language === "kn" ? "ನಮ್ಮ ಬಗ್ಗೆ · ಸಂಪರ್ಕ" : language === "ta" ? "எங்களைப் பற்றி · தொடர்பு" : "About & Contact"}
+        </button>
+      </nav>
     </div>
   );
 }

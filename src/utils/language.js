@@ -226,6 +226,8 @@ export const translations = {
     checkBeforeSelling: "Check before selling",
     marketInfoUnavailable: "Market information could not be loaded.",
     locationFallback: "Unable to detect your current location. Select State → District → Mandal manually.",
+    detectNearbyServices: "Use my location",
+    detectingNearbyServices: "Detecting your location and loading nearby services…",
     exactLocationFallback: "Your coordinates were found, but the area could not be identified. Select State → District → Mandal manually.",
     locationPermissionNearby: "Location permission was denied. Your location was not detected. Select State → District → Mandal manually or allow location and retry.",
     locationPositionUnavailable: "Your device could not determine its location. Check location services, or select State → District → Mandal manually.",
@@ -2662,6 +2664,10 @@ const farmerPageTranslations = {
 for (const [languageCode, copy] of Object.entries(farmerPageTranslations)) {
   Object.assign(translations[languageCode], copy);
 }
+
+Object.assign(translations.te, { detectNearbyServices: "నా స్థానాన్ని ఉపయోగించండి", detectingNearbyServices: "మీ స్థానాన్ని గుర్తించి సమీప సేవలను లోడ్ చేస్తోంది…" });
+Object.assign(translations.hi, { detectNearbyServices: "मेरी जगह इस्तेमाल करें", detectingNearbyServices: "आपकी जगह खोजकर पास की सेवाएँ लोड की जा रही हैं…" });
+Object.assign(translations.kn, { detectNearbyServices: "ನನ್ನ ಸ್ಥಳವನ್ನು ಬಳಸಿ", detectingNearbyServices: "ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಪತ್ತೆಹಚ್ಚಿ ಹತ್ತಿರದ ಸೇವೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…" });
 
 const cropSelectorTranslations = {
   te: { categoryAll: "అన్ని", categoryCereals: "ధాన్యాలు", categoryFibre: "పీచు పంటలు", categorySpices: "మసాలా పంటలు", categoryVegetables: "కూరగాయలు", categoryOther: "ఇతరాలు", categoryOilseeds: "నూనెగింజలు", categoryPulses: "పప్పుధాన్యాలు", categoryFruits: "పండ్లు", cropPaddy: "వరి", cropWheat: "గోధుమ", cropMaize: "మొక్కజొన్న", cropCotton: "పత్తి", cropChilli: "మిరప", cropTurmeric: "పసుపు", cropTomato: "టమాటా", cropPotato: "బంగాళాదుంప", cropOnion: "ఉల్లిపాయ", cropBrinjal: "వంకాయ", cropVegetables: "కూరగాయలు", cropSugarcane: "చెరకు", cropGroundnut: "వేరుశెనగ", cropSoybean: "సోయాబీన్", cropRedGram: "కందిపప్పు", cropGreenGram: "పెసరపప్పు", cropBlackGram: "మినపప్పు", cropBanana: "అరటి", cropMango: "మామిడి", cropApple: "ఆపిల్", cropFruits: "పండ్లు", cropOther: "ఇతర పంట" },

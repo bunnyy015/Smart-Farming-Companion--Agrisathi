@@ -13,6 +13,7 @@ import SplashPage from "./modules/splash/SplashPage";
 const LoginPage = lazy(() => import("./modules/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./modules/auth/RegisterPage"));
 const RoleSelectionPage = lazy(() => import("./modules/auth/RoleSelectionPage"));
+const AboutContactPage = lazy(() => import("./modules/auth/AboutContactPage"));
 const ForgotPasswordPage = lazy(() => import("./modules/auth/ForgotPasswordPage"));
 const DealerAccessGuard = lazy(() => import("./components/DealerAccessGuard"));
 
@@ -98,6 +99,11 @@ function App() {
         <Route
           path="/role-selection"
           element={<RoleSelectionPage />}
+        />
+
+        <Route
+          path="/about"
+          element={<AboutContactPage />}
         />
 
         <Route

@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminPageEffects.css";
 import { get, ref } from "firebase/database";
 import {
   ArrowLeft,
   BarChart3,
-  CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -35,6 +34,7 @@ import { auth, database } from "../../firebase";
 import { signOut } from "firebase/auth";
 import StatusMessage from "../../components/StatusMessage";
 import { sortOrdersNewestFirst } from "../../utils/orderSorting";
+import { getPendingDealerRequests } from "../../utils/dealerRequests";
 
 /*
 |--------------------------------------------------------------------------
@@ -714,10 +714,6 @@ export default function ReportsStatisticsPage() {
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [dealerRequests, setDealerRequests] =
-    useState([]);
-  const [schemes, setSchemes] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] =
     useState(false);
@@ -740,10 +736,6 @@ export default function ReportsStatisticsPage() {
   const [orderFilter, setOrderFilter] =
     useState("all");
 
-  useEffect(() => {
-    loadReports();
-  }, []);
-
   function showMessage(type, text) {
     setMessage({
       type,
@@ -757,7 +749,7 @@ export default function ReportsStatisticsPage() {
   |--------------------------------------------------------------------------
   */
 
-  async function loadReports() {
+  const loadReports = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -783,12 +775,11 @@ export default function ReportsStatisticsPage() {
           ref(database, "dealerRequests")
         );
 
-      const loadedDealerRequests =
+      const loadedDealerRequests = getPendingDealerRequests(
         dealerRequestsSnapshot.exists()
-          ? getArrayFromFirebase(
-              dealerRequestsSnapshot.val()
-            )
-          : [];
+          ? dealerRequestsSnapshot.val()
+          : null
+      );
 
       /*
        * PRODUCTS
@@ -934,21 +925,19 @@ export default function ReportsStatisticsPage() {
             Number(
               product.lowStockLevel ?? 5
             );
+          const validLowStockLevel = Number.isFinite(lowStockLevel) && lowStockLevel >= 0
+            ? lowStockLevel
+            : 5;
 
           totalStock += quantity;
           reservedStock += reserved;
           soldStock += sold;
 
-          if (quantity > 0) {
+          if (quantity > validLowStockLevel) {
             availableProducts++;
-          } else {
+          } else if (quantity === 0) {
             outOfStockProducts++;
-          }
-
-          if (
-            quantity <=
-            lowStockLevel
-          ) {
+          } else if (quantity > 0) {
             lowStockProducts++;
           }
         }
@@ -960,11 +949,6 @@ export default function ReportsStatisticsPage() {
       setUsers(loadedUsers);
       setProducts(loadedProducts);
       setOrders(loadedOrders);
-      setDealerRequests(
-        loadedDealerRequests
-      );
-      setSchemes(loadedSchemes);
-
       setReport({
         farmers,
         dealers,
@@ -994,15 +978,20 @@ export default function ReportsStatisticsPage() {
         error
       );
 
-      showMessage(
-        "error",
-        "Unable to load reports. Check Firebase database access and rules."
-      );
+      setMessage({
+        type: "error",
+        text: "Unable to load reports. Check Firebase database access and rules.",
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadReports, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadReports]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -1229,7 +1218,7 @@ export default function ReportsStatisticsPage() {
               product.lowStockLevel ?? 5
             );
 
-          return quantity <= level;
+          return quantity > 0 && quantity <= level;
         })
         .sort(
           (a, b) =>
@@ -1663,7 +1652,7 @@ export default function ReportsStatisticsPage() {
             <div className="grid grid-cols-3 gap-3 mt-3">
 
               <MiniStat
-                label="Total Stock"
+                label="Available Units"
                 value={
                   report.totalStock
                 }

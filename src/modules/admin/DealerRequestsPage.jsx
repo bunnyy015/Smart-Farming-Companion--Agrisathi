@@ -14,6 +14,7 @@ import {
 
 import StatusMessage from "../../components/StatusMessage";
 import { database } from "../../firebase";
+import { getPendingDealerRequests } from "../../utils/dealerRequests";
 import "./AdminPageEffects.css";
 
 function cleanValue(value) {
@@ -26,36 +27,6 @@ function cleanValue(value) {
 
 function normalize(value) {
   return cleanValue(value).toLowerCase();
-}
-
-function getPendingRequests(data) {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return [];
-  }
-
-  return Object.entries(data)
-    .filter(([, request]) => {
-      if (!request || typeof request !== "object" || Array.isArray(request)) {
-        return false;
-      }
-
-      const status = normalize(request.status);
-      const role = normalize(request.role);
-
-      return (
-        (!status || status === "pending") &&
-        (!role || role === "dealer")
-      );
-    })
-    .map(([requestKey, request]) => ({
-      ...request,
-      requestKey,
-    }))
-    .sort((first, second) =>
-      cleanValue(second.createdAt).localeCompare(
-        cleanValue(first.createdAt)
-      )
-    );
 }
 
 function displayValue(value) {
@@ -169,7 +140,7 @@ export default function DealerRequestsPage() {
 
     try {
       const snapshot = await get(ref(database, "dealerRequests"));
-      setRequests(getPendingRequests(snapshot.exists() ? snapshot.val() : null));
+      setRequests(getPendingDealerRequests(snapshot.exists() ? snapshot.val() : null));
 
       if (isRefresh) {
         setMessage({
@@ -190,7 +161,8 @@ export default function DealerRequestsPage() {
   }, []);
 
   useEffect(() => {
-    loadRequests();
+    const timer = window.setTimeout(() => loadRequests(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadRequests]);
 
   async function approveRequest(request) {

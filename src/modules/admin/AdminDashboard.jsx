@@ -4,6 +4,7 @@ import { get, ref } from "firebase/database";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { auth, database } from "../../firebase";
+import { getPendingDealerRequests } from "../../utils/dealerRequests";
 import "./AdminPageEffects.css";
 
 const EMPTY_STATS = {
@@ -144,34 +145,7 @@ async function safeRead(path) {
  * so existing data continues to work.
  */
 function countPendingDealerRequests(data) {
-  if (
-    !data ||
-    typeof data !== "object" ||
-    Array.isArray(data)
-  ) {
-    return 0;
-  }
-
-  return Object.values(data).filter((request) => {
-    if (
-      !request ||
-      typeof request !== "object"
-    ) {
-      return false;
-    }
-
-    const status = normalize(request.status);
-
-    if (!status) {
-      return true;
-    }
-
-    return (
-      status === "pending" ||
-      status === "requested" ||
-      status === "waiting"
-    );
-  }).length;
+  return getPendingDealerRequests(data).length;
 }
 
 export default function AdminDashboardPage() {

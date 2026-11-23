@@ -138,6 +138,51 @@
 .role-card > div:nth-child(2) > div:first-child > div:last-child { transition: translate 220ms ease-out, color 220ms ease-out; }
 .role-card:hover > div:nth-child(2) > div:first-child > div:last-child { translate: 3px 0; }
 
+.role-info-actions {
+  position: absolute;
+  z-index: 25;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1rem, 2.5vh, 1.5rem);
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .35rem;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 74%);
+  box-shadow: 0 8px 24px rgb(22 73 43 / 12%);
+  backdrop-filter: blur(14px);
+  animation: content-rise .65s .5s ease-out both;
+}
+
+.role-info-actions button {
+  display: inline-flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  gap: .42rem;
+  padding: .55rem .8rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #175b39;
+  font-size: .78rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.role-info-actions button:hover {
+  transform: translateY(-1px);
+  border-color: #d4eddb;
+  background: #f2fbf4;
+  box-shadow: 0 4px 10px rgb(22 73 43 / 9%);
+}
+
+.role-info-actions button:focus-visible {
+  outline: 3px solid #8ccf9c;
+  outline-offset: 3px;
+}
+
 @keyframes landscape-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sunlight-breathe { from { opacity: .58; scale: .96; } to { opacity: .92; scale: 1.06; } }
 @keyframes rays-turn { to { rotate: 360deg; } }
@@ -149,9 +194,27 @@
 @keyframes card-arrive { from { opacity: 0; translate: 0 16px; } to { opacity: 1; translate: 0 0; } }
 
 @media (max-width: 640px) {
+  .role-selection-page {
+    flex-direction: column;
+    overflow-y: auto;
+  }
   .cloud-two, .nature-leaf, .speck-three { display: none; }
   .landscape-field, .landscape-crops, .landscape-cloud { transition: none; }
   .landscape-crops { opacity: .55; }
+  .role-info-actions {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    margin: .8rem auto .3rem;
+    transform: none;
+    gap: .15rem;
+    max-width: calc(100% - 1rem);
+  }
+  .role-info-actions button {
+    min-height: 2.25rem;
+    padding: .45rem .65rem;
+    font-size: .72rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -163,4 +226,9 @@
     transition-duration: .01ms !important;
   }
   .landscape-cloud { margin: 0; }
+  .role-info-actions,
+  .role-info-actions button {
+    animation: none !important;
+    transition: none !important;
+  }
 }

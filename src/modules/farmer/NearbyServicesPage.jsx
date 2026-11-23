@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 import useLanguage from "../../utils/useLanguage";
 import { getLanguage, t } from "../../utils/language";
 import { speakLocalizedText } from "../../utils/speechOutput";
+import { getCurrentLocation, getLocationErrorTranslationKey, reverseGeocodeCoordinates } from "../../services/currentLocationService";
 import { telanganaDirectory } from "../../data/telanganaAgricultureServices";
 import "./NearbyServicesPage.css";
 
@@ -32,25 +33,6 @@ function Recenter({ center }) {
   const map = useMap();
   useEffect(() => { if (center) map.flyTo([center.latitude, center.longitude], 12); }, [center, map]);
   return null;
-}
-
-function getDeviceGpsLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(Object.assign(new Error("Geolocation is unsupported"), { code: "UNSUPPORTED" }));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords, timestamp }) => resolve({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        accuracy: coords.accuracy,
-        timestamp,
-      }),
-      reject,
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    );
-  });
 }
 
 function distanceKm(a, b) {
@@ -203,7 +185,7 @@ export default function NearbyServicesPage() {
   const language = useLanguage();
   const [queryText, setQueryText] = useState("");
   const [voiceLanguage, setVoiceLanguage] = useState(language === "te" ? "te-IN" : "en-IN");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => t("detectingNearbyServices", {}, language));
   const [center, setCenter] = useState(null);
   const [deviceLocation, setDeviceLocation] = useState(null);
   const [route, setRoute] = useState(null);
@@ -212,8 +194,9 @@ export default function NearbyServicesPage() {
   const [directory, setDirectory] = useState([]);
   const [selected, setSelected] = useState(null);
   const [category, setCategory] = useState("all");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [liveError, setLiveError] = useState("");
+  const [locationRetry, setLocationRetry] = useState(0);
 
   async function searchAt(point, label, address = {}) {
     setCenter(point);
@@ -231,17 +214,41 @@ export default function NearbyServicesPage() {
 
   useEffect(() => {
     let active = true;
-    getDeviceGpsLocation().then(async (point) => {
+    getCurrentLocation().then(async (point) => {
       if (!active) return;
       setDeviceLocation(point);
+      setCenter(point);
+      setLive([]);
+      let address = {};
       if (isTelangana(point)) {
-        const reverse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${point.latitude}&longitude=${point.longitude}&localityLanguage=en`).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
-        if (active) setDirectory(relevantDirectory({ state_district: reverse.localityInfo?.administrative?.[1]?.name, county: reverse.localityInfo?.administrative?.[2]?.name, city_district: reverse.city }));
+        try { address = await reverseGeocodeCoordinates(point); } catch { /* Coordinates still work if reverse geocoding is unavailable. */ }
       }
-      if (active) { setCenter(point); setMessage(t("showingNearbyDevice", {}, getLanguage())); setBusy(true); try { setLive(await fetchLiveServices(point)); } catch (error) { setLiveError(t(error.name === "TimeoutError" ? "liveMapTimeout" : "liveMapUnavailable", {}, getLanguage())); } finally { if (active) setBusy(false); } }
-    }).catch(() => { if (active) setMessage(t("locationUnavailableSearch", {}, getLanguage())); });
+      if (!active) return;
+      setDirectory(isTelangana(point) ? relevantDirectory({
+        state_district: address.localityInfo?.administrative?.[1]?.name,
+        county: address.localityInfo?.administrative?.[2]?.name,
+        city_district: address.city,
+      }) : []);
+      const locationMessage = t("showingNearbyDevice", {}, getLanguage());
+      setMessage(point.source === "ip"
+        ? `${locationMessage} ${t("locationApproximate", {}, getLanguage())}`
+        : locationMessage);
+      try {
+        setLive(await fetchLiveServices(point));
+      } catch (error) {
+        if (active) setLiveError(t(error.name === "TimeoutError" ? "liveMapTimeout" : "liveMapUnavailable", {}, getLanguage()));
+      } finally {
+        if (active) setBusy(false);
+      }
+    }).catch((error) => {
+      if (!active) return;
+      setLive([]);
+      setDirectory([]);
+      setMessage(t(getLocationErrorTranslationKey(error), {}, getLanguage()));
+      setBusy(false);
+    });
     return () => { active = false; };
-  }, []);
+  }, [locationRetry]);
 
   const visibleLive = useMemo(() => category === "all" ? live : live.filter((item) => item.category === category), [live, category]);
   const visibleDirectory = useMemo(() => category === "all" ? directory : directory.filter((item) => category === "office" ? ["office", "horticulture"].includes(item.category) : item.category === category), [directory, category]);
@@ -290,7 +297,7 @@ export default function NearbyServicesPage() {
   const allCount = visibleLive.length + visibleDirectory.length;
   return <main className="nearby-services-page min-h-screen px-4 py-5 text-slate-900 sm:px-6 lg:px-10"><div className="nearby-services-page__content mx-auto max-w-6xl">
     <header className="nearby-services-hero mb-5 rounded-3xl p-5 text-white sm:p-7"><button type="button" onClick={() => navigate("/dashboard")} className="nearby-services-back mb-4 min-h-11 rounded-lg px-3 font-semibold">← {t("farmerDashboardLabel", {}, language)}</button><h1 className="text-2xl font-bold sm:text-3xl">{t("nearbyServices", {}, language)}</h1><p className="mt-2">{t("findFarmingHelp", {}, language)}</p><p className="nearby-services-status mt-3 text-sm" role="status" aria-live="polite">{message}</p></header>
-    <section className="nearby-services-search mb-4 rounded-3xl p-4 sm:p-5"><label htmlFor="nearby-place" className="block text-lg font-bold">{t("findServicesByVillage", {}, language)}</label><div className="mt-3 flex flex-col gap-2 sm:flex-row"><input id="nearby-place" value={queryText} onChange={(e) => setQueryText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchTypedPlace(); }} placeholder={t("typeOrSpeakPlace", {}, language)} className="nearby-services-field min-h-12 min-w-0 flex-1 rounded-xl px-3 text-base"/><select aria-label={t("voiceInputLanguage", {}, language)} value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} className="nearby-services-field min-h-12 rounded-xl px-3"><option value="en-IN">English</option><option value="te-IN">తెలుగు</option></select><button type="button" onClick={startRecognition} className="nearby-services-button nearby-services-button--voice min-h-12 rounded-xl px-4 font-bold">🎙 {t("speak", {}, language)}</button><button type="button" disabled={!queryText.trim() || busy} onClick={searchTypedPlace} className="nearby-services-button nearby-services-button--primary min-h-12 rounded-xl px-4 font-bold disabled:opacity-50">{busy ? t("searching", {}, language) : t("searchNearbyServices", {}, language)}</button></div></section>
+    <section className="nearby-services-search mb-4 rounded-3xl p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="nearby-place" className="block text-lg font-bold">{t("findServicesByVillage", {}, language)}</label><button type="button" disabled={busy} onClick={() => { setBusy(true); setLiveError(""); setMessage(t("detectingNearbyServices", {}, language)); setLocationRetry((attempt) => attempt + 1); }} className="nearby-services-call min-h-10 rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50">📍 {t("detectNearbyServices", {}, language)}</button></div><div className="mt-3 flex flex-col gap-2 sm:flex-row"><input id="nearby-place" value={queryText} onChange={(e) => setQueryText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchTypedPlace(); }} placeholder={t("typeOrSpeakPlace", {}, language)} className="nearby-services-field min-h-12 min-w-0 flex-1 rounded-xl px-3 text-base"/><select aria-label={t("voiceInputLanguage", {}, language)} value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} className="nearby-services-field min-h-12 rounded-xl px-3"><option value="en-IN">English</option><option value="te-IN">తెలుగు</option></select><button type="button" onClick={startRecognition} className="nearby-services-button nearby-services-button--voice min-h-12 rounded-xl px-4 font-bold">🎙 {t("speak", {}, language)}</button><button type="button" disabled={!queryText.trim() || busy} onClick={searchTypedPlace} className="nearby-services-button nearby-services-button--primary min-h-12 rounded-xl px-4 font-bold disabled:opacity-50">{busy ? t("searching", {}, language) : t("searchNearbyServices", {}, language)}</button></div></section>
     <section className="nearby-services-categories mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">{groups.map(([id, icon, key]) => <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)} className="nearby-services-category min-h-20 rounded-xl border-2 p-2 font-bold"><span className="block text-2xl">{icon}</span>{t(key, {}, language)}</button>)}</section>
     <section className="nearby-services-map mb-4 overflow-hidden rounded-3xl" aria-label={t("nearbyServicesMap", {}, language)}><MapContainer center={center ? [center.latitude, center.longitude] : [17.8, 79.1]} zoom={center ? 12 : 7} scrollWheelZoom className="h-[360px] w-full"><Recenter center={center}/><TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>{deviceLocation && <Marker position={[deviceLocation.latitude, deviceLocation.longitude]}><Popup>{t("yourLocation", {}, language)}</Popup></Marker>}{center && <Marker position={[center.latitude, center.longitude]}><Popup>{t("searchLocation", {}, language)}</Popup></Marker>}{visibleLive.map((item) => <Marker key={item.id} position={[item.latitude, item.longitude]} eventHandlers={{ click: () => setSelected(item) }}><Popup><b>{item.name}</b><br/>{t(({ office: "officesExperts", horticulture: "officesExperts", soil: "soilTesting", supply: "seedsFertilizer", equipment: "equipment", veterinary: "veterinary", support: "farmerSupport" })[item.category] || "allServices", {}, language)}</Popup></Marker>)}{route && <Polyline positions={route.coordinates} pathOptions={{ color: "#166534", weight: 6, opacity: 0.85 }} />}</MapContainer></section>
     {selected && <section className="nearby-services-selected mb-4 rounded-3xl p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold">{localizedServiceItem(selected, language).name}</h2><p className="mt-1">{t(({ office: "officesExperts", horticulture: "officesExperts", soil: "soilTesting", supply: "seedsFertilizer", equipment: "equipment", veterinary: "veterinary", support: "farmerSupport" })[selected.category] || "allServices", {}, language)}{selected.distance != null ? ` · ${selected.distance.toFixed(1)} km ${t("fromSearchPoint", {}, language)}` : ` · ${t("officialDirectoryListing", {}, language)}`}</p><p className="mt-1">{selected.address || [localizedServiceItem(selected, language).locality, selected.district].filter(Boolean).join(", ") || t("addressNotListed", {}, language)}</p></div><button type="button" onClick={() => getDirections(selected)} className="nearby-services-button nearby-services-button--primary min-h-12 rounded-xl px-5 font-bold">{t("getDirections", {}, language)}</button></div>{selected.phone && <a className="nearby-services-call mt-3 inline-flex min-h-11 items-center rounded-lg px-4 py-2 font-bold" href={`tel:${selected.phone}`}>{t("call", {}, language)} {selected.phone}</a>}{routeMessage && <p role="status" aria-live="polite" className="nearby-services-notice mt-3 rounded-lg p-3 text-sm font-semibold">{routeMessage}</p>}</section>}

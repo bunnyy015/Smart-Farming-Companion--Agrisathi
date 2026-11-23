@@ -367,6 +367,320 @@
   box-shadow: 0 9px 20px rgb(25 74 45 / 9%);
 }
 
+.crop-land-profile {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgb(190 232 199 / 34%), transparent 34%),
+    linear-gradient(150deg, #fff 0%, #f8fcf8 100%);
+}
+
+.crop-land-profile__soil-input {
+  min-height: 46px;
+  border: 1px solid #d0e0d5;
+  background: #fbfefb;
+  color: #173c2d;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.crop-land-profile__soil-input:focus {
+  border-color: #16804b;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(22 128 75 / 12%);
+  outline: none;
+}
+
+.crop-land-profile__illustration {
+  display: grid;
+  min-height: 14rem;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  overflow: hidden;
+  gap: .5rem;
+  padding: 1rem 1rem 1rem 1.25rem;
+  border: 1px solid #d4ebd9;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(ellipse at 88% 12%, rgb(188 229 166 / 48%), transparent 36%),
+    linear-gradient(125deg, #f4fbf3 0%, #fafff9 53%, #e8f6e8 100%);
+}
+
+.crop-land-profile__illustration-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 17rem;
+}
+
+.crop-land-profile__illustration-copy span {
+  color: #16804b;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.crop-land-profile__illustration-copy h3 {
+  margin-top: .65rem;
+  color: #145638;
+  font-size: clamp(1.1rem, 1.7vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.crop-land-profile__illustration-copy p {
+  margin-top: .6rem;
+  color: #5b7466;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.crop-land-profile__illustration svg {
+  display: block;
+  width: 100%;
+  min-height: 12rem;
+  overflow: visible;
+}
+
+.crop-land-profile__root {
+  fill: none;
+  stroke: #e7bd8e;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: crop-land-root-grow 2.4s ease-out both;
+}
+
+.crop-land-profile__leaf {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: crop-disease-leaf-sway 3.8s ease-in-out infinite alternate;
+}
+
+.crop-land-profile__leaf--right { animation-delay: .45s; }
+.crop-land-profile__leaf--top { animation-delay: .8s; }
+
+.crop-land-profile__preview-wrap {
+  position: relative;
+  overflow: hidden;
+  min-height: 12rem;
+  border: 1px solid #d7e9dc;
+  border-radius: 1rem;
+  background: #eef6ef;
+}
+
+.crop-land-profile__preview {
+  display: block;
+  width: 100%;
+  max-height: 19rem;
+  min-height: 12rem;
+  object-fit: cover;
+}
+
+.crop-land-profile__remove {
+  position: absolute;
+  right: .65rem;
+  bottom: .65rem;
+  padding: .48rem .75rem;
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: 999px;
+  background: rgb(19 43 31 / 84%);
+  color: white;
+  font-size: .75rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.crop-land-profile__analyze { min-height: 3rem; }
+
+.crop-land-profile__error {
+  border: 1px solid #fecaca;
+  border-radius: .8rem;
+  background: #fff4f2;
+  padding: .75rem;
+  color: #b42318;
+  font-size: .84rem;
+}
+
+.crop-land-profile__progress {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  color: #24623e;
+  font-size: .82rem;
+}
+
+.crop-land-profile__progress span {
+  width: .85rem;
+  height: .85rem;
+  border: 2px solid #badfc4;
+  border-top-color: #087b43;
+  border-radius: 50%;
+  animation: crop-land-spin 850ms linear infinite;
+}
+
+.crop-land-profile__analysis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .55rem;
+  padding: .9rem;
+  border: 1px solid #d9e9dc;
+  border-radius: 1rem;
+  background: linear-gradient(120deg, #f0f8f1, #f8fbf5);
+}
+
+.crop-land-profile__analysis span {
+  color: #718376;
+  font-size: .7rem;
+}
+
+.crop-land-profile__analysis strong {
+  color: #204c35;
+  font-size: .82rem;
+  text-transform: capitalize;
+}
+
+.crop-land-profile__recommendations {
+  overflow: hidden;
+  padding: 1rem;
+  border: 1px solid #cce5d2;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 100% 0, rgba(130, 211, 145, .16), transparent 34%),
+    linear-gradient(145deg, #f5fcf5, #ffffff 62%, #f0f9f1);
+  animation: crop-disease-card-enter 420ms ease both;
+}
+
+.crop-land-profile__recommendations-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .8rem;
+}
+
+.crop-land-profile__eyebrow {
+  color: #188348;
+  font-size: .63rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.crop-land-profile__recommendations-heading h3 {
+  margin: .18rem 0 0;
+  color: #174d31;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.crop-land-profile__season {
+  flex: 0 0 auto;
+  padding: .35rem .65rem;
+  border: 1px solid #c8e8d0;
+  border-radius: 999px;
+  background: #e9f8ec;
+  color: #217545;
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.crop-land-profile__recommendation-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.crop-land-profile__recommendation-card {
+  padding: .8rem;
+  border: 1px solid #dcebe0;
+  border-radius: .85rem;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 5px 14px rgba(31, 87, 52, .055);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.crop-land-profile__recommendation-card:hover {
+  transform: translateY(-2px);
+  border-color: #a9d8b5;
+  box-shadow: 0 10px 22px rgba(31, 87, 52, .1);
+}
+
+.crop-land-profile__recommendation-title {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+
+.crop-land-profile__recommendation-title > span {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #d6eddb;
+  border-radius: .75rem;
+  background: #effaf0;
+  font-size: 1.3rem;
+}
+
+.crop-land-profile__recommendation-title h4 {
+  margin: 0;
+  color: #174d31;
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.crop-land-profile__recommendation-title div > span {
+  display: block;
+  margin-top: .12rem;
+  color: #677c6d;
+  font-size: .68rem;
+}
+
+.crop-land-profile__recommendation-card p {
+  margin: .55rem 0 0;
+  color: #52685a;
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.crop-land-profile__recommendation-card .crop-land-profile__land-match {
+  padding: .5rem .6rem;
+  border-radius: .6rem;
+  background: #f1f8f2;
+  color: #386146;
+}
+
+.crop-land-profile__recommendation-note {
+  margin: 0;
+  padding: .7rem .75rem;
+  border: 1px solid #e7dfb9;
+  border-radius: .7rem;
+  background: #fffaf0;
+  color: #705b27;
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.crop-land-profile__recommendation-source {
+  margin: .7rem 0 0;
+  color: #718176;
+  font-size: .66rem;
+  line-height: 1.5;
+}
+
+.crop-land-profile__recommendation-source a {
+  color: #087b43;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@keyframes crop-land-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes crop-land-root-grow {
+  from { stroke-dashoffset: 1; opacity: .3; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
 .crop-disease-results {
   animation-delay: 100ms;
 }
@@ -419,6 +733,29 @@
 }
 
 @media (max-width: 640px) {
+  .crop-land-profile__illustration {
+    min-height: 12rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: .1rem;
+    padding: .9rem .5rem .9rem .85rem;
+  }
+
+  .crop-land-profile__illustration-copy p {
+    font-size: .72rem;
+  }
+
+  .crop-land-profile__illustration-copy span {
+    font-size: .53rem;
+  }
+
+  .crop-land-profile__illustration svg {
+    min-height: 9rem;
+  }
+
+  .crop-land-profile__analysis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .crop-disease-visual-stage {
     min-height: 185px;
     grid-template-columns: minmax(0, 1fr) minmax(128px, .8fr);
@@ -443,5 +780,9 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: .01ms !important;
+  }
+
+  .crop-land-profile__progress span {
+    animation: none;
   }
 }
